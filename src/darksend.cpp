@@ -385,7 +385,7 @@ void CDarksendPool::ProcessMessage(CNode* pfrom, std::string& strCommand, CDataS
             return;
         }
 
-        darkSendPool.CompletedTransaction(error, errorID);
+        CompletedTransaction(error, errorID);
     }
 
 }
@@ -424,17 +424,6 @@ void CDarksendPool::SetNull(){
     unsigned int seed = 0;
     RAND_bytes((unsigned char*)&seed, sizeof(seed));
     std::srand(seed);
-}
-
-bool CDarksendPool::SetCollateralAddress(std::string strAddress){
-    CBitcoinAddress address;
-    if (!address.SetString(strAddress))
-    {
-        LogPrintf("CDarksendPool::SetCollateralAddress - Invalid PrivateSend collateral address\n");
-        return false;
-    }
-    collateralPubKey = GetScriptForDestination(address.Get());
-    return true;
 }
 
 //
@@ -1456,6 +1445,14 @@ bool CDarksendPool::DoAutomaticDenominating(bool fDryRun)
 
             if(nBalanceNeedsDenominated > nValueIn) nBalanceNeedsDenominated = nValueIn;
 
+            LogPrint("privatesend", "%s -- SelectCoinsDark -- (%f - (%f + %f - %f = %f) ) = %f\n", __func__,
+                            (float)nBalanceNeedsAnonymized/COIN,
+                            (float)pwalletMain->GetDenominatedBalance(true)/COIN,
+                            (float)pwalletMain->GetDenominatedBalance()/COIN,
+                            (float)pwalletMain->GetAnonymizedBalance()/COIN,
+                            (float)nOnlyDenominatedBalance/COIN,
+                            (float)nBalanceNeedsDenominated/COIN);
+
             if(nBalanceNeedsDenominated < nLowestDenom) return false; // most likely we just waiting for denoms to confirm
             if(!fDryRun) return CreateDenominated(nBalanceNeedsDenominated);
 
@@ -1472,6 +1469,13 @@ bool CDarksendPool::DoAutomaticDenominating(bool fDryRun)
 
     nOnlyDenominatedBalance = pwalletMain->GetDenominatedBalance(true) + pwalletMain->GetDenominatedBalance() - pwalletMain->GetAnonymizedBalance();
     nBalanceNeedsDenominated = nBalanceNeedsAnonymized - nOnlyDenominatedBalance;
+    LogPrint("privatesend", "%s -- 'nBalanceNeedsDenominated > nOnlyDenominatedBalance' (%f - (%f + %f - %f = %f) ) = %f\n", __func__,
+                    (float)nBalanceNeedsAnonymized/COIN,
+                    (float)pwalletMain->GetDenominatedBalance(true)/COIN,
+                    (float)pwalletMain->GetDenominatedBalance()/COIN,
+                    (float)pwalletMain->GetAnonymizedBalance()/COIN,
+                    (float)nOnlyDenominatedBalance/COIN,
+                    (float)nBalanceNeedsDenominated/COIN);
 
     //check if we have should create more denominated inputs
     if(nBalanceNeedsDenominated > nOnlyDenominatedBalance) return CreateDenominated(nBalanceNeedsDenominated);

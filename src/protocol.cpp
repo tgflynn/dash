@@ -42,11 +42,13 @@ const char *SPORK="spork";
 const char *GETSPORKS="getsporks";
 const char *MNWINNER="mnw";
 const char *MNWINNERSSYNC="mnget";
+const char *MNSCANERROR="mn scan error"; // not implemented
 const char *MNGOVERNANCEVOTESYNC="mnvs";
 const char *MNGOVERNANCEVOTE="mvote";
 const char *MNGOVERNANCEPROPOSAL="mprop";
 const char *MNGOVERNANCEFINAL="fbs";
 const char *MNGOVERNANCEFINALVOTE="fbvote";
+const char *MNQUORUM="mn quorum"; // not implemented
 const char *MNANNOUNCE="mnb";
 const char *MNPING="mnp";
 const char *DSACCEPT="dsa";
@@ -72,10 +74,12 @@ static const char* ppszTypeName[] =
     NetMsgType::IXLOCKVOTE,
     NetMsgType::SPORK,
     NetMsgType::MNWINNER,
+    NetMsgType::MNSCANERROR, // not implemented
     NetMsgType::MNGOVERNANCEVOTE,
     NetMsgType::MNGOVERNANCEPROPOSAL,
     NetMsgType::MNGOVERNANCEFINAL,
     NetMsgType::MNGOVERNANCEFINALVOTE,
+    NetMsgType::MNQUORUM, // not implemented
     NetMsgType::MNANNOUNCE,
     NetMsgType::MNPING,
     NetMsgType::DSTX
@@ -229,7 +233,7 @@ CInv::CInv(const std::string& strType, const uint256& hashIn)
         }
     }
     if (i == ARRAYLEN(ppszTypeName))
-        LogPrint("net", "CInv::CInv(string, uint256) : unknown type '%s'", strType);
+        LogPrint("net", "CInv::CInv(string, uint256) : unknown type '%s'\n", strType);
     hash = hashIn;
 }
 
@@ -246,7 +250,7 @@ bool CInv::IsKnownType() const
 const char* CInv::GetCommand() const
 {
     if (!IsKnownType())
-        LogPrint("net", "CInv::GetCommand() : type=%d unknown type", type);
+        LogPrint("net", "CInv::GetCommand() : type=%d unknown type\n", type);
 
     return ppszTypeName[type];
 }

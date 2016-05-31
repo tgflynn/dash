@@ -128,7 +128,7 @@ CMasternode::CMasternode(const CMasternodeBroadcast& mnb)
 //
 bool CMasternode::UpdateFromNewBroadcast(CMasternodeBroadcast& mnb)
 {
-    if(mnb.sigTime > sigTime) {    
+    if(mnb.sigTime > sigTime) {
         pubkey2 = mnb.pubkey2;
         sigTime = mnb.sigTime;
         vchSig = mnb.vchSig;
@@ -214,7 +214,7 @@ void CMasternode::Check(bool forceCheck)
     if(!unitTest){
         CValidationState state;
         CMutableTransaction tx = CMutableTransaction();
-        CTxOut vout = CTxOut(999.99*COIN, darkSendPool.collateralPubKey);
+        CTxOut vout = CTxOut(999.99*COIN, mnodeman.dummyScriptPubkey);
         tx.vin.push_back(vin);
         tx.vout.push_back(vout);
 
@@ -370,9 +370,16 @@ bool CMasternodeBroadcast::CheckAndUpdate(int& nDos)
     if(lastPing == CMasternodePing() || !lastPing.CheckAndUpdate(nDos, false, true))
         return false;
 
-    std::string vchPubKey(pubkey.begin(), pubkey.end());
-    std::string vchPubKey2(pubkey2.begin(), pubkey2.end());
-    std::string strMessage = addr.ToString() + boost::lexical_cast<std::string>(sigTime) + vchPubKey + vchPubKey2 + boost::lexical_cast<std::string>(protocolVersion);
+    std::string strMessage;
+    if(protocolVersion < 70201) {
+        std::string vchPubKey(pubkey.begin(), pubkey.end());
+        std::string vchPubKey2(pubkey2.begin(), pubkey2.end());
+        strMessage = addr.ToString() + boost::lexical_cast<std::string>(sigTime) + vchPubKey + vchPubKey2 + boost::lexical_cast<std::string>(protocolVersion);
+    } else {
+        strMessage = addr.ToString() + boost::lexical_cast<std::string>(sigTime) +
+                        pubkey.GetID().ToString() + pubkey2.GetID().ToString() +
+                        boost::lexical_cast<std::string>(protocolVersion);
+    }
 
     if(protocolVersion < mnpayments.GetMinMasternodePaymentsProto()) {
         LogPrintf("CMasternodeBroadcast::CheckAndUpdate - ignoring outdated Masternode %s protocol version %d\n", vin.ToString(), protocolVersion);
@@ -405,7 +412,8 @@ bool CMasternodeBroadcast::CheckAndUpdate(int& nDos)
     std::string errorMessage = "";
     if(!darkSendSigner.VerifyMessage(pubkey, vchSig, strMessage, errorMessage)){
         LogPrintf("CMasternodeBroadcast::CheckAndUpdate - Got bad Masternode address signature\n");
-        nDos = 100;
+        // don't ban for old masternodes, their sigs could be broken because of the bug
+        nDos = protocolVersion < 70201 ? 0 : 100;
         return false;
     }
 
@@ -479,7 +487,7 @@ bool CMasternodeBroadcast::CheckInputsAndAdd(int& nDos)
 
     CValidationState state;
     CMutableTransaction tx = CMutableTransaction();
-    CTxOut vout = CTxOut(999.99*COIN, darkSendPool.collateralPubKey);
+    CTxOut vout = CTxOut(999.99*COIN, mnodeman.dummyScriptPubkey);
     tx.vin.push_back(vin);
     tx.vout.push_back(vout);
 
@@ -567,12 +575,18 @@ bool CMasternodeBroadcast::Sign(CKey& keyCollateralAddress)
 {
     std::string errorMessage;
 
-    std::string vchPubKey(pubkey.begin(), pubkey.end());
-    std::string vchPubKey2(pubkey2.begin(), pubkey2.end());
-
     sigTime = GetAdjustedTime();
 
-    std::string strMessage = addr.ToString() + boost::lexical_cast<std::string>(sigTime) + vchPubKey + vchPubKey2 + boost::lexical_cast<std::string>(protocolVersion);
+    std::string strMessage;
+    if(protocolVersion < 70201) {
+        std::string vchPubKey(pubkey.begin(), pubkey.end());
+        std::string vchPubKey2(pubkey2.begin(), pubkey2.end());
+        strMessage = addr.ToString() + boost::lexical_cast<std::string>(sigTime) + vchPubKey + vchPubKey2 + boost::lexical_cast<std::string>(protocolVersion);
+    } else {
+        strMessage = addr.ToString() + boost::lexical_cast<std::string>(sigTime) +
+                        pubkey.GetID().ToString() + pubkey2.GetID().ToString() +
+                        boost::lexical_cast<std::string>(protocolVersion);
+    }
 
     if(!darkSendSigner.SignMessage(strMessage, errorMessage, vchSig, keyCollateralAddress)) {
         LogPrintf("CMasternodeBroadcast::Sign() - Error: %s\n", errorMessage);
@@ -586,10 +600,16 @@ bool CMasternodeBroadcast::VerifySignature()
 {
     std::string errorMessage;
 
-    std::string vchPubKey(pubkey.begin(), pubkey.end());
-    std::string vchPubKey2(pubkey2.begin(), pubkey2.end());
-
-    std::string strMessage = addr.ToString() + boost::lexical_cast<std::string>(sigTime) + vchPubKey + vchPubKey2 + boost::lexical_cast<std::string>(protocolVersion);
+    std::string strMessage;
+    if(protocolVersion < 70201) {
+        std::string vchPubKey(pubkey.begin(), pubkey.end());
+        std::string vchPubKey2(pubkey2.begin(), pubkey2.end());
+        strMessage = addr.ToString() + boost::lexical_cast<std::string>(sigTime) + vchPubKey + vchPubKey2 + boost::lexical_cast<std::string>(protocolVersion);
+    } else {
+        strMessage = addr.ToString() + boost::lexical_cast<std::string>(sigTime) +
+                        pubkey.GetID().ToString() + pubkey2.GetID().ToString() +
+                        boost::lexical_cast<std::string>(protocolVersion);
+    }
 
     if(!darkSendSigner.VerifyMessage(pubkey, vchSig, strMessage, errorMessage)) {
         LogPrintf("CMasternodeBroadcast::VerifySignature() - Error: %s\n", errorMessage);
@@ -679,7 +699,7 @@ bool CMasternodePing::CheckAndUpdate(int& nDos, bool fRequireEnabled, bool fChec
         return true;
     }
 
-    LogPrint("masternode", "CMasternodePing::CheckAndUpdate - New Ping - %s - %s - %lli\n", GetHash().ToString(), blockHash.ToString(), sigTime);
+    LogPrint("masternode", "CMasternodePing::CheckAndUpdate - New Ping %s - %s %s %d\n", vin.ToString(), GetHash().ToString(), blockHash.ToString(), sigTime);
 
     // see if we have this Masternode
     CMasternode* pmn = mnodeman.Find(vin);

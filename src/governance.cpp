@@ -30,6 +30,7 @@ int nSubmittedFinalBudget;
 
 bool IsCollateralValid(uint256 nTxCollateralHash, uint256 nExpectedHash, std::string& strError, int& nConf, CAmount minFee)
 {
+
     CTransaction txCollateral;
     uint256 nBlockHash;
     int64_t nTime;

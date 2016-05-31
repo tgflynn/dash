@@ -36,31 +36,6 @@ std::string GetRequiredPaymentsString(int nBlockHeight);
 bool IsBlockValueValid(const CBlock& block, CAmount nExpectedValue);
 void FillBlockPayee(CMutableTransaction& txNew, CAmount nFees);
 
-void DumpMasternodePayments();
-
-/** Save Masternode Payment Data (mnpayments.dat)
- */
-class CMasternodePaymentDB
-{
-private:
-    boost::filesystem::path pathDB;
-    std::string strMagicMessage;
-public:
-    enum ReadResult {
-        Ok,
-        FileError,
-        HashReadError,
-        IncorrectHash,
-        IncorrectMagicMessage,
-        IncorrectMagicNumber,
-        IncorrectFormat
-    };
-
-    CMasternodePaymentDB();
-    bool Write(const CMasternodePayments &objToSave);
-    ReadResult Read(CMasternodePayments& objToLoad, bool fDryRun = false);
-};
-
 class CMasternodePayee
 {
 public:
@@ -224,7 +199,9 @@ public:
 class CMasternodePayments
 {
 private:
-    int nSyncedFromPeer;
+    const int nMinBlocksToStore;
+    const float nStorageCoeff;
+
     // Keep track of current block index
     const CBlockIndex *pCurrentBlockIndex;
 
@@ -233,8 +210,7 @@ public:
     std::map<int, CMasternodeBlockPayees> mapMasternodeBlocks;
     std::map<uint256, int> mapMasternodesLastVote; //Hash(BEGIN(prevout.hash), END(prevout.n)), nBlockHeight
 
-    CMasternodePayments() {
-        nSyncedFromPeer = 0;
+    CMasternodePayments() : nMinBlocksToStore(4000), nStorageCoeff(1.25) {
     }
 
     void Clear() {
@@ -285,6 +261,8 @@ public:
     {
         return mapMasternodePayeeVotes.size();
     }
+
+    bool IsEnoughData(int nMnCount);
 
     ADD_SERIALIZE_METHODS;
 

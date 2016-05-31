@@ -21,29 +21,6 @@ using namespace std;
 class CMasternodeMan;
 extern CMasternodeMan mnodeman;
 
-/** Access to the MN database (mncache.dat)
- */
-class CMasternodeDB
-{
-private:
-    boost::filesystem::path pathMN;
-    std::string strMagicMessage;
-public:
-    enum ReadResult {
-        Ok,
-        FileError,
-        HashReadError,
-        IncorrectHash,
-        IncorrectMagicMessage,
-        IncorrectMagicNumber,
-        IncorrectFormat
-    };
-
-    CMasternodeDB();
-    bool Write(const CMasternodeMan &mnodemanToSave);
-    ReadResult Read(CMasternodeMan& mnodemanToLoad, bool fDryRun = false);
-};
-
 class CMasternodeMan
 {
 private:
@@ -67,9 +44,12 @@ public:
     map<uint256, CMasternodeBroadcast> mapSeenMasternodeBroadcast;
     // Keep track of all pings I've seen
     map<uint256, CMasternodePing> mapSeenMasternodePing;
-    
+
     // keep track of dsq count to prevent masternodes from gaming darksend queue
     int64_t nDsqCount;
+
+    // dummy script pubkey to test masternodes' vins against mempool
+    CScript dummyScriptPubkey;
 
     ADD_SERIALIZE_METHODS;
 
@@ -127,6 +107,8 @@ public:
     std::vector<pair<int, CMasternode> > GetMasternodeRanks(int64_t nBlockHeight, int minProtocol=0);
     int GetMasternodeRank(const CTxIn &vin, int64_t nBlockHeight, int minProtocol=0, bool fOnlyActive=true);
     CMasternode* GetMasternodeByRank(int nRank, int64_t nBlockHeight, int minProtocol=0, bool fOnlyActive=true);
+
+    void InitDummyScriptPubkey();
 
     void ProcessMasternodeConnections();
 
