@@ -255,16 +255,18 @@ void CMasternodeSync::Process()
     }
 
     // INITIAL SYNC SETUP / LOG REPORTING
-    double nSyncProgress = double(RequestedMasternodeAttempt + (RequestedMasternodeAssets - 1) * 8) / (8*4);
-    LogPrintf("CMasternodeSync::Process() - tick %d RequestedMasternodeAttempt %d RequestedMasternodeAssets %d nSyncProgress %f\n", tick, RequestedMasternodeAttempt, RequestedMasternodeAssets, nSyncProgress);
-    uiInterface.NotifyAdditionalDataSyncProgressChanged(nSyncProgress);
+    {
+        double nSyncProgress = double(RequestedMasternodeAttempt + (RequestedMasternodeAssets - 1) * 8) / (8*4);
+        LogPrintf("CMasternodeSync::Process() - tick %d RequestedMasternodeAttempt %d RequestedMasternodeAssets %d nSyncProgress %f\n", tick, RequestedMasternodeAttempt, RequestedMasternodeAssets, nSyncProgress);
+        uiInterface.NotifyAdditionalDataSyncProgressChanged(nSyncProgress);
 
-    // sporks synced but blockchain is not, wait until we're almost at a recent block to continue
-    if(Params().NetworkIDString() != CBaseChainParams::REGTEST &&
-            !IsBlockchainSynced() && RequestedMasternodeAssets > MASTERNODE_SYNC_SPORKS) return;
+        // sporks synced but blockchain is not, wait until we're almost at a recent block to continue
+        if(Params().NetworkIDString() != CBaseChainParams::REGTEST &&
+                !IsBlockchainSynced() && RequestedMasternodeAssets > MASTERNODE_SYNC_SPORKS) return;
 
-    TRY_LOCK(cs_vNodes, lockRecv);
-    if(!lockRecv) return;
+        TRY_LOCK(cs_vNodes, lockRecv);
+        if(!lockRecv) return;
+    }
 
     if(RequestedMasternodeAssets == MASTERNODE_SYNC_INITIAL) GetNextAsset();
 
@@ -308,7 +310,6 @@ void CMasternodeSync::Process()
 
             // MNLIST : SYNC MASTERNODE LIST FROM OTHER CONNECTED CLIENTS
 
-            if(RequestedMasternodeAssets == MASTERNODE_SYNC_LIST) {
                 // check for timeout first
                 if(lastMasternodeList < GetTime() - MASTERNODE_SYNC_TIMEOUT) {
                     LogPrintf("CMasternodeSync::Process -- tick %d  asset %d -- timeout\n", tick, RequestedMasternodeAssets);
@@ -343,7 +344,9 @@ void CMasternodeSync::Process()
 
             // MNW : SYNC MASTERNODE WINNERS FROM OTHER CONNECTED CLIENTS
 
-            if(RequestedMasternodeAssets == MASTERNODE_SYNC_MNW) {
+            if(RequestedMasternodeAssets == MASTERNODE_SYNC_MNW)
+            {
+                if (pnode->nVersion < mnpayments.GetMinMasternodePaymentsProto()) continue;
                 // check for timeout first
                 // This might take a lot longer than MASTERNODE_SYNC_TIMEOUT minutes due to new blocks,
                 // but that should be OK and it should timeout eventually.
@@ -376,8 +379,9 @@ void CMasternodeSync::Process()
 
                 return; //this will cause each peer to get one request each six seconds for the various assets we need
             }
-
+           
             // GOVOBJ : SYNC GOVERNANCE ITEMS FROM OUR PEERS
+
 
             if(RequestedMasternodeAssets == MASTERNODE_SYNC_GOVERNANCE) {
                 // check for timeout first

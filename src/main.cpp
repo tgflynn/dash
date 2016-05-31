@@ -5076,9 +5076,11 @@ void static ProcessGetData(CNode* pfrom, const Consensus::Params& consensusParam
                     }
                 }
 
-                if (!pushed && inv.type == MSG_TX) {
+                if (!pushed && inv.type == MSG_TX)
+                {
                     CTransaction tx;
-                    if (mempool.lookup(inv.hash, tx)) {
+                    if (mempool.lookup(inv.hash, tx))
+                    {
                         CDataStream ss(SER_NETWORK, PROTOCOL_VERSION);
                         ss.reserve(1000);
                         ss << tx;
@@ -6666,7 +6668,9 @@ bool SendMessages(CNode* pto)
             pto->mapAskFor.erase(pto->mapAskFor.begin());
         }
         if (!vGetData.empty())
+        {
             pto->PushMessage(NetMsgType::GETDATA, vGetData);
+        }
 
     }
     return true;
