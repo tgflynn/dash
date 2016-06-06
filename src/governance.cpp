@@ -452,8 +452,7 @@ void CGovernanceManager::Sync(CNode* pfrom, uint256 nProp)
     // SYNC GOVERNANCE OBJECTS WITH OTHER CLIENT
 
     std::map<uint256, CGovernanceObject>::iterator it1 = mapObjects.begin();
-    while(it1 != mapObjects.end())
-    {
+    while(it1 != mapObjects.end()) {
         uint256 h = (*it1).first;
 
         if((*it1).second.fCachedValid && ((nProp == uint256() || (h == nProp)))){
@@ -467,8 +466,7 @@ void CGovernanceManager::Sync(CNode* pfrom, uint256 nProp)
     // SYNC OUR GOVERNANCE OBJECT VOTES WITH THEIR GOVERNANCE OBJECT VOTES
 
     std::map<uint256, CGovernanceVote>::iterator it2 = mapVotesByHash.begin();
-    while(it2 != mapVotesByHash.end())
-    {
+    while(it2 != mapVotesByHash.end()) {
         pfrom->PushInventory(CInv(MSG_GOVERNANCE_VOTE, (*it2).first));
         nInvCount++;
         ++it2;
@@ -518,8 +516,7 @@ bool CGovernanceManager::AddOrUpdateVote(const CGovernanceVote& vote, std::strin
     uint256 nTypeHash = vote.GetTypeHash();
     uint256 nHash = vote.GetHash();
 
-    if(mapVotesByType.count(nTypeHash))
-    {
+    if(mapVotesByType.count(nTypeHash)) {
         if(mapVotesByType[nTypeHash].nTime > vote.nTime){
             strError = strprintf("new vote older than existing vote - %s", nTypeHash.ToString());
             LogPrint("mngovernance", "CGovernanceObject::AddOrUpdateVote - %s\n", strError);
