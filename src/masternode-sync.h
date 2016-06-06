@@ -9,9 +9,9 @@
 #define MASTERNODE_SYNC_SPORKS            1
 #define MASTERNODE_SYNC_LIST              2
 #define MASTERNODE_SYNC_MNW               3
-#define MASTERNODE_SYNC_GOVERNANCE            4
-#define MASTERNODE_SYNC_GOVOBJ       10
-#define MASTERNODE_SYNC_GOVERNANCE_FIN        11
+#define MASTERNODE_SYNC_GOVERNANCE        4
+#define MASTERNODE_SYNC_GOVOBJ            10
+#define MASTERNODE_SYNC_GOVERNANCE_FIN    11
 #define MASTERNODE_SYNC_FAILED            998
 #define MASTERNODE_SYNC_FINISHED          999
 

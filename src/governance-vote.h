@@ -76,7 +76,8 @@ public:
         return ret;
     }
 
-    uint256 GetHash(){
+    uint256 GetHash() const
+    {
         CHashWriter ss(SER_GETHASH, PROTOCOL_VERSION);
         ss << vinMasternode;
         ss << nParentHash;
@@ -87,7 +88,7 @@ public:
     }
 
     // GET HASH WITH DETERMINISTIC HASH OF PARENT-HASH/VOTE-TYPE
-    uint256 GetTypeHash()
+    uint256 GetTypeHash() const
     {       
         // CALCULATE HOW TO STORE VOTE IN governance.mapVotes
 

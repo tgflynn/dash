@@ -22,10 +22,10 @@ static const int GETHEADERS_VERSION = 70077;
 static const int MIN_PEER_PROTO_VERSION = 70103;
 
 //! minimum peer version accepted by DarksendPool
-static const int MIN_POOL_PEER_PROTO_VERSION = 70200;
+static const int MIN_POOL_PEER_PROTO_VERSION = 70201;
 
 //! minimum peer version for masternode budgets
-static const int MSG_GOVERNANCE_PEER_PROTO_VERSION = 70200;
+static const int MSG_GOVERNANCE_PEER_PROTO_VERSION = 70201;
 
 //! minimum peer version for masternode winner broadcasts
 static const int MIN_MNW_PEER_PROTO_VERSION = 70103;
@@ -34,7 +34,7 @@ static const int MIN_MNW_PEER_PROTO_VERSION = 70103;
 // V1 - Last protocol version before update
 // V2 - Newest protocol version
 static const int MIN_MASTERNODE_PAYMENT_PROTO_VERSION_1 = 70103;
-static const int MIN_MASTERNODE_PAYMENT_PROTO_VERSION_2 = 70200;
+static const int MIN_MASTERNODE_PAYMENT_PROTO_VERSION_2 = 70201;
 
 //! nTime field added to CAddress, starting with this version;
 //! if possible, avoid requesting addresses nodes older than this

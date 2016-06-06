@@ -98,13 +98,13 @@ public:
     //void ResetSync();
     //void MarkSynced();
     void Sync(CNode* node, uint256 nProp);
-    void SyncParentObjectByVote(CNode* pfrom, CGovernanceVote& vote);
+    void SyncParentObjectByVote(CNode* pfrom, const CGovernanceVote& vote);
 
     void ProcessMessage(CNode* pfrom, std::string& strCommand, CDataStream& vRecv);
     void NewBlock();
 
     CGovernanceObject *FindGovernanceObject(const std::string &strName);
-    CGovernanceObject *FindGovernanceObject(uint256& nHash);
+    CGovernanceObject *FindGovernanceObject(const uint256& nHash);
     
     std::vector<CGovernanceObject*> GetAllProposals(int64_t nMoreThanTime);
 
@@ -112,8 +112,8 @@ public:
 
     bool IsBudgetPaymentBlock(int nBlockHeight);
     bool AddGovernanceObject (CGovernanceObject& govobj);
-    bool UpdateGovernanceObject(CGovernanceVote& vote, CNode* pfrom, std::string& strError);
-    bool AddOrUpdateVote(CGovernanceVote& vote, std::string& strError);
+    bool UpdateGovernanceObject(const CGovernanceVote& vote, CNode* pfrom, std::string& strError);
+    bool AddOrUpdateVote(const CGovernanceVote& vote, std::string& strError);
     std::string GetRequiredPaymentsString(int nBlockHeight);
     void CleanAndRemove(bool fSignatureCheck);
     void CheckAndRemove();

@@ -106,8 +106,9 @@ void CGovernanceManager::ProcessMessage(CNode* pfrom, std::string& strCommand, C
     LOCK(cs_budget);
 
     // GOVERANCE SYNCING FUNCTIONALITY
+    if (strCommand == NetMsgType::MNGOVERNANCESYNC)
+    {
 
-    if (strCommand == NetMsgType::MNGOVERNANCESYNC) {
         uint256 nProp;
         vRecv >> nProp;
 
@@ -125,11 +126,14 @@ void CGovernanceManager::ProcessMessage(CNode* pfrom, std::string& strCommand, C
         // ask for a specific proposal and it's votes
         Sync(pfrom, nProp);
         LogPrint("mngovernance", "syncing governance objects to our peer at %s\n", pfrom->addr.ToString());
+    
     }
 
     // NEW GOVERNANCE OBJECT
+    else if (strCommand == NetMsgType::MNGOVERNANCEOBJECT)
 
-    if (strCommand == NetMsgType::MNGOVERNANCEOBJECT) {
+    {
+
         CGovernanceObject govobj;
         vRecv >> govobj;
 
@@ -165,11 +169,14 @@ void CGovernanceManager::ProcessMessage(CNode* pfrom, std::string& strCommand, C
         LogPrintf("Governance object - new! - %s\n", govobj.GetHash().ToString());
         //We might have active votes for this proposal that are valid now
         CheckOrphanVotes();
+    
     }
 
     // NEW GOVERNANCE OBJECT VOTE
+    else if (strCommand == NetMsgType::MNGOVERNANCEVOTE)
 
-    if (strCommand == NetMsgType::MNGOVERNANCEVOTE) {
+    {
+
         CGovernanceVote vote;
         vRecv >> vote;
         vote.fValid = true;
@@ -186,13 +193,15 @@ void CGovernanceManager::ProcessMessage(CNode* pfrom, std::string& strCommand, C
             return;
         }
 
-        mapSeenVotes.insert(make_pair(vote.GetHash(), SEEN_OBJECT_IS_VALID));
         if(!vote.IsValid(true)){
             LogPrintf("mngovernance - signature invalid\n");
             if(masternodeSync.IsSynced()) Misbehaving(pfrom->GetId(), 20);
             // it could just be a non-synced masternode
             mnodeman.AskForMN(pfrom, vote.vinMasternode);
+            mapSeenVotes.insert(make_pair(vote.GetHash(), SEEN_OBJECT_ERROR_INVALID));
             return;
+        } else {
+            mapSeenVotes.insert(make_pair(vote.GetHash(), SEEN_OBJECT_IS_VALID));
         }
 
         std::string strError = "";
@@ -299,7 +308,7 @@ CGovernanceObject *CGovernanceManager::FindGovernanceObject(const std::string &s
     return pGovObj;
 }
 
-CGovernanceObject *CGovernanceManager::FindGovernanceObject(uint256& nHash)
+CGovernanceObject *CGovernanceManager::FindGovernanceObject(const uint256& nHash)
 {
     LOCK(cs);
 
@@ -469,7 +478,7 @@ void CGovernanceManager::Sync(CNode* pfrom, uint256 nProp)
     LogPrintf("CGovernanceManager::Sync - sent %d items\n", nInvCount);
 }
 
-void CGovernanceManager::SyncParentObjectByVote(CNode* pfrom, CGovernanceVote& vote)
+void CGovernanceManager::SyncParentObjectByVote(CNode* pfrom, const CGovernanceVote& vote)
 {
     if(!mapAskedForGovernanceObject.count(vote.nParentHash)){
         pfrom->PushMessage(NetMsgType::MNGOVERNANCESYNC, vote.nParentHash);
@@ -477,7 +486,7 @@ void CGovernanceManager::SyncParentObjectByVote(CNode* pfrom, CGovernanceVote& v
     }
 }
 
-bool CGovernanceManager::UpdateGovernanceObject(CGovernanceVote& vote, CNode* pfrom, std::string& strError)
+bool CGovernanceManager::UpdateGovernanceObject(const CGovernanceVote& vote, CNode* pfrom, std::string& strError)
 {
     LOCK(cs);
 
@@ -501,29 +510,30 @@ bool CGovernanceManager::UpdateGovernanceObject(CGovernanceVote& vote, CNode* pf
     return AddOrUpdateVote(vote, strError);
 }
 
-bool CGovernanceManager::AddOrUpdateVote(CGovernanceVote& vote, std::string& strError)
+bool CGovernanceManager::AddOrUpdateVote(const CGovernanceVote& vote, std::string& strError)
 {
     LOCK(cs);
 
     // GET DETERMINISTIC HASH INCLUDING PARENT/TYPE
-    uint256 hash = vote.GetTypeHash();
+    uint256 nTypeHash = vote.GetTypeHash();
+    uint256 nHash = vote.GetHash();
 
-    if(mapVotesByType.count(hash))
+    if(mapVotesByType.count(nTypeHash))
     {
-        if(mapVotesByType[hash].nTime > vote.nTime){
-            strError = strprintf("new vote older than existing vote - %s", vote.GetHash().ToString());
+        if(mapVotesByType[nTypeHash].nTime > vote.nTime){
+            strError = strprintf("new vote older than existing vote - %s", nTypeHash.ToString());
             LogPrint("mngovernance", "CGovernanceObject::AddOrUpdateVote - %s\n", strError);
             return false;
         }
-        if(vote.nTime - mapVotesByType[hash].nTime < GOVERNANCE_UPDATE_MIN){
-            strError = strprintf("time between votes is too soon - %s - %lli", vote.GetHash().ToString(), vote.nTime - mapVotesByType[hash].nTime);
+        if(vote.nTime - mapVotesByType[nTypeHash].nTime < GOVERNANCE_UPDATE_MIN){
+            strError = strprintf("time between votes is too soon - %s - %lli", nTypeHash.ToString(), vote.nTime - mapVotesByType[nHash].nTime);
             LogPrint("mngovernance", "CGovernanceObject::AddOrUpdateVote - %s\n", strError);
             return false;
         }
     }
 
-    mapVotesByType[vote.GetTypeHash()] = vote;
-    mapVotesByHash[vote.GetHash()] = vote;
+    mapVotesByType[nTypeHash] = vote;
+    mapVotesByHash[nHash] = vote;
     return true;
 }
 

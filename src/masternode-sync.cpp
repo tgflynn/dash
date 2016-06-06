@@ -390,14 +390,14 @@ void CMasternodeSync::Process()
                 //     }
                 // }
 
-                // //we'll start rejecting votes if we accidentally get set as synced too soon, this allows plenty of time
-                // if(lastBudgetItem < GetTime() - MASTERNODE_SYNC_TIMEOUT){
-                //     GetNextAsset();
+                //we'll start rejecting votes if we accidentally get set as synced too soon, this allows plenty of time
+                if(lastBudgetItem < GetTime() - MASTERNODE_SYNC_TIMEOUT){
+                    GetNextAsset();
 
-                //     //try to activate our masternode if possible
-                //     activeMasternode.ManageStatus();
-                //     return;
-                // }
+                    //try to activate our masternode if possible
+                    activeMasternode.ManageStatus();
+                    return;
+                }
 
                 // requesting is the last thing we do, incase we needed to move to the next asset and we've requested from each peer already
 
