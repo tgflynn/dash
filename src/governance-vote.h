@@ -76,13 +76,28 @@ public:
         return ret;
     }
 
-    uint256 GetHash(){
+    uint256 GetHash() const
+    {
         CHashWriter ss(SER_GETHASH, PROTOCOL_VERSION);
         ss << vinMasternode;
         ss << nParentHash;
         ss << nVoteSignal;
         ss << nVoteOutcome;
         ss << nTime;
+        return ss.GetHash();
+    }
+
+    // GET HASH WITH DETERMINISTIC HASH OF PARENT-HASH/VOTE-TYPE
+    uint256 GetTypeHash() const
+    {       
+        // CALCULATE HOW TO STORE VOTE IN governance.mapVotes
+
+        CHashWriter ss(SER_GETHASH, PROTOCOL_VERSION);
+        ss << vinMasternode;
+        ss << nParentHash;
+        ss << nVoteSignal;
+        ss << nVoteOutcome;
+        //  -- timeless
         return ss.GetHash();
     }
 
