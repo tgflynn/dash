@@ -5076,11 +5076,9 @@ void static ProcessGetData(CNode* pfrom, const Consensus::Params& consensusParam
                     }
                 }
 
-                if (!pushed && inv.type == MSG_TX)
-                {
+                if (!pushed && inv.type == MSG_TX) {
                     CTransaction tx;
-                    if (mempool.lookup(inv.hash, tx))
-                    {
+                    if (mempool.lookup(inv.hash, tx)) {
                         CDataStream ss(SER_NETWORK, PROTOCOL_VERSION);
                         ss.reserve(1000);
                         ss << tx;
@@ -5125,6 +5123,26 @@ void static ProcessGetData(CNode* pfrom, const Consensus::Params& consensusParam
                         ss.reserve(1000);
                         ss << mnpayments.mapMasternodePayeeVotes[inv.hash];
                         pfrom->PushMessage(NetMsgType::MNWINNER, ss);
+                        pushed = true;
+                    }
+                }
+                if (!pushed && inv.type == MSG_GOVERNANCE_VOTE) {
+                    if(governance.mapVotesByHash.count(inv.hash)) {
+
+                if (!pushed && inv.type == MSG_MASTERNODE_ANNOUNCE) {
+                    if(mnodeman.mapSeenMasternodeBroadcast.count(inv.hash)){
+                        CDataStream ss(SER_NETWORK, PROTOCOL_VERSION);
+                        ss.reserve(1000);
+                        pushed = true;
+                    }
+                }
+
+                if (!pushed && inv.type == MSG_GOVERNANCE_OBJECT) {
+                    if(governance.mapObjects.count(inv.hash)) {
+                        CDataStream ss(SER_NETWORK, PROTOCOL_VERSION);
+                        ss.reserve(1000);
+                        ss << governance.mapObjects[inv.hash];
+                        pfrom->PushMessage(NetMsgType::MNGOVERNANCEOBJECT, ss);
                         pushed = true;
                     }
                 }
@@ -6668,9 +6686,7 @@ bool SendMessages(CNode* pto)
             pto->mapAskFor.erase(pto->mapAskFor.begin());
         }
         if (!vGetData.empty())
-        {
             pto->PushMessage(NetMsgType::GETDATA, vGetData);
-        }
 
     }
     return true;
