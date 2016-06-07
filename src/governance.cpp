@@ -512,9 +512,12 @@ bool CGovernanceManager::AddOrUpdateVote(const CGovernanceVote& vote, std::strin
 {
     LOCK(cs);
 
-    // GET DETERMINISTIC HASH INCLUDING PARENT/TYPE
+    // GET DETERMINISTIC HASH WHICH COLLIDES ON MASTERNODE-VIN/GOVOBJ-HASH/VOTE-SIGNAL
+    
     uint256 nTypeHash = vote.GetTypeHash();
     uint256 nHash = vote.GetHash();
+
+    // LOOK FOR PREVIOUS VOTES BY THIS SPECIFIC MASTERNODE FOR THIS SPECIFIC SIGNAL
 
     if(mapVotesByType.count(nTypeHash)) {
         if(mapVotesByType[nTypeHash].nTime > vote.nTime){
@@ -528,6 +531,8 @@ bool CGovernanceManager::AddOrUpdateVote(const CGovernanceVote& vote, std::strin
             return false;
         }
     }
+
+    // UPDATE TO NEWEST VOTE
 
     mapVotesByType[nTypeHash] = vote;
     mapVotesByHash[nHash] = vote;
