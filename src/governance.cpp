@@ -526,7 +526,7 @@ bool CGovernanceManager::AddOrUpdateVote(const CGovernanceVote& vote, std::strin
             return false;
         }
         if(vote.nTime - mapVotesByType[nTypeHash].nTime < GOVERNANCE_UPDATE_MIN){
-            strError = strprintf("time between votes is too soon - %s - %lli", nTypeHash.ToString(), vote.nTime - mapVotesByType[nHash].nTime);
+            strError = strprintf("time between votes is too soon - %s - %lli", nTypeHash.ToString(), vote.nTime - mapVotesByType[nTypeHash].nTime);
             LogPrint("mngovernance", "CGovernanceObject::AddOrUpdateVote - %s\n", strError);
             return false;
         }
