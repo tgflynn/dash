@@ -4425,8 +4425,7 @@ void static ProcessGetData(CNode* pfrom, const Consensus::Params& consensusParam
                 }
                 // Pruned nodes may have deleted the block, so check whether
                 // it's available before trying to send.
-                if (send && (mi->second->nStatus & BLOCK_HAVE_DATA))
-                {
+                if (send && (mi->second->nStatus & BLOCK_HAVE_DATA)) {
                     // Send block from disk
                     CBlock block;
                     if (!ReadBlockFromDisk(block, (*mi).second, consensusParams))
@@ -4480,11 +4479,9 @@ void static ProcessGetData(CNode* pfrom, const Consensus::Params& consensusParam
                     }
                 }
 
-                if (!pushed && inv.type == MSG_TX)
-                {
+                if (!pushed && inv.type == MSG_TX) {
                     CTransaction tx;
-                    if (mempool.lookup(inv.hash, tx))
-                    {
+                    if (mempool.lookup(inv.hash, tx)) {
                         CDataStream ss(SER_NETWORK, PROTOCOL_VERSION);
                         ss.reserve(1000);
                         ss << tx;
@@ -4493,10 +4490,8 @@ void static ProcessGetData(CNode* pfrom, const Consensus::Params& consensusParam
                     }
                 }
 
-                if (!pushed && inv.type == MSG_TXLOCK_VOTE)
-                {
-                    if(mapTxLockVote.count(inv.hash))
-                    {
+                if (!pushed && inv.type == MSG_TXLOCK_VOTE) {
+                    if(mapTxLockVote.count(inv.hash)) {
                         CDataStream ss(SER_NETWORK, PROTOCOL_VERSION);
                         ss.reserve(1000);
                         ss << mapTxLockVote[inv.hash];
@@ -4505,10 +4500,8 @@ void static ProcessGetData(CNode* pfrom, const Consensus::Params& consensusParam
                     }
                 }
             
-                if (!pushed && inv.type == MSG_TXLOCK_REQUEST)
-                {
-                    if(mapTxLockReq.count(inv.hash))
-                    {
+                if (!pushed && inv.type == MSG_TXLOCK_REQUEST) {
+                    if(mapTxLockReq.count(inv.hash)) {
                         CDataStream ss(SER_NETWORK, PROTOCOL_VERSION);
                         ss.reserve(1000);
                         ss << mapTxLockReq[inv.hash];
@@ -4517,10 +4510,8 @@ void static ProcessGetData(CNode* pfrom, const Consensus::Params& consensusParam
                     }
                 }
             
-                if (!pushed && inv.type == MSG_SPORK)
-                {
-                    if(mapSporks.count(inv.hash))
-                    {
+                if (!pushed && inv.type == MSG_SPORK) {
+                    if(mapSporks.count(inv.hash)) {
                         CDataStream ss(SER_NETWORK, PROTOCOL_VERSION);
                         ss.reserve(1000);
                         ss << mapSporks[inv.hash];
@@ -4529,10 +4520,8 @@ void static ProcessGetData(CNode* pfrom, const Consensus::Params& consensusParam
                     }
                 }
             
-                if (!pushed && inv.type == MSG_MASTERNODE_WINNER)
-                {
-                    if(mnpayments.mapMasternodePayeeVotes.count(inv.hash))
-                    {
+                if (!pushed && inv.type == MSG_MASTERNODE_WINNER) {
+                    if(mnpayments.mapMasternodePayeeVotes.count(inv.hash)) {
                         CDataStream ss(SER_NETWORK, PROTOCOL_VERSION);
                         ss.reserve(1000);
                         ss << mnpayments.mapMasternodePayeeVotes[inv.hash];
@@ -4541,10 +4530,8 @@ void static ProcessGetData(CNode* pfrom, const Consensus::Params& consensusParam
                     }
                 }
             
-                if (!pushed && inv.type == MSG_GOVERNANCE_VOTE)
-                {
-                    if(governance.mapVotesByHash.count(inv.hash))
-                    {
+                if (!pushed && inv.type == MSG_GOVERNANCE_VOTE) {
+                    if(governance.mapVotesByHash.count(inv.hash)) {
                         CDataStream ss(SER_NETWORK, PROTOCOL_VERSION);
                         ss.reserve(1000);
                         ss << governance.mapVotesByHash[inv.hash];
@@ -4553,10 +4540,8 @@ void static ProcessGetData(CNode* pfrom, const Consensus::Params& consensusParam
                     }
                 }
 
-                if (!pushed && inv.type == MSG_GOVERNANCE_OBJECT)
-                {
-                    if(governance.mapObjects.count(inv.hash))
-                    {
+                if (!pushed && inv.type == MSG_GOVERNANCE_OBJECT) {
+                    if(governance.mapObjects.count(inv.hash)) {
                         CDataStream ss(SER_NETWORK, PROTOCOL_VERSION);
                         ss.reserve(1000);
                         ss << governance.mapObjects[inv.hash];
@@ -4575,10 +4560,8 @@ void static ProcessGetData(CNode* pfrom, const Consensus::Params& consensusParam
                     }
                 }
 
-                if (!pushed && inv.type == MSG_MASTERNODE_PING)
-                {
-                    if(mnodeman.mapSeenMasternodePing.count(inv.hash))
-                    {
+                if (!pushed && inv.type == MSG_MASTERNODE_PING) {
+                    if(mnodeman.mapSeenMasternodePing.count(inv.hash)) {
                         CDataStream ss(SER_NETWORK, PROTOCOL_VERSION);
                         ss.reserve(1000);
                         ss << mnodeman.mapSeenMasternodePing[inv.hash];
@@ -4587,10 +4570,8 @@ void static ProcessGetData(CNode* pfrom, const Consensus::Params& consensusParam
                     }
                 }
 
-                if (!pushed && inv.type == MSG_DSTX)
-                {
-                    if(mapDarksendBroadcastTxes.count(inv.hash))
-                    {
+                if (!pushed && inv.type == MSG_DSTX) {
+                    if(mapDarksendBroadcastTxes.count(inv.hash)) {
                         CDataStream ss(SER_NETWORK, PROTOCOL_VERSION);
                         ss.reserve(1000);
                         ss <<
@@ -6119,9 +6100,7 @@ bool SendMessages(CNode* pto)
             pto->mapAskFor.erase(pto->mapAskFor.begin());
         }
         if (!vGetData.empty())
-        {
             pto->PushMessage(NetMsgType::GETDATA, vGetData);
-        }
 
     }
     return true;
