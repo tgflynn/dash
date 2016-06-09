@@ -164,10 +164,7 @@ void CGovernanceManager::ProcessMessage(CNode* pfrom, std::string& strCommand, C
         // UPDATE CACHED VARIABLES FOR THIS OBJECT AND ADD IT TO OUR MANANGED DATA
 
         govobj.UpdateSentinelVariables(pCurrentBlockIndex);
-        if(AddGovernanceObject(govobj))
-        {
-            govobj.Relay();
-        }
+        if(AddGovernanceObject(govobj)) govobj.Relay();
 
         mapSeenGovernanceObjects.insert(make_pair(govobj.GetHash(), SEEN_OBJECT_IS_VALID));
         masternodeSync.AddedBudgetItem(govobj.GetHash());
