@@ -310,6 +310,8 @@ public:
         READWRITE(nTime);
         READWRITE(nFeeTXHash);
         READWRITE(strData);
+
+        // AFTER DESERIALIZATION OCCURS, CACHED VARIABLES MUST BE CALCULATED MANUALLY
     }
 };
 

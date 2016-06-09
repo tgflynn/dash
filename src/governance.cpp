@@ -133,6 +133,9 @@ void CGovernanceManager::ProcessMessage(CNode* pfrom, std::string& strCommand, C
     else if (strCommand == NetMsgType::MNGOVERNANCEOBJECT)
 
     {
+        // MAKE SURE WE HAVE A VALID REFERENCE TO THE TIP BEFORE CONTINUING
+
+        if(!pCurrentBlockIndex) return;
 
         CGovernanceObject govobj;
         vRecv >> govobj;
@@ -157,7 +160,10 @@ void CGovernanceManager::ProcessMessage(CNode* pfrom, std::string& strCommand, C
             LogPrintf("Governance object is invalid - %s\n", strError);
             return;
         }
+        
+        // UPDATE CACHED VARIABLES FOR THIS OBJECT AND ADD IT TO OUR MANANGED DATA
 
+        govobj.UpdateSentinelVariables(pCurrentBlockIndex);
         if(AddGovernanceObject(govobj))
         {
             govobj.Relay();
@@ -254,6 +260,10 @@ void CGovernanceManager::CheckAndRemove()
 {
     LogPrintf("CGovernanceManager::CheckAndRemove \n");
 
+    // DOUBLE CHECK THAT WE HAVE A VALID POINTER TO TIP
+
+    if(!pCurrentBlockIndex) return;
+
     // DELETE OBJECTS WHICH MASTERNODE HAS FLAGGED DELETE=TRUE
 
     std::map<uint256, CGovernanceObject>::iterator it = mapObjects.begin();
@@ -267,8 +277,6 @@ void CGovernanceManager::CheckAndRemove()
     }
 
     // UPDATE CACHING MECHANISMS FOR GOVERNANCE OBJECTS
-
-    if(!pCurrentBlockIndex) return;
 
     std::string strError = "";
 
@@ -563,6 +571,12 @@ CGovernanceObject::CGovernanceObject(uint256 nHashParentIn, int nRevisionIn, std
     strName = strNameIn;
     nTime = nTimeIn;
     nFeeTXHash = nFeeTXHashIn; //fee-tx    
+
+    // caching
+    fCachedFunding = false;
+    fCachedValid = true;
+    fCachedDelete = false;
+    fCachedEndorsed = false;
 }
 
 CGovernanceObject::CGovernanceObject(const CGovernanceObject& other)
@@ -575,6 +589,12 @@ CGovernanceObject::CGovernanceObject(const CGovernanceObject& other)
     nTime = other.nTime;
     nFeeTXHash = other.nFeeTXHash;
     strData = other.strData;
+
+    // caching
+    fCachedFunding = other.fCachedFunding;
+    fCachedValid = other.fCachedValid;
+    fCachedDelete = other.fCachedDelete;
+    fCachedEndorsed = other.fCachedEndorsed;
 }
 
 bool CGovernanceObject::IsValid(const CBlockIndex* pindex, std::string& strError, bool fCheckCollateral)
