@@ -198,11 +198,13 @@ void CMasternode::Check(bool forceCheck)
         || (pubkey2 == activeMasternode.pubKeyMasternode && protocolVersion < PROTOCOL_VERSION)) {
         // remove it from the list
         activeState = MASTERNODE_REMOVE;
+        FlagGovernanceItemsAsDirty();
         return;
     }
 
     if(!IsPingedWithin(MASTERNODE_EXPIRATION_SECONDS)){
         activeState = MASTERNODE_EXPIRED;
+        FlagGovernanceItemsAsDirty();
         return;
     }
 

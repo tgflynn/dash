@@ -135,10 +135,43 @@ public:
     int nLastScanningErrorBlockHeight;
     CMasternodePing lastPing;
 
+    // KEEP TRACK OF GOVERNANCE ITEMS EACH MASTERNODE HAS VOTE UPON FOR RECALCULATION
+    std::map<uint256, int> mapGovernaceObjectsVotedOn;
+
     CMasternode();
     CMasternode(const CMasternode& other);
     CMasternode(const CMasternodeBroadcast& mnb);
 
+    // KEEP TRACK OF EACH GOVERNANCE ITEM INCASE THIS NODE GOES OFFLINE, SO WE CAN RECALC THEIR STATUS
+    void AddGovernanceVote(uint256 nGovernanceObjectHash)
+    {
+        if(mapGovernaceObjectsVotedOn.count(nGovernanceObjectHash))
+        {
+            // INCREMENT ITEM SAYING WE VOTED ON ONE MORE OBJECT
+            mapGovernaceObjectsVotedOn.update(nGovernanceObjectHash, mapGovernaceObjectsVotedOn[nGovernanceObjectHash]+1);
+        } else {
+            mapGovernaceObjectsVotedOn.insert(nGovernanceObjectHash, 1);
+        }
+    }
+
+    // RECALCULATE CACHED STATUS FLAGS FOR ALL AFFECTED OBJECTS
+    void FlagGovernanceItemsAsDirty()
+    {
+
+        std::map<uint256, int>::iterator it = mapGovernaceObjectsVotedOn.begin();
+        while(it != mapGovernaceObjectsVotedOn.end())
+        {   
+            CGovernanceObject* pObj = governance.FindGovernanceObject((*it).first);
+            if(pObj)
+            {
+                // TELL THE SYSTEM THAT WE MUST RECALCULATE THIS OBJECTS STATUS 
+                pObj->fDirtyCache = true;
+            }
+ 
+            ++it;
+        }
+
+    }
 
     void swap(CMasternode& first, CMasternode& second) // nothrow
     {
@@ -163,6 +196,7 @@ public:
         swap(first.nLastDsq, second.nLastDsq);
         swap(first.nScanningErrorCount, second.nScanningErrorCount);
         swap(first.nLastScanningErrorBlockHeight, second.nLastScanningErrorBlockHeight);
+        swap(first.mapGovernaceObjectsVotedOn, second.mapGovernaceObjectsVotedOn);
     }
 
     CMasternode& operator=(CMasternode from)
@@ -203,6 +237,7 @@ public:
             READWRITE(nLastDsq);
             READWRITE(nScanningErrorCount);
             READWRITE(nLastScanningErrorBlockHeight);
+            READWRITE(mapGovernaceObjectsVotedOn);
     }
 
     int64_t SecondsSincePayment();
