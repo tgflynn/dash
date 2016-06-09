@@ -221,6 +221,7 @@ void CGovernanceManager::ProcessMessage(CNode* pfrom, std::string& strCommand, C
         if(UpdateGovernanceObject(vote, pfrom, strError)) {
             vote.Relay();
             masternodeSync.AddedBudgetItem(vote.GetHash());
+            pmn->AddGovernanceVote(vote.GetParentHash());
         }
 
         LogPrint("mngovernance", "new vote - %s\n", vote.GetHash().ToString());
@@ -277,6 +278,9 @@ void CGovernanceManager::CheckAndRemove()
     while(it != mapObjects.end())
     {   
         CGovernanceObject* pObj = &((*it).second);
+
+        // IF CACHE IS NOT DIRTY, WHY DO THIS?
+        if(!fDirtyCache) {++it; continue;}
 
         // UPDATE LOCAL VALIDITY AGAINST CRYPTO DATA
         pObj->UpdateLocalValidity(pCurrentBlockIndex);
@@ -372,8 +376,9 @@ void CGovernanceManager::NewBlock()
     // todo - 12.1 - add govobj sync
     if (masternodeSync.RequestedMasternodeAssets <= MASTERNODE_SYNC_GOVERNANCE) return;
 
+    // -- OLD WAY
     //this function should be called 1/6 blocks, allowing up to 100 votes per day on all proposals
-    if(pCurrentBlockIndex->nHeight % 6 != 0) return;
+    // if(pCurrentBlockIndex->nHeight % 60 != 0) return;
 
     // description: incremental sync with our peers
     // note: incremental syncing seems excessive, well just have clients ask for specific objects and their votes
@@ -568,7 +573,7 @@ CGovernanceObject::CGovernanceObject()
     fCachedValid = true;
     fCachedDelete = false;
     fCachedEndorsed = false;
-    //fDirtyCache = true;
+    fDirtyCache = true;
 }
 
 CGovernanceObject::CGovernanceObject(uint256 nHashParentIn, int nRevisionIn, std::string strNameIn, int64_t nTimeIn, uint256 nFeeTXHashIn)
@@ -584,7 +589,7 @@ CGovernanceObject::CGovernanceObject(uint256 nHashParentIn, int nRevisionIn, std
     fCachedValid = true;
     fCachedDelete = false;
     fCachedEndorsed = false;
-    //fDirtyCache = true;
+    fDirtyCache = true;
 }
 
 CGovernanceObject::CGovernanceObject(const CGovernanceObject& other)
@@ -603,7 +608,7 @@ CGovernanceObject::CGovernanceObject(const CGovernanceObject& other)
     fCachedValid = other.fCachedValid;
     fCachedDelete = other.fCachedDelete;
     fCachedEndorsed = other.fCachedEndorsed;
-    //fDirtyCache = other.fDirtyCache;
+    fDirtyCache = other.fDirtyCache;
 }
 
 bool CGovernanceObject::IsValid(const CBlockIndex* pindex, std::string& strError, bool fCheckCollateral)
