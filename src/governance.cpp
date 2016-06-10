@@ -280,7 +280,7 @@ void CGovernanceManager::CheckAndRemove()
         CGovernanceObject* pObj = &((*it).second);
 
         // IF CACHE IS NOT DIRTY, WHY DO THIS?
-        if(!fDirtyCache) {++it; continue;}
+        if(!pObj || !pObj->fDirtyCache) {++it; continue;}
 
         // UPDATE LOCAL VALIDITY AGAINST CRYPTO DATA
         pObj->UpdateLocalValidity(pCurrentBlockIndex);

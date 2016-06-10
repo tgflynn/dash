@@ -198,8 +198,8 @@ public:
 
         // CALCULATE THE MINUMUM VOTE COUNT REQUIRED FOR FULL SIGNAL
 
-        int nAbsYesVoteReq = nMnCount / 10;
-        int nAbsNoVoteReq = nAbsYesVoteReq; //same in absolute value
+        // todo - 12.1 - should be set to `10` after governance vote compression is implemented
+        int nAbsVoteReq = nMnCount / 10;
 
         // SET SENTINEL FLAGS TO FALSE
 
@@ -211,16 +211,15 @@ public:
 
         // SET SENTINEL FLAGS TO TRUE IF MIMIMUM SUPPORT LEVELS ARE REACHED
 
-        // todo - 12.1
-        // if(GetAbsoluteYesCount(VOTE_SIGNAL_FUNDING) >= nAbsYesVoteReq) fCachedFunding = true;
-        // if(GetAbsoluteYesCount(VOTE_SIGNAL_VALID) >= nAbsYesVoteReq) fCachedValid = true;
-        // if(GetAbsoluteYesCount(VOTE_SIGNAL_DELETE) >= nAbsYesVoteReq) fCachedDelete = true;
-        // if(GetAbsoluteYesCount(VOTE_SIGNAL_ENDORSED) >= nAbsYesVoteReq) fCachedEndorsed = true;
+        if(GetAbsoluteYesCount(VOTE_SIGNAL_FUNDING) >= nAbsVoteReq) fCachedFunding = true;
+        if(GetAbsoluteYesCount(VOTE_SIGNAL_VALID) >= nAbsVoteReq) fCachedValid = true;
+        if(GetAbsoluteYesCount(VOTE_SIGNAL_DELETE) >= nAbsVoteReq) fCachedDelete = true;
+        if(GetAbsoluteYesCount(VOTE_SIGNAL_ENDORSED) >= nAbsVoteReq) fCachedEndorsed = true;
 
-        // if(GetAbsoluteNoCount(VOTE_SIGNAL_FUNDING) >= nAbsNoVoteReq) fCachedFunding = false;
-        // if(GetAbsoluteNoCount(VOTE_SIGNAL_VALID) >= nAbsNoVoteReq) fCachedValid = false;
-        // if(GetAbsoluteNoCount(VOTE_SIGNAL_DELETE) >= nAbsNoVoteReq) fCachedDelete = false;
-        // if(GetAbsoluteNoCount(VOTE_SIGNAL_ENDORSED) >= nAbsNoVoteReq) fCachedEndorsed = false;
+        if(GetAbsoluteNoCount(VOTE_SIGNAL_FUNDING) >= nAbsVoteReq) fCachedFunding = false;
+        if(GetAbsoluteNoCount(VOTE_SIGNAL_VALID) >= nAbsVoteReq) fCachedValid = false;
+        if(GetAbsoluteNoCount(VOTE_SIGNAL_DELETE) >= nAbsVoteReq) fCachedDelete = false;
+        if(GetAbsoluteNoCount(VOTE_SIGNAL_ENDORSED) >= nAbsVoteReq) fCachedEndorsed = false;
     }
 
     void swap(CGovernanceObject& first, CGovernanceObject& second) // nothrow
@@ -242,6 +241,7 @@ public:
         swap(first.fCachedValid, second.fCachedValid);
         swap(first.fCachedDelete, second.fCachedDelete);
         swap(first.fCachedEndorsed, second.fCachedEndorsed);
+        swap(first.fDirtyCache, second.fDirtyCache);
     }
 
     bool HasMinimumRequiredSupport();
