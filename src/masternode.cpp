@@ -10,6 +10,7 @@
 #include "masternode-payments.h"
 #include "masternode-sync.h"
 #include "masternodeman.h"
+#include "governance.h"
 #include "util.h"
 #include "sync.h"
 #include "addrman.h"
@@ -826,3 +827,33 @@ void CMasternodePing::Relay()
     CInv inv(MSG_MASTERNODE_PING, GetHash());
     RelayInv(inv);
 }
+
+void CMasternode::AddGovernanceVote(uint256 nGovernanceObjectHash)
+{
+    if(mapGovernaceObjectsVotedOn.count(nGovernanceObjectHash))
+    {
+        mapGovernaceObjectsVotedOn[nGovernanceObjectHash]++;
+    } else {
+        mapGovernaceObjectsVotedOn.insert(make_pair(nGovernanceObjectHash, 1));
+    }
+}
+
+/** 
+*   FLAG GOVERNANCE ITEMS AS DIRTY
+*
+*   - When masternode come and go on the network, we must flag the items they voted on to recalc it's cached flags
+*
+*/
+
+void CMasternode::FlagGovernanceItemsAsDirty()
+{
+    std::map<uint256, int>::iterator it = mapGovernaceObjectsVotedOn.begin();
+    while(it != mapGovernaceObjectsVotedOn.end()){
+        CGovernanceObject *pObj = governance.FindGovernanceObject((*it).first);
+
+        if(pObj) pObj->fDirtyCache = true;
+        ++it;
+    }
+
+}
+

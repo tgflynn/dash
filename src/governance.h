@@ -244,7 +244,6 @@ public:
         swap(first.fDirtyCache, second.fDirtyCache);
     }
 
-    bool HasMinimumRequiredSupport();
     bool IsValid(const CBlockIndex* pindex, std::string& strError, bool fCheckCollateral=true);
 
     std::string GetName() {return strName; }
