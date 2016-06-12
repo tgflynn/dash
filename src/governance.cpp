@@ -115,7 +115,7 @@ void CGovernanceManager::ProcessMessage(CNode* pfrom, std::string& strCommand, C
         if(Params().NetworkIDString() == CBaseChainParams::MAIN){
             if(nProp == uint256()) {
                 if(pfrom->HasFulfilledRequest(NetMsgType::MNGOVERNANCESYNC)) {
-                    LogPrint("mngovernance", "peer already asked me for the list\n");
+                    LogPrint("gobject", "peer already asked me for the list\n");
                     Misbehaving(pfrom->GetId(), 20);
                     return;
                 }
@@ -125,7 +125,7 @@ void CGovernanceManager::ProcessMessage(CNode* pfrom, std::string& strCommand, C
 
         // ask for a specific proposal and it's votes
         Sync(pfrom, nProp);
-        LogPrint("mngovernance", "syncing governance objects to our peer at %s\n", pfrom->addr.ToString());
+        LogPrint("gobject", "syncing governance objects to our peer at %s\n", pfrom->addr.ToString());
     
     }
 
@@ -191,13 +191,13 @@ void CGovernanceManager::ProcessMessage(CNode* pfrom, std::string& strCommand, C
 
         CMasternode* pmn = mnodeman.Find(vote.vinMasternode);
         if(pmn == NULL) {
-            LogPrint("mngovernance", "mngovernance - unknown masternode - vin: %s\n", vote.vinMasternode.ToString());
+            LogPrint("gobject", "gobject - unknown masternode - vin: %s\n", vote.vinMasternode.ToString());
             mnodeman.AskForMN(pfrom, vote.vinMasternode);
             return;
         }
 
         if(!vote.IsValid(true)){
-            LogPrintf("mngovernance - signature invalid\n");
+            LogPrintf("gobject - signature invalid\n");
             if(masternodeSync.IsSynced()) Misbehaving(pfrom->GetId(), 20);
             // it could just be a non-synced masternode
             mnodeman.AskForMN(pfrom, vote.vinMasternode);
@@ -214,7 +214,7 @@ void CGovernanceManager::ProcessMessage(CNode* pfrom, std::string& strCommand, C
             pmn->AddGovernanceVote(vote.GetParentHash());
         }
 
-        LogPrint("mngovernance", "new vote - %s\n", vote.GetHash().ToString());
+        LogPrint("gobject", "new vote - %s\n", vote.GetHash().ToString());
     }
 
 }
@@ -526,12 +526,12 @@ bool CGovernanceManager::AddOrUpdateVote(const CGovernanceVote& vote, std::strin
     if(mapVotesByType.count(nTypeHash)) {
         if(mapVotesByType[nTypeHash].nTime > vote.nTime){
             strError = strprintf("new vote older than existing vote - %s", nTypeHash.ToString());
-            LogPrint("mngovernance", "CGovernanceObject::AddOrUpdateVote - %s\n", strError);
+            LogPrint("gobject", "CGovernanceObject::AddOrUpdateVote - %s\n", strError);
             return false;
         }
         if(vote.nTime - mapVotesByType[nTypeHash].nTime < GOVERNANCE_UPDATE_MIN){
             strError = strprintf("time between votes is too soon - %s - %lli", nTypeHash.ToString(), vote.nTime - mapVotesByType[nTypeHash].nTime);
-            LogPrint("mngovernance", "CGovernanceObject::AddOrUpdateVote - %s\n", strError);
+            LogPrint("gobject", "CGovernanceObject::AddOrUpdateVote - %s\n", strError);
             return false;
         }
     }
@@ -735,7 +735,7 @@ std::string CGovernanceManager::ToString() const
 void CGovernanceManager::UpdatedBlockTip(const CBlockIndex *pindex)
 {
     pCurrentBlockIndex = pindex;
-    LogPrint("mngovernance", "pCurrentBlockIndex->nHeight: %d\n", pCurrentBlockIndex->nHeight);
+    LogPrint("gobject", "pCurrentBlockIndex->nHeight: %d\n", pCurrentBlockIndex->nHeight);
 
     if(!fLiteMode && masternodeSync.RequestedMasternodeAssets > MASTERNODE_SYNC_LIST)
         NewBlock();
