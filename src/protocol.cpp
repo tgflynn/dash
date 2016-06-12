@@ -88,7 +88,8 @@ static const char* ppszTypeName[] =
     NetMsgType::MNPING,
     NetMsgType::DSTX,
     NetMsgType::MNGOVERNANCEOBJECT,
-    NetMsgType::MNGOVERNANCEOBJECTVOTE
+    NetMsgType::MNGOVERNANCEOBJECTVOTE,
+    NetMsgType::GOVERNANCETRIGGER
 };
 
 /** All known message types. Keep this in the same order as the list of
@@ -139,7 +140,8 @@ const static std::string allNetMessageTypes[] = {
     NetMsgType::SYNCSTATUSCOUNT,
     NetMsgType::MNGOVERNANCESYNC,
     NetMsgType::MNGOVERNANCEOBJECT,
-    NetMsgType::MNGOVERNANCEOBJECTVOTE
+    NetMsgType::MNGOVERNANCEOBJECTVOTE,
+    NetMsgType::GOVERNANCETRIGGER
 };
 const static std::vector<std::string> allNetMessageTypesVec(allNetMessageTypes, allNetMessageTypes+ARRAYLEN(allNetMessageTypes));
 
