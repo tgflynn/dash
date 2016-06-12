@@ -58,7 +58,7 @@ int ConvertVoteSignal(std::string strVoteSignal)
     return -1;
 }
 
-UniValue mngovernance(const UniValue& params, bool fHelp)
+UniValue gobject(const UniValue& params, bool fHelp)
 {
     string strCommand;
     if (params.size() >= 1)
@@ -68,7 +68,7 @@ UniValue mngovernance(const UniValue& params, bool fHelp)
         (strCommand != "vote-conf" && strCommand != "vote-alias" && strCommand != "prepare" && strCommand != "submit" &&
          strCommand != "vote" && strCommand != "get" && strCommand != "list" && strCommand != "diff"))
         throw runtime_error(
-                "mngovernance \"command\"...\n"
+                "gobject \"command\"...\n"
                 "Manage proposals\n"
                 "\nAvailable commands:\n"
                 "  prepare            - Prepare proposal by signing and creating tx\n"
@@ -91,13 +91,13 @@ UniValue mngovernance(const UniValue& params, bool fHelp)
 
 
         Command:
-            mngovernance submit 6e622bb41bad1fb18e7f23ae96770aeb33129e18bd9efe790522488e580a0a03 0 1 1464292854 "beer-reimbursement" 5b5b22636f6e7472616374222c207b2270726f6a6563745f6e616d65223a20225c22626565722d7265696d62757273656d656e745c22222c20227061796d656e745f61646472657373223a20225c225879324c4b4a4a64655178657948726e34744744514238626a6876464564615576375c22222c2022656e645f64617465223a202231343936333030343030222c20226465736372697074696f6e5f75726c223a20225c227777772e646173687768616c652e6f72672f702f626565722d7265696d62757273656d656e745c22222c2022636f6e74726163745f75726c223a20225c22626565722d7265696d62757273656d656e742e636f6d2f3030312e7064665c22222c20227061796d656e745f616d6f756e74223a20223233342e323334323232222c2022676f7665726e616e63655f6f626a6563745f6964223a2037342c202273746172745f64617465223a202231343833323534303030227d5d5d1
+            gobject submit 6e622bb41bad1fb18e7f23ae96770aeb33129e18bd9efe790522488e580a0a03 0 1 1464292854 "beer-reimbursement" 5b5b22636f6e7472616374222c207b2270726f6a6563745f6e616d65223a20225c22626565722d7265696d62757273656d656e745c22222c20227061796d656e745f61646472657373223a20225c225879324c4b4a4a64655178657948726e34744744514238626a6876464564615576375c22222c2022656e645f64617465223a202231343936333030343030222c20226465736372697074696f6e5f75726c223a20225c227777772e646173687768616c652e6f72672f702f626565722d7265696d62757273656d656e745c22222c2022636f6e74726163745f75726c223a20225c22626565722d7265696d62757273656d656e742e636f6d2f3030312e7064665c22222c20227061796d656e745f616d6f756e74223a20223233342e323334323232222c2022676f7665726e616e63655f6f626a6563745f6964223a2037342c202273746172745f64617465223a202231343833323534303030227d5d5d1
     */
 
     if(strCommand == "prepare")
     {
         if (params.size() != 6)
-            throw JSONRPCError(RPC_INVALID_PARAMETER, "Correct usage is 'mngovernance prepare <parent-hash> <revision> <time> <name> <registers-hex>'");
+            throw JSONRPCError(RPC_INVALID_PARAMETER, "Correct usage is 'gobject prepare <parent-hash> <revision> <time> <name> <registers-hex>'");
 
         // ASSEMBLE NEW GOVERNANCE OBJECT FROM USER PARAMETERS
 
@@ -147,7 +147,7 @@ UniValue mngovernance(const UniValue& params, bool fHelp)
     if(strCommand == "submit")
     {
         if (params.size() != 7)
-            throw JSONRPCError(RPC_INVALID_PARAMETER, "Correct usage is 'mngovernance submit <fee-tx> <parent-hash> <revision> <time> <name> <registers-hex>'");
+            throw JSONRPCError(RPC_INVALID_PARAMETER, "Correct usage is 'gobject submit <fee-tx> <parent-hash> <revision> <time> <name> <registers-hex>'");
 
         if(!masternodeSync.IsBlockchainSynced()) {
             throw JSONRPCError(RPC_CLIENT_IN_INITIAL_DOWNLOAD, "Must wait for client to sync with masternode network. Try again in a minute or so.");
@@ -279,7 +279,7 @@ UniValue mngovernance(const UniValue& params, bool fHelp)
     if(strCommand == "vote-alias")
     {
         if(params.size() != 5)
-            throw JSONRPCError(RPC_INVALID_PARAMETER, "Correct usage is 'mngovernance vote-alias <governance-hash> [funding|valid|delete] [yes|no|abstain] <alias-name>'");
+            throw JSONRPCError(RPC_INVALID_PARAMETER, "Correct usage is 'gobject vote-alias <governance-hash> [funding|valid|delete] [yes|no|abstain] <alias-name>'");
 
         uint256 hash;
         std::string strVote;
@@ -372,7 +372,7 @@ UniValue mngovernance(const UniValue& params, bool fHelp)
     if(strCommand == "list" || strCommand == "diff")
     {
         if (params.size() > 2)
-            throw JSONRPCError(RPC_INVALID_PARAMETER, "Correct usage is 'mngovernance list [valid]'");
+            throw JSONRPCError(RPC_INVALID_PARAMETER, "Correct usage is 'gobject list [valid]'");
 
         std::string strShow = "valid";
         if (params.size() == 2) strShow = params[1].get_str();
@@ -424,7 +424,7 @@ UniValue mngovernance(const UniValue& params, bool fHelp)
     if(strCommand == "getproposal")
     {
         if (params.size() != 2)
-            throw JSONRPCError(RPC_INVALID_PARAMETER, "Correct usage is 'mngovernance getproposal <proposal-hash>'");
+            throw JSONRPCError(RPC_INVALID_PARAMETER, "Correct usage is 'gobject getproposal <proposal-hash>'");
 
         uint256 hash = ParseHashV(params[1], "Proposal hash");
 
@@ -460,7 +460,7 @@ UniValue mngovernance(const UniValue& params, bool fHelp)
     {
         if (params.size() != 3)
             throw runtime_error(
-                "Correct usage is 'mngovernance getvotes <governance-hash> <vote-outcome>'"
+                "Correct usage is 'gobject getvotes <governance-hash> <vote-outcome>'"
                 );
 
         uint256 hash = ParseHashV(params[1], "Governance hash");
