@@ -92,11 +92,6 @@ public:
 
     int sizeProposals() {return (int)mapObjects.size();}
 
-    // description: incremental sync with our peers
-    // note: incremental syncing seems excessive, well just have clients ask for specific objects and their votes
-    // note: 12.1 - remove
-    //void ResetSync();
-    //void MarkSynced();
     void Sync(CNode* node, uint256 nProp);
     void SyncParentObjectByVote(CNode* pfrom, const CGovernanceVote& vote);
 
@@ -122,7 +117,7 @@ public:
     void Clear(){
         LOCK(cs);
 
-        LogPrintf("Governance object manager was cleared\n");
+        LogPrintf("mngovernance", "Governance object manager was cleared\n");
         mapObjects.clear();
         mapSeenGovernanceObjects.clear();
         mapSeenVotes.clear();
