@@ -16,6 +16,8 @@
 #include "masternodeman.h"
 #include <boost/lexical_cast.hpp>
 #include "init.h"
+#include <univalue.h>
+#include "utilstrencodings.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -311,7 +313,7 @@ public:
         UniValue u(UniValue::VOBJ);
         u.read(s);
 
-        return u.write().c_str();
+        return u;
     }
 
     ADD_SERIALIZE_METHODS;
