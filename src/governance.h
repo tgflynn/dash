@@ -273,7 +273,8 @@ public:
     *   SetData - Example usage:
     *   --------------------------------------------------------
     * 
-    *   Governance is data-agnostic, for rules about data see sentinel documentation
+    *   Data must be stored as an encoded hex/json string.
+    *   Other than the above requirement gov objects are data-agnostic.
     *    
     */
 
@@ -290,6 +291,27 @@ public:
 
         strData = strDataIn;
         return true;
+    }
+
+    /**
+    *   GetData - Example usage:
+    *   --------------------------------------------------------
+    * 
+    *   Decode governance object data into UniValue(VOBJ)
+    *    
+    */
+
+    UniValue GetData()
+    {
+        // NOTE : IS THIS SAFE? 
+
+        vector<unsigned char> v = ParseHex(strData);
+        string s(v.begin(), v.end());
+
+        UniValue u(UniValue::VOBJ);
+        u.read(s);
+
+        return u.write().c_str();
     }
 
     ADD_SERIALIZE_METHODS;

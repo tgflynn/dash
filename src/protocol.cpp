@@ -82,8 +82,7 @@ static const char* ppszTypeName[] =
     NetMsgType::MNQUORUM, // not implemented
     NetMsgType::MNANNOUNCE,
     NetMsgType::MNPING,
-    NetMsgType::DSTX,
-    NetMsgType::GOVERNANCETRIGGER
+    NetMsgType::DSTX
 };
 
 /** All known message types. Keep this in the same order as the list of
@@ -135,8 +134,7 @@ const static std::string allNetMessageTypes[] = {
     NetMsgType::DSTX,
     NetMsgType::DSQUEUE,
     NetMsgType::DSEG,
-    NetMsgType::SYNCSTATUSCOUNT,
-    NetMsgType::GOVERNANCETRIGGER
+    NetMsgType::SYNCSTATUSCOUNT
 };
 const static std::vector<std::string> allNetMessageTypesVec(allNetMessageTypes, allNetMessageTypes+ARRAYLEN(allNetMessageTypes));
 
