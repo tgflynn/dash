@@ -17,6 +17,7 @@
 #include "util.h"
 #include "addrman.h"
 #include <boost/lexical_cast.hpp>
+#include <univalue.h>
 
 class CNode;
 

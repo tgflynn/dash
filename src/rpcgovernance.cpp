@@ -18,7 +18,6 @@
 #include <boost/lexical_cast.hpp>
 
 #include <fstream>
-#include <univalue.h>
 #include <iostream>
 #include <sstream>
 
