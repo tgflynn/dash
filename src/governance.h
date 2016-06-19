@@ -23,6 +23,10 @@
 #include <string.h>
 
 using namespace std;
+
+#define GOVERNANCE_OBJECT_PROPOSAL          1
+#define GOVERNANCE_OBJECT_TRIGGER           2
+
 extern CCriticalSection cs_budget;
 
 class CGovernanceManager;
@@ -103,7 +107,7 @@ public:
     CGovernanceObject *FindGovernanceObject(const std::string &strName);
     CGovernanceObject *FindGovernanceObject(const uint256& nHash);
     
-    std::vector<CGovernanceObject*> GetAllProposals(int64_t nMoreThanTime);
+    std::vector<CGovernanceObject*> GetAllNewerThan(int64_t nMoreThanTime);
 
     int CountMatchingVotes(CGovernanceObject& govobj, int nVoteSignalIn, int nVoteOutcomeIn);
 
@@ -147,8 +151,7 @@ public:
 };
 
 /**
-* Generic Governance Object
-*
+* Governance Object
 *
 */
 
@@ -165,87 +168,38 @@ public:
     int nRevision; //object revision in the system
     std::string strName; //org name, username, prop name, etc. 
     int64_t nTime; //time this object was created
-    uint256 nFeeTXHash; //fee-tx
+    uint256 nCollateralHash; //fee-tx
     std::string strData; // Data field - can be used for anything
+    int nObjectType;
 
-    // set by IsValid()
-    bool fCachedLocalValidity;
+    bool fCachedLocalValidity; // is valid by blockchain 
     std::string strLocalValidityError;
 
-    // set via sentinel voting mechanisms
-    // caching -- one per voting mechanism -- see below for more information
+    // VARIOUS FLAGS FOR OBJECT / SET VIA MASTERNODE VOTING
+
     bool fCachedFunding; // true == minimum network support has been reached for this object to be funded (doesn't mean it will for sure though)
     bool fCachedValid; // true == minimum network has been reached flagging this object as a valid and understood goverance object (e.g, the serialized data is correct format, etc)
     bool fCachedDelete; // true == minimum network support has been reached saying this object should be deleted from the system entirely
     bool fCachedEndorsed; // true == minimum network support has been reached flagging this object as endorsed by an elected representative body (e.g. business review board / technecial review board /etc)
     bool fDirtyCache; // object was updated and cached values should be updated soon
+    bool fUnparsable; // data field was unparsible, object will be rejected
 
     CGovernanceObject();
-    CGovernanceObject(uint256 nHashParentIn, int nRevisionIn, std::string strNameIn, int64_t nTime, uint256 nFeeTXHashIn);
+    CGovernanceObject(uint256 nHashParentIn, int nRevisionIn, std::string strNameIn, int64_t nTime, uint256 nCollateralHashIn, std::string strDataIn);
     CGovernanceObject(const CGovernanceObject& other);
+    void swap(CGovernanceObject& first, CGovernanceObject& second); // nothrow
 
     // Update local validity : store the values in memory
-    void UpdateLocalValidity(const CBlockIndex *pCurrentBlockIndex) {fCachedLocalValidity = IsValid(pCurrentBlockIndex, strLocalValidityError);};
-    void UpdateSentinelVariables(const CBlockIndex *pCurrentBlockIndex)
-    {
-        // CALCULATE MINIMUM SUPPORT LEVELS REQUIRED
+    bool IsValidLocally(const CBlockIndex* pindex, std::string& strError, bool fCheckCollateral=true);
+    void UpdateLocalValidity(const CBlockIndex *pCurrentBlockIndex) {fCachedLocalValidity = IsValidLocally(pCurrentBlockIndex, strLocalValidityError);};
+    void UpdateSentinelVariables(const CBlockIndex *pCurrentBlockIndex);
 
-        int nMnCount = mnodeman.CountEnabled();
-        if(nMnCount == 0) return;
-
-        // CALCULATE THE MINUMUM VOTE COUNT REQUIRED FOR FULL SIGNAL
-
-        // todo - 12.1 - should be set to `10` after governance vote compression is implemented
-        int nAbsVoteReq = nMnCount / 10;
-
-        // SET SENTINEL FLAGS TO FALSE
-
-        fCachedFunding = false;
-        fCachedValid = true; //default to valid
-        fCachedDelete = false;
-        fCachedEndorsed = false;
-        fDirtyCache = false;
-
-        // SET SENTINEL FLAGS TO TRUE IF MIMIMUM SUPPORT LEVELS ARE REACHED
-
-        if(GetAbsoluteYesCount(VOTE_SIGNAL_FUNDING) >= nAbsVoteReq) fCachedFunding = true;
-        if(GetAbsoluteYesCount(VOTE_SIGNAL_VALID) >= nAbsVoteReq) fCachedValid = true;
-        if(GetAbsoluteYesCount(VOTE_SIGNAL_DELETE) >= nAbsVoteReq) fCachedDelete = true;
-        if(GetAbsoluteYesCount(VOTE_SIGNAL_ENDORSED) >= nAbsVoteReq) fCachedEndorsed = true;
-
-        if(GetAbsoluteNoCount(VOTE_SIGNAL_FUNDING) >= nAbsVoteReq) fCachedFunding = false;
-        if(GetAbsoluteNoCount(VOTE_SIGNAL_VALID) >= nAbsVoteReq) fCachedValid = false;
-        if(GetAbsoluteNoCount(VOTE_SIGNAL_DELETE) >= nAbsVoteReq) fCachedDelete = false;
-        if(GetAbsoluteNoCount(VOTE_SIGNAL_ENDORSED) >= nAbsVoteReq) fCachedEndorsed = false;
-    }
-
-    void swap(CGovernanceObject& first, CGovernanceObject& second) // nothrow
-    {
-        // enable ADL (not necessary in our case, but good practice)
-        using std::swap;
-
-        // by swapping the members of two classes,
-        // the two classes are effectively swapped
-        swap(first.strName, second.strName);
-        swap(first.nHashParent, second.nHashParent);
-        swap(first.nRevision, second.nRevision);
-        swap(first.nTime, second.nTime);
-        swap(first.nFeeTXHash, second.nFeeTXHash);
-        swap(first.strData, second.strData);     
-
-        // swap all cached valid flags
-        swap(first.fCachedFunding, second.fCachedFunding);
-        swap(first.fCachedValid, second.fCachedValid);
-        swap(first.fCachedDelete, second.fCachedDelete);
-        swap(first.fCachedEndorsed, second.fCachedEndorsed);
-        swap(first.fDirtyCache, second.fDirtyCache);
-    }
-
-    bool IsValid(const CBlockIndex* pindex, std::string& strError, bool fCheckCollateral=true);
-
+    int GetObjectType();
+    int GetObjectSubtype();
     std::string GetName() {return strName; }
 
-    // get vote counts on each outcome
+    // GET VOTE COUNT FOR SIGNAL
+
     int GetAbsoluteYesCount(int nVoteSignalIn);
     int GetAbsoluteNoCount(int nVoteSignalIn);
     int GetYesCount(int nVoteSignalIn);
@@ -255,66 +209,15 @@ public:
     void CleanAndRemove(bool fSignatureCheck);
     void Relay();
 
-    uint256 GetHash(){
+    uint256 GetHash();
 
-        // CREATE HASH OF ALL IMPORTANT PIECES OF DATA
+    // FUNCTIONS FOR DEALING WITH DATA STRING 
 
-        CHashWriter ss(SER_GETHASH, PROTOCOL_VERSION);
-        ss << nHashParent;
-        ss << nRevision;
-        ss << strName;
-        ss << nTime;
-        ss << strData;
-        // fee_tx is left out on purpose
-        uint256 h1 = ss.GetHash();
-
-        return h1;
-    }
-
-    /**
-    *   SetData - Example usage:
-    *   --------------------------------------------------------
-    * 
-    *   Data must be stored as an encoded hex/json string.
-    *   Other than the above requirement gov objects are data-agnostic.
-    *    
-    */
-
-    bool SetData(std::string& strError, std::string strDataIn)
-    {
-        // SET DATA FIELD TO INPUT
-
-        if(strDataIn.size() > 512*4)
-        {
-            // (assumption) this is equal to pythons len(strData) > 512*4, I think 
-            strError = "Too big.";
-            return false;
-        }
-
-        strData = strDataIn;
-        return true;
-    }
-
-    /**
-    *   GetData - Example usage:
-    *   --------------------------------------------------------
-    * 
-    *   Decode governance object data into UniValue(VOBJ)
-    *    
-    */
-
-    UniValue GetData()
-    {
-        // NOTE : IS THIS SAFE? 
-
-        vector<unsigned char> v = ParseHex(strData);
-        string s(v.begin(), v.end());
-
-        UniValue u(UniValue::VOBJ);
-        u.read(s);
-
-        return u;
-    }
+    void LoadData();
+    bool SetData(std::string& strError, std::string strDataIn);
+    bool GetData(UniValue& objResult);
+    std::string GetDataAsHex();
+    std::string GetDataAsString();
 
     ADD_SERIALIZE_METHODS;
 
@@ -327,7 +230,7 @@ public:
         READWRITE(nRevision);
         READWRITE(LIMITED_STRING(strName, 64));
         READWRITE(nTime);
-        READWRITE(nFeeTXHash);
+        READWRITE(nCollateralHash);
         READWRITE(strData);
 
         // AFTER DESERIALIZATION OCCURS, CACHED VARIABLES MUST BE CALCULATED MANUALLY

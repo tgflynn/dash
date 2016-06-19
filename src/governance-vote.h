@@ -121,7 +121,7 @@ public:
         return ss.GetHash();
     }
 
-    uint256 GetParentHash(){
+    uint256 GetParentHash() const {
         return nParentHash;
     }
 
