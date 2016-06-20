@@ -440,8 +440,8 @@ UniValue gobject(const UniValue& params, bool fHelp)
 
         // -- 
         std::string strError = "";
-        objResult.push_back(Pair("fBlockchainValidity",  pGovObj->IsValidLocally(chainActive.Tip(), strError)));
-        objResult.push_back(Pair("fValid",  pGovObj->fCachedValid));
+        objResult.push_back(Pair("fLocalValidity",  pGovObj->IsValidLocally(chainActive.Tip(), strError)));
+        objResult.push_back(Pair("fCachedValid",  pGovObj->fCachedValid));
 
         return objResult;
     }
