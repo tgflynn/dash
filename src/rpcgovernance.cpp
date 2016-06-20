@@ -23,40 +23,6 @@
 
 using namespace std;
 
-int ConvertVoteOutcome(std::string strVoteOutcome)
-{
-    int nVote = -1;
-    if(strVoteOutcome == "yes") nVote = VOTE_OUTCOME_YES;
-    if(strVoteOutcome == "no") nVote = VOTE_OUTCOME_NO;
-    if(strVoteOutcome == "abstain") nVote = VOTE_OUTCOME_ABSTAIN;
-    if(strVoteOutcome == "none") nVote = VOTE_OUTCOME_NONE;
-    return nVote;
-}
-
-int ConvertVoteSignal(std::string strVoteSignal)
-{
-    if(strVoteSignal == "none") return 0;
-    if(strVoteSignal == "funding") return 1;
-    if(strVoteSignal == "valid") return 2;
-    if(strVoteSignal == "delete") return 3;
-    if(strVoteSignal == "endorsed") return 4;
-
-    // ID FIVE THROUGH CUSTOM_START ARE TO BE USED BY GOVERNANCE ENGINE / TRIGGER SYSTEM
-
-    // convert custom sentinel outcomes to integer and store
-    try {
-        int  i = boost::lexical_cast<int>(strVoteSignal);
-        if(i < VOTE_SIGNAL_CUSTOM_START || i > VOTE_SIGNAL_CUSTOM_END) return -1;
-        return i;
-    }
-    catch(std::exception const & e)
-    {
-         cout<<"error : " << e.what() <<endl;
-    }
-
-    return -1;
-}
-
 UniValue gobject(const UniValue& params, bool fHelp)
 {
     string strCommand;
@@ -81,16 +47,9 @@ UniValue gobject(const UniValue& params, bool fHelp)
     
 
     /*
-        12.1 todo - 
-
-
-        Example Governance Item
-            - This should be valid for anyone to submit
-            - This should propagate and show up when syncing
-
-
-        Command:
-            gobject submit 6e622bb41bad1fb18e7f23ae96770aeb33129e18bd9efe790522488e580a0a03 0 1 1464292854 "beer-reimbursement" 5b5b22636f6e7472616374222c207b2270726f6a6563745f6e616d65223a20225c22626565722d7265696d62757273656d656e745c22222c20227061796d656e745f61646472657373223a20225c225879324c4b4a4a64655178657948726e34744744514238626a6876464564615576375c22222c2022656e645f64617465223a202231343936333030343030222c20226465736372697074696f6e5f75726c223a20225c227777772e646173687768616c652e6f72672f702f626565722d7265696d62757273656d656e745c22222c2022636f6e74726163745f75726c223a20225c22626565722d7265696d62757273656d656e742e636f6d2f3030312e7064665c22222c20227061796d656e745f616d6f756e74223a20223233342e323334323232222c2022676f7665726e616e63655f6f626a6563745f6964223a2037342c202273746172745f64617465223a202231343833323534303030227d5d5d1
+        ------ Example Governance Item ------ 
+        
+        gobject submit 6e622bb41bad1fb18e7f23ae96770aeb33129e18bd9efe790522488e580a0a03 0 1 1464292854 "beer-reimbursement" 5b5b22636f6e7472616374222c207b2270726f6a6563745f6e616d65223a20225c22626565722d7265696d62757273656d656e745c22222c20227061796d656e745f61646472657373223a20225c225879324c4b4a4a64655178657948726e34744744514238626a6876464564615576375c22222c2022656e645f64617465223a202231343936333030343030222c20226465736372697074696f6e5f75726c223a20225c227777772e646173687768616c652e6f72672f702f626565722d7265696d62757273656d656e745c22222c2022636f6e74726163745f75726c223a20225c22626565722d7265696d62757273656d656e742e636f6d2f3030312e7064665c22222c20227061796d656e745f616d6f756e74223a20223233342e323334323232222c2022676f7665726e616e63655f6f626a6563745f6964223a2037342c202273746172745f64617465223a202231343833323534303030227d5d5d1
     */
 
     // DEBUG : TEST DESERIALIZATION OF GOVERNANCE META DATA
@@ -313,11 +272,11 @@ UniValue gobject(const UniValue& params, bool fHelp)
        
         // CONVERT NAMED SIGNAL/ACTION AND CONVERT
 
-        int nVoteSignal = ConvertVoteSignal(strVoteAction);
+        int nVoteSignal = CGovernanceVoting::ConvertVoteSignal(strVoteAction);
         if(nVoteSignal == VOTE_SIGNAL_NONE || nVoteSignal == -1)
             throw JSONRPCError(RPC_INVALID_PARAMETER, "Invalid vote signal. Please use one of the following: 'yes', 'no' or 'abstain'");
 
-        int nVoteOutcome = ConvertVoteOutcome(strVoteOutcome);
+        int nVoteOutcome = CGovernanceVoting::ConvertVoteOutcome(strVoteOutcome);
         if(nVoteOutcome == VOTE_OUTCOME_NONE || nVoteOutcome == -1)
             throw JSONRPCError(RPC_INVALID_PARAMETER, "Invalid vote outcome. Please using one of the following: (funding|valid|delete|clear_registers|endorsed|release_bounty1|release_bounty2|release_bounty3) OR `custom sentinel code` "); 
 
@@ -462,6 +421,7 @@ UniValue gobject(const UniValue& params, bool fHelp)
         return objResult;
     }
 
+    // GET SPECIFIC GOVERNANCE ENTRY
     if(strCommand == "get")
     {
         if (params.size() != 2)
@@ -544,7 +504,7 @@ UniValue gobject(const UniValue& params, bool fHelp)
 
         uint256 hash = ParseHashV(params[1], "Governance hash");
         std::string strVoteSignal = params[2].get_str();
-        int nVoteSignal = ConvertVoteSignal(strVoteSignal);
+        int nVoteSignal = CGovernanceVoting::ConvertVoteSignal(strVoteSignal);
         if(nVoteSignal == -1)
         {
             throw JSONRPCError(RPC_INVALID_PARAMETER, "Invalid vote signal, invalid name. Please using one of the following: (funding|valid|delete|clear_registers|endorsed|release_bounty1|release_bounty2|release_bounty3) OR `custom sentinel code` "); 
@@ -559,12 +519,16 @@ UniValue gobject(const UniValue& params, bool fHelp)
 
         // REPORT RESULTS TO USER
 
-        UniValue bObj(UniValue::VOBJ);
+        UniValue bResult(UniValue::VOBJ);
        
         // 12.1 - get all votes and return to user
         //   
 
-        return bObj;
+        std::vector<CGovernanceVote*> vecVotes = governance.GetMatchingVotes(hash);
+        BOOST_FOREACH(CGovernanceVote* pVote, vecVotes)
+            bResult.push_back(Pair(pVote->GetHash().ToString(),  pVote->ToString()));
+
+        return bResult;
     }
 
     return NullUniValue;
@@ -586,11 +550,11 @@ UniValue voteraw(const UniValue& params, bool fHelp)
     std::string strVoteOutcome = params[3].get_str();
     std::string strVoteSignal = params[4].get_str();
 
-    int nVoteSignal = ConvertVoteSignal(strVoteSignal);
+    int nVoteSignal = CGovernanceVoting::ConvertVoteSignal(strVoteSignal);
     if(nVoteSignal == VOTE_OUTCOME_NONE || nVoteSignal == -1)
         throw JSONRPCError(RPC_INVALID_PARAMETER, "Invalid vote signal. Please use one of the following: 'yes', 'no' or 'abstain'");
 
-    int nVoteOutcome = ConvertVoteOutcome(strVoteOutcome);
+    int nVoteOutcome = CGovernanceVoting::ConvertVoteOutcome(strVoteOutcome);
     if(nVoteOutcome == VOTE_OUTCOME_NONE || nVoteOutcome == -1)
         throw JSONRPCError(RPC_INVALID_PARAMETER, "Invalid vote action. Please using one of the following: (funding|valid|delete|clear_registers|endorsed|release_bounty1|release_bounty2|release_bounty3) OR `custom sentinel code` "); 
 

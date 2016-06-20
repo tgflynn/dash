@@ -364,6 +364,24 @@ CGovernanceObject *CGovernanceManager::FindGovernanceObject(const uint256& nHash
     return NULL;
 }
 
+std::vector<CGovernanceVote*> CGovernanceManager::GetMatchingVotes(const uint256& nParentHash)
+{
+    std::vector<CGovernanceVote*> vecResult;
+
+    // LOOP THROUGH ALL VOTES AND FIND THOSE MATCHING USER HASH
+
+    std::map<uint256, CGovernanceVote>::iterator it2 = mapVotesByHash.begin();
+    while(it2 != mapVotesByHash.end()){
+        if((*it2).second.GetParentHash() == nParentHash)
+        {
+            vecResult.push_back(&(*it2).second);
+        }
+        *it2++;
+    }
+
+    return vecResult;
+}
+
 std::vector<CGovernanceObject*> CGovernanceManager::GetAllNewerThan(int64_t nMoreThanTime)
 {
     LOCK(cs);
@@ -587,9 +605,10 @@ bool CGovernanceManager::AddOrUpdateVote(const CGovernanceVote& vote, std::strin
     }
 
     // UPDATE TO NEWEST VOTE
-
-    mapVotesByType[nTypeHash] = vote;
-    mapVotesByHash[nHash] = vote;
+    {
+        mapVotesByType[nTypeHash] = vote;
+        mapVotesByHash[nHash] = vote;   
+    }
 
     // SET CACHE AS DIRTY / WILL BE UPDATED NEXT BLOCK
 
