@@ -12,17 +12,10 @@
 #include "consensus/merkle.h"
 #include "consensus/validation.h"
 
-// 12.1 - which are required?
-//#include "flat-database.h"
 #include "governance.h"
 #include "governance-classes.h"
 #include "masternode.h"
 #include "governance.h"
-#include "darksend.h"
-#include "masternodeman.h"
-//#include "masternode-sync.h"
-#include "util.h"
-#include "addrman.h"
 #include <boost/lexical_cast.hpp>
 #include <univalue.h>
 
@@ -70,7 +63,11 @@ bool CGovernanceTriggerManager::AddNewTrigger(uint256 nHash)
 {
     if(!mapTrigger.count(nHash))
     {
-        if(IsValidTrigger(nHash))
+
+        CGovernanceObject* pObj = governance.FindGovernanceObject(nHash);
+
+        // IF THIS ISN'T A TRIGGER, WHY ARE WE HERE?
+        if(pObj->GetObjectType() != GOVERNANCE_OBJECT_TRIGGER)
         {
             mapTrigger.insert(make_pair(nHash, SEEN_OBJECT_IS_VALID));
             return true;
@@ -78,39 +75,6 @@ bool CGovernanceTriggerManager::AddNewTrigger(uint256 nHash)
     }
 
     return false;
-}
-
-/**
-*   Is Valid Trigger
-*/
-
-bool CGovernanceTriggerManager::IsValidTrigger(uint256 nHash)
-{
-    CGovernanceObject* pObj = governance.FindGovernanceObject(nHash);
-
-    if(pObj)
-    {
-        // IF THIS ISN'T A TRIGGER, WHY ARE WE HERE?
-        if(pObj->GetObjectType() != GOVERNANCE_OBJECT_TRIGGER) return false;
-
-        // CHECK TRIGGER SUBTYPES, DO PER-TYPE EVALUATION
-
-        if(pObj->GetObjectSubtype() == TRIGGER_SUPERBLOCK)
-        {
-            CSuperblock t(pObj);
-            if(t.IsExecuted()) return false;
-        }
-
-        /*
-            IS IT ACTIVATED?
-            - this shouldn't be important, because votes can change over time
-        */
-    } else {
-        // it's gone...
-        return false;
-    }
-
-    return true;
 }
 
 /**
@@ -125,14 +89,55 @@ void CGovernanceTriggerManager::CleanAndRemove()
     std::map<uint256, int>::iterator it1 = mapTrigger.begin();
     while(it1 != mapTrigger.end())
     {
-        bool fErase = IsValidTrigger((*it1).first);
+        int nNewStatus = -1;
+        CGovernanceObject* pObj = governance.FindGovernanceObject((*it1).first);
 
-        if(fErase)
+        // IF THIS ISN'T A TRIGGER, WHY ARE WE HERE?
+        if(pObj->GetObjectType() != GOVERNANCE_OBJECT_TRIGGER)
         {
-            mapTrigger.erase(it1++);
-        } else {
+            UpdateStatus((*it1).first, SEEN_OBJECT_ERROR_INVALID);
             it1++;
+            continue;
         }
+
+        it1++;
+    }
+}
+
+/**
+*
+*   Update Status
+*
+*/
+
+bool CGovernanceTriggerManager::UpdateStatus(uint256 nHash, int nNewStatus)
+{
+
+    if(mapTrigger.count(nHash))
+    {
+        mapTrigger[nHash] = nNewStatus;
+        return true;
+    } else {
+        LogPrintf("CGovernanceTriggerManager::UpdateStatus - nHash %s nNewStatus %d\n", nHash.ToString(), nNewStatus);
+        return false;
+    }
+}
+
+/**
+*
+*   Get Status
+*
+*/
+
+int CGovernanceTriggerManager::GetStatus(uint256 nHash)
+{
+
+    if(mapTrigger.count(nHash))
+    {
+        return mapTrigger[nHash];
+    } else {
+        LogPrintf("CGovernanceTriggerManager::GetStatus - nHash %s\n", nHash.ToString());
+        return false;
     }
 }
 
@@ -157,17 +162,6 @@ std::vector<CGovernanceObject*> CGovernanceTriggerManager::GetActiveTriggers()
 
         if(pObj)
         {
-            fErase = false;
-            if(pObj->GetObjectType() != GOVERNANCE_OBJECT_TRIGGER) fErase = true;
-
-            // 12.1 - todo
-            // if(pObj->IsExecuted()) fErase = true;
-        }       
-
-        if(fErase)
-        {
-            mapTrigger.erase(it1);
-        } else {
             CSuperblock t(pObj);
             vecResults.push_back(&t);
         }
@@ -199,34 +193,52 @@ bool CSuperblockManager::IsSuperblockTriggered(int nBlockHeight)
 {
     // GET ALL ACTIVE TRIGGERS
     std::vector<CGovernanceObject*> vecTriggers = triggerman.GetActiveTriggers();
+    int nYesCount = 0;
 
     BOOST_FOREACH(CGovernanceObject* pObj, vecTriggers)
     {
         if(pObj)
         {
-            bool fIsTriggered = true;
-            CSuperblock superblock(pObj);
-            
-            // 12.1 - todo 
-            // if(!superblock.IsActivated(nBlockHeight))
-            // {
-            //     fIsTriggered = false;
-            // }
+            CSuperblock t(pObj);
+            if(nBlockHeight != t.GetBlockStart()) continue;
 
-            // TODO : MORE CHECKS?
-            
-            return fIsTriggered;
+            // MAKE SURE THIS TRIGGER IS ACTIVE VIA FUNDING CACHE FLAG
+
+            if(pObj->fCachedFunding)
+            {
+                return true;
+            }
         }       
     }
 
-    return false;
+    return nYesCount > 0;
 }
 
 
-bool CSuperblockManager::GetBestSuperblock(CSuperblock& block)
+bool CSuperblockManager::GetBestSuperblock(CSuperblock* pBlock, int nBlockHeight)
 {
-    // 12.1 - TODO
-    return true;
+    std::vector<CGovernanceObject*> vecTriggers = triggerman.GetActiveTriggers();
+    int nYesCount = 0;
+
+    BOOST_FOREACH(CGovernanceObject* pObj, vecTriggers)
+    {
+        if(pObj)
+        {
+            CSuperblock t(pObj);
+            if(nBlockHeight != t.GetBlockStart()) continue;
+
+            // DO WE HAVE A NEW WINNER?
+
+            int nTempYesCount = pObj->GetAbsoluteYesCount(VOTE_SIGNAL_FUNDING);
+            if(nTempYesCount > nYesCount)
+            {
+                nYesCount = nTempYesCount;
+                pBlock = &t;
+            }
+        }       
+    }
+
+    return nYesCount > 0;
 }
 
 /**
@@ -235,7 +247,7 @@ bool CSuperblockManager::GetBestSuperblock(CSuperblock& block)
 *   - Create the correct payment structure for a given superblock
 */
 
-void CSuperblockManager::CreateSuperblock(CMutableTransaction& txNew, CAmount nFees)
+void CSuperblockManager::CreateSuperblock(CMutableTransaction& txNew, CAmount nFees, int nBlockHeight)
 {
     AssertLockHeld(cs_main);
     if(!chainActive.Tip()) return;
@@ -245,20 +257,20 @@ void CSuperblockManager::CreateSuperblock(CMutableTransaction& txNew, CAmount nF
         - loop through each payment in superblock and set txNew
     */
 
-    CSuperblock superblock;
-    if(!CSuperblockManager::GetBestSuperblock(superblock))
+    CSuperblock* pBlock = NULL;
+    if(!CSuperblockManager::GetBestSuperblock(pBlock, nBlockHeight))
     {
-        // 12.1 - todo --logging
+        LogPrint("superblock", "CSuperblockManager::CreateSuperblock: Can't find superblock for height %d\n", nBlockHeight);
         return;
     }
 
     // CONFIGURE SUPERBLOCK OUTPUTS 
 
-    txNew.vout.resize(superblock.CountPayments());
-    for(int i = 0; i <= superblock.CountPayments(); i++)
+    txNew.vout.resize(pBlock->CountPayments());
+    for(int i = 0; i <= pBlock->CountPayments(); i++)
     {
         CGovernancePayment payment;
-        if(superblock.GetPayment(i, payment))
+        if(pBlock->GetPayment(i, payment))
         {
             // SET COINBASE OUTPUT TO SUPERBLOCK SETTING
 
@@ -280,10 +292,15 @@ void CSuperblockManager::CreateSuperblock(CMutableTransaction& txNew, CAmount nF
 
 bool CSuperblockManager::IsValid(const CTransaction& txNew, int nBlockHeight)
 {
-    // LOOP THROUGH VALID SUPERBLOCKS TO TRY AND FIND A MATCH
-    // 12.1 - todo
+    // GET BEST SUPERBLOCK, SHOULD MATCH
 
-    return true;
+    CSuperblock* pBlock = NULL;
+    if(CSuperblockManager::GetBestSuperblock(pBlock, nBlockHeight))
+    {
+        return pBlock->IsValid(txNew);
+    }    
+    
+    return false;
 }
 
 /**
@@ -292,7 +309,7 @@ bool CSuperblockManager::IsValid(const CTransaction& txNew, int nBlockHeight)
 *   - Does this transaction match the superblock?
 */
 
-bool CSuperblock::IsTransactionValid(const CTransaction& txNew)
+bool CSuperblock::IsValid(const CTransaction& txNew)
 {
     // TODO : LOCK(cs);
     std::string strPayeesPossible = "";
@@ -343,19 +360,19 @@ std::string CSuperblockManager::GetRequiredPaymentsString(int nBlockHeight)
 
     // GET BEST SUPERBLOCK
 
-    CSuperblock superblock;
-    if(!CSuperblockManager::GetBestSuperblock(superblock))
+    CSuperblock* pBlock = NULL;
+    if(!CSuperblockManager::GetBestSuperblock(pBlock, nBlockHeight))
     {
-        // 12.1 - todo --logging
+        LogPrint("superblock", "CSuperblockManager::CreateSuperblock: Can't find superblock for height %d\n", nBlockHeight);
         return "error";
     }    
 
     // LOOP THROUGH SUPERBLOCK PAYMENTS, CONFIGURE OUTPUT STRING 
 
-    for(int i = 0; i <= superblock.CountPayments(); i++)
+    for(int i = 0; i <= pBlock->CountPayments(); i++)
     {
         CGovernancePayment payment;
-        if(superblock.GetPayment(i, payment))
+        if(pBlock->GetPayment(i, payment))
         {
             // PRINT NICE LOG OUTPUT FOR SUPERBLOCK PAYMENT
 
