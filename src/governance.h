@@ -123,7 +123,7 @@ public:
     void Clear(){
         LOCK(cs);
 
-        LogPrintf("gobject", "Governance object manager was cleared\n");
+        LogPrint("gobject", "Governance object manager was cleared\n");
         mapObjects.clear();
         mapSeenGovernanceObjects.clear();
         mapSeenVotes.clear();
