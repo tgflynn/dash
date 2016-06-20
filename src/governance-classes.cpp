@@ -6,6 +6,11 @@
 #include "core_io.h"
 #include "main.h"
 #include "init.h"
+#include "chainparams.h"
+
+#include "consensus/consensus.h"
+#include "consensus/merkle.h"
+#include "consensus/validation.h"
 
 // 12.1 - which are required?
 //#include "flat-database.h"
@@ -33,6 +38,11 @@ class CNode;
 CGovernanceTriggerManager triggerman;
 
 // SPLIT UP STRING BY DELIMITER
+
+/*  
+    NOTE : SplitBy can be simplified via:
+    http://www.boost.org/doc/libs/1_58_0/doc/html/boost/algorithm/split_idp202406848.html
+*/
 
 std::vector<std::string> SplitBy(std::string strCommand, std::string strDelimit)
 {
@@ -176,7 +186,7 @@ std::vector<CGovernanceObject*> CGovernanceTriggerManager::GetActiveTriggers()
 bool CSuperblockManager::IsValidSuperblockHeight(int nBlockHeight)
 {
     // SUPERBLOCKS CAN HAPPEN ONCE PER DAY
-    return nBlockHeight % 576;
+    return nBlockHeight % Params().GetConsensus().nSuperblockCycle;
 }
 
 /**
