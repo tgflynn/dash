@@ -106,7 +106,8 @@ public:
 
     CGovernanceObject *FindGovernanceObject(const std::string &strName);
     CGovernanceObject *FindGovernanceObject(const uint256& nHash);
-    
+
+    std::vector<CGovernanceVote*> GetMatchingVotes(const uint256& nParentHash);
     std::vector<CGovernanceObject*> GetAllNewerThan(int64_t nMoreThanTime);
 
     int CountMatchingVotes(CGovernanceObject& govobj, int nVoteSignalIn, int nVoteOutcomeIn);
@@ -225,6 +226,7 @@ public:
     inline void SerializationOp(Stream& s, Operation ser_action, int nType, int nVersion)
     {
         // SERIALIZE DATA FOR SAVING/LOADING OR NETWORK FUNCTIONS
+
 
         READWRITE(nHashParent);
         READWRITE(nRevision);
