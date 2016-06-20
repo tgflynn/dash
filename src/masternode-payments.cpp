@@ -143,7 +143,7 @@ void FillBlockPayee(CMutableTransaction& txNew, CAmount nFees)
         if(CSuperblockManager::IsSuperblockTriggered(chainActive.Tip()->nHeight+1))
         {
             // IF WE HAVE A ACTIVATED TRIGGER
-            CSuperblockManager::CreateSuperblock(txNew, nFees);
+            CSuperblockManager::CreateSuperblock(txNew, nFees, chainActive.Tip()->nHeight+1);
             return;
         }
     }

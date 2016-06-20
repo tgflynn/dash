@@ -46,6 +46,7 @@ extern CGovernanceManager governance;
 #define SEEN_OBJECT_IS_VALID          0
 #define SEEN_OBJECT_ERROR_INVALID     1
 #define SEEN_OBJECT_ERROR_IMMATURE    2
+#define SEEN_OBJECT_EXECUTED          3 //used for triggers
 
 //Check the collateral transaction for the budget proposal/finalized budget
 extern bool IsCollateralValid(uint256 nTxCollateralHash, uint256 nExpectedHash, std::string& strError, int& nConf, CAmount minFee);

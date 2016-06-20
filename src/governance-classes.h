@@ -47,9 +47,16 @@ public:
     std::vector<CGovernanceObject*> GetActiveTriggers();
     bool AddNewTrigger(uint256 nHash);
     void CleanAndRemove();
-    bool IsValidTrigger(uint256);
+
+    bool UpdateStatus(uint256 nHash, int nNewStatus);
+    int GetStatus(uint256 nHash);
 };
 
+/**
+*   Superblock Mananger
+*
+*   Class for querying superblock information
+*/
 
 class CSuperblockManager
 {
@@ -71,10 +78,12 @@ public:
 
     static bool IsValidSuperblockHeight(int nBlockHeight);
     static bool IsSuperblockTriggered(int nBlockHeight);
-    static void CreateSuperblock(CMutableTransaction& txNew, CAmount nFees);
+    static void CreateSuperblock(CMutableTransaction& txNew, CAmount nFees, int nBlockHeight);
+
+
     static std::string GetRequiredPaymentsString(int nBlockHeight);
     static bool IsValid(const CTransaction& txNew, int nBlockHeight);
-    static bool GetBestSuperblock(CSuperblock& block);
+    static bool GetBestSuperblock(CSuperblock* pBlock, int nBlockHeight);
 };
 
 /**
@@ -187,6 +196,27 @@ public:
         }
     }
 
+    int GetBlockStart()
+    {
+        // 12.1 TRIGGER EXECUTION
+        // NOTE : Is this over complicated?
+
+        int nRet = 0;
+        int nTipEpoch = 0;
+        int nTipBlock = chainActive.Tip()->nHeight+1;
+
+        // GET TIP EPOCK / BLOCK
+
+        // typically it should be more than the current time
+        int nDiff = nEpochStart - nTipEpoch;
+        int nBlockDiff = nDiff / (2.6*60);
+
+        // calculate predicted block height
+        int nMod = (nTipBlock + nBlockDiff) % Params().GetConsensus().nSuperblockCycle;
+
+        return (nTipBlock + nBlockDiff)-nMod;
+    }
+
     bool ParsePaymentSchedule(std::string& strPaymentAddresses, std::string& strPaymentAmounts)
     {
         // SPLIT UP ADDR/AMOUNT STRINGS AND PUT IN VECTORS
@@ -230,24 +260,16 @@ public:
         return false;
     }
 
-    /**
-    * IS THIS TRIGGER ALREADY EXECUTED?
-    */
+    // IS THIS TRIGGER ALREADY EXECUTED?
     bool IsExecuted()
     {
-        // 12.1 -- where should this happen?
-        // return pGovObj->IsExecuted();
-        return true;
+        return triggerman.GetStatus(pGovObj->GetHash()) == SEEN_OBJECT_EXECUTED;
     };
 
-    /**
-    * TELL THE ENGINE WE EXECUTED THIS EVENT
-    */
+    // TELL THE ENGINE WE EXECUTED THIS EVENT
     void SetExecuted()
     {
-        // 12.1 -- todo
-        //pGovObj->SetExecuted(true);
-        return;
+        triggerman.UpdateStatus(pGovObj->GetHash(), SEEN_OBJECT_EXECUTED);
     };
 
     int CountPayments()
@@ -266,7 +288,7 @@ public:
         return true;
     }
 
-    bool IsTransactionValid(const CTransaction& txNew);
+    bool IsValid(const CTransaction& txNew);
 };
 
 #endif
