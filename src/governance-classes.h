@@ -201,7 +201,7 @@ public:
         // 12.1 TRIGGER EXECUTION
         // NOTE : Is this over complicated?
 
-        int nRet = 0;
+        //int nRet = 0;
         int nTipEpoch = 0;
         int nTipBlock = chainActive.Tip()->nHeight+1;
 

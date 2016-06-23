@@ -273,7 +273,8 @@ CBlockTemplate* CreateNewBlock(const CChainParams& chainparams, const CScript& s
                 }
             }
         }
-        // Masternode and general budget payments
+
+        // DASH : Masternode and general budget payments
         FillBlockPayee(txNew, nFees);
 
         // Make payee

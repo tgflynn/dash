@@ -136,14 +136,17 @@ void FillBlockPayee(CMutableTransaction& txNew, CAmount nFees)
     AssertLockHeld(cs_main);
     if(!chainActive.Tip()) return;
 
+    int nHeight = chainActive.Tip()->nHeight+1;
+
     // SEE IF THIS IS A VALID SUPERBLOCK
 
-    if(CSuperblockManager::IsValidSuperblockHeight(chainActive.Tip()->nHeight+1))
+    if(CSuperblockManager::IsValidSuperblockHeight(nHeight))
     {
-        if(CSuperblockManager::IsSuperblockTriggered(chainActive.Tip()->nHeight+1))
+        if(CSuperblockManager::IsSuperblockTriggered(nHeight))
         {
             // IF WE HAVE A ACTIVATED TRIGGER
-            CSuperblockManager::CreateSuperblock(txNew, nFees, chainActive.Tip()->nHeight+1);
+            LogPrint("gobject", "FillBlockPayee, triggered superblock creation @ height %d\n", nHeight);
+            CSuperblockManager::CreateSuperblock(txNew, nFees, nHeight);
             return;
         }
     }

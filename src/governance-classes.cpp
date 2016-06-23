@@ -61,9 +61,11 @@ std::vector<std::string> SplitBy(std::string strCommand, std::string strDelimit)
 
 bool CGovernanceTriggerManager::AddNewTrigger(uint256 nHash)
 {
+
+    // IF WE DON'T HAVE THIS HASH, WE SHOULD ADD IT
+
     if(!mapTrigger.count(nHash))
     {
-
         CGovernanceObject* pObj = governance.FindGovernanceObject(nHash);
 
         // IF THIS ISN'T A TRIGGER, WHY ARE WE HERE?
@@ -89,7 +91,7 @@ void CGovernanceTriggerManager::CleanAndRemove()
     std::map<uint256, int>::iterator it1 = mapTrigger.begin();
     while(it1 != mapTrigger.end())
     {
-        int nNewStatus = -1;
+        //int nNewStatus = -1;
         CGovernanceObject* pObj = governance.FindGovernanceObject((*it1).first);
 
         // IF THIS ISN'T A TRIGGER, WHY ARE WE HERE?
@@ -158,7 +160,7 @@ std::vector<CGovernanceObject*> CGovernanceTriggerManager::GetActiveTriggers()
     while(it1 != mapTrigger.end()){
 
         CGovernanceObject* pObj = governance.FindGovernanceObject((*it1).first);
-        bool fErase = true;
+        //bool fErase = true;
 
         if(pObj)
         {
@@ -193,12 +195,14 @@ bool CSuperblockManager::IsSuperblockTriggered(int nBlockHeight)
 {
     // GET ALL ACTIVE TRIGGERS
     std::vector<CGovernanceObject*> vecTriggers = triggerman.GetActiveTriggers();
-    int nYesCount = 0;
+    //int nYesCount = 0;
 
     BOOST_FOREACH(CGovernanceObject* pObj, vecTriggers)
     {
         if(pObj)
         {
+            // note : 12.1 - is epoch calculation correct?
+
             CSuperblock t(pObj);
             if(nBlockHeight != t.GetBlockStart()) continue;
 
@@ -211,7 +215,7 @@ bool CSuperblockManager::IsSuperblockTriggered(int nBlockHeight)
         }       
     }
 
-    return nYesCount > 0;
+    return false;
 }
 
 
@@ -252,10 +256,7 @@ void CSuperblockManager::CreateSuperblock(CMutableTransaction& txNew, CAmount nF
     AssertLockHeld(cs_main);
     if(!chainActive.Tip()) return;
 
-    /*
-        - resize txNew.size() to superblock vecPayments + 1
-        - loop through each payment in superblock and set txNew
-    */
+    // GET THE BEST SUPERBLOCK FOR THIS BLOCK HEIGHT
 
     CSuperblock* pBlock = NULL;
     if(!CSuperblockManager::GetBestSuperblock(pBlock, nBlockHeight))
@@ -285,7 +286,7 @@ void CSuperblockManager::CreateSuperblock(CMutableTransaction& txNew, CAmount nF
 
             // TODO: PRINT NICE N.N DASH OUTPUT
 
-            LogPrintf("SUPERBLOCK: output n %d payment %d to %s\n", payment.nAmount, address2.ToString());
+            LogPrintf("NEW Superblock : output %d (addr %s, amount %d)\n", i, address2.ToString(), payment.nAmount);
         }
     }
 }
