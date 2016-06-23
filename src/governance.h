@@ -38,7 +38,6 @@ static const CAmount GOVERNANCE_FEE_TX = (0.1*COIN);
 static const int64_t GOVERNANCE_FEE_CONFIRMATIONS = 6;
 static const int64_t GOVERNANCE_UPDATE_MIN = 60*60;
 
-extern std::vector<CGovernanceObject> vecImmatureGovernanceObjects;
 extern std::map<uint256, int64_t> mapAskedForGovernanceObject;
 extern CGovernanceManager governance;
 
@@ -70,10 +69,10 @@ public:
     // critical section to protect the inner data structures
     mutable CCriticalSection cs;
     
-    // keep track of the scanning errors I've seen
+    // keep track of the scanning errors
     map<uint256, CGovernanceObject> mapObjects;
 
-    // todo - 12.1 - move to private for better encapsulation 
+    // note: move to private for better encapsulation 
     std::map<uint256, int> mapSeenGovernanceObjects;
     std::map<uint256, int> mapSeenVotes;
     std::map<uint256, CGovernanceVote> mapOrphanVotes;
@@ -115,13 +114,15 @@ public:
 
     bool IsBudgetPaymentBlock(int nBlockHeight);
     bool AddGovernanceObject (CGovernanceObject& govobj);
-    bool UpdateGovernanceObject(const CGovernanceVote& vote, CNode* pfrom, std::string& strError);
-    bool AddOrUpdateVote(const CGovernanceVote& vote, std::string& strError);
+    bool AddOrUpdateVote(const CGovernanceVote& vote, CNode* pfrom, std::string& strError);
+
     std::string GetRequiredPaymentsString(int nBlockHeight);
     void CleanAndRemove(bool fSignatureCheck);
-    void CheckAndRemove();
+    void UpdateCachesAndClean();
+    void CheckAndRemove() {UpdateCachesAndClean();}
 
     void CheckOrphanVotes();
+
     void Clear(){
         LOCK(cs);
 
@@ -133,6 +134,7 @@ public:
         mapVotesByType.clear();
         mapVotesByHash.clear();
     }
+    
     std::string ToString() const;
 
     ADD_SERIALIZE_METHODS;
@@ -162,7 +164,6 @@ class CGovernanceObject
 private:
     // critical section to protect the inner data structures
     mutable CCriticalSection cs;
-    CAmount nAlloted;
 
 public:
 
@@ -191,14 +192,16 @@ public:
     CGovernanceObject(const CGovernanceObject& other);
     void swap(CGovernanceObject& first, CGovernanceObject& second); // nothrow
 
-    // Update local validity : store the values in memory
-    bool IsValidLocally(const CBlockIndex* pindex, std::string& strError, bool fCheckCollateral=true);
-    void UpdateLocalValidity(const CBlockIndex *pCurrentBlockIndex) {fCachedLocalValidity = IsValidLocally(pCurrentBlockIndex, strLocalValidityError);};
-    void UpdateSentinelVariables(const CBlockIndex *pCurrentBlockIndex);
+    // CORE OBJECT FUNCTIONS
 
+    bool IsValidLocally(const CBlockIndex* pindex, std::string& strError, bool fCheckCollateral);
+    void UpdateLocalValidity(const CBlockIndex *pCurrentBlockIndex);
+    void UpdateSentinelVariables(const CBlockIndex *pCurrentBlockIndex);
     int GetObjectType();
     int GetObjectSubtype();
     std::string GetName() {return strName; }
+    void Relay();
+    uint256 GetHash();
 
     // GET VOTE COUNT FOR SIGNAL
 
@@ -208,11 +211,6 @@ public:
     int GetNoCount(int nVoteSignalIn);
     int GetAbstainCount(int nVoteSignalIn);
 
-    void CleanAndRemove(bool fSignatureCheck);
-    void Relay();
-
-    uint256 GetHash();
-
     // FUNCTIONS FOR DEALING WITH DATA STRING 
 
     void LoadData();
@@ -221,13 +219,14 @@ public:
     std::string GetDataAsHex();
     std::string GetDataAsString();
 
+    // SERIALIZER
+
     ADD_SERIALIZE_METHODS;
 
     template <typename Stream, typename Operation>
     inline void SerializationOp(Stream& s, Operation ser_action, int nType, int nVersion)
     {
         // SERIALIZE DATA FOR SAVING/LOADING OR NETWORK FUNCTIONS
-
 
         READWRITE(nHashParent);
         READWRITE(nRevision);

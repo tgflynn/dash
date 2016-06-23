@@ -32,7 +32,7 @@ std::string CGovernanceVoting::ConvertOutcomeToString(int nOutcome)
         case VOTE_OUTCOME_ABSTAIN:
             return "ABSTAIN"; break;
     }
-
+    return "error";
 }
 
 std::string CGovernanceVoting::ConvertSignalToString(int nSignal)
@@ -77,6 +77,7 @@ std::string CGovernanceVoting::ConvertSignalToString(int nSignal)
             return "CUSTOM_END"; break;
     }
 
+    return "error";
 }
 
 

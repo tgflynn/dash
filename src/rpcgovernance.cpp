@@ -157,7 +157,7 @@ UniValue gobject(const UniValue& params, bool fHelp)
         CGovernanceObject govobj(hashParent, nRevision, strName, nTime, fee_tx, strData);
 
         std::string strError = "";
-        if(!govobj.IsValidLocally(pindex, strError)){
+        if(!govobj.IsValidLocally(pindex, strError, true)){
             throw JSONRPCError(RPC_INTERNAL_ERROR, "Governance object is not valid - " + govobj.GetHash().ToString() + " - " + strError);
         }
 
@@ -343,7 +343,7 @@ UniValue gobject(const UniValue& params, bool fHelp)
             // UPDATE LOCAL DATABASE WITH NEW OBJECT SETTINGS
 
             std::string strError = "";
-            if(governance.UpdateGovernanceObject(vote, NULL, strError)) {
+            if(governance.AddOrUpdateVote(vote, NULL, strError)) {
                 governance.mapSeenVotes.insert(make_pair(vote.GetHash(), SEEN_OBJECT_IS_VALID));
                 vote.Relay();
                 success++;
@@ -371,10 +371,18 @@ UniValue gobject(const UniValue& params, bool fHelp)
         if (params.size() > 2)
             throw JSONRPCError(RPC_INVALID_PARAMETER, "Correct usage is 'gobject [list|diff] [valid]'");
 
+        // GET MAIN PARAMETER FOR THIS MODE, VALID OR ALL?
+
         std::string strShow = "valid";
         if (params.size() == 2) strShow = params[1].get_str();
+        if (strShow != "valid" && strShow != "all") return "Invalid mode, should be valid or all";
 
-        UniValue objResult(UniValue::VOBJ);
+        // GET STARTING TIME TO QUERY SYSTEM WITH
+
+        int nStartTime = 0; //list
+        if(strCommand == "diff") nStartTime = governance.GetLastDiffTime();
+
+        // SETUP BLOCK INDEX VARIABLE / RESULTS VARIABLE
 
         CBlockIndex* pindex;
         {
@@ -382,11 +390,14 @@ UniValue gobject(const UniValue& params, bool fHelp)
             pindex = chainActive.Tip();
         }
 
-        int nStartTime = 0; //list
-        if(strCommand == "diff") nStartTime = governance.GetLastDiffTime();
+        UniValue objResult(UniValue::VOBJ);
+
+        // GET MATCHING GOVERNANCE OBJECTS
 
         std::vector<CGovernanceObject*> objs = governance.GetAllNewerThan(nStartTime);
         governance.UpdateLastDiffTime(GetTime());
+
+        // CREATE RESULTS FOR USER
 
         BOOST_FOREACH(CGovernanceObject* pGovObj, objs)
         {
@@ -408,7 +419,7 @@ UniValue gobject(const UniValue& params, bool fHelp)
 
             // REPORT VALIDITY AND CACHING FLAGS FOR VARIOUS SETTINGS
             std::string strError = "";
-            bObj.push_back(Pair("fBlockchainValidity",  pGovObj->IsValidLocally(pindex , strError)));
+            bObj.push_back(Pair("fBlockchainValidity",  pGovObj->IsValidLocally(pindex , strError, false)));
             bObj.push_back(Pair("IsValidReason",  strError.c_str()));
             bObj.push_back(Pair("fCachedValid",  pGovObj->fCachedValid));
             bObj.push_back(Pair("fCachedFunding",  pGovObj->fCachedFunding));
@@ -486,7 +497,7 @@ UniValue gobject(const UniValue& params, bool fHelp)
 
         // -- 
         std::string strError = "";
-        objResult.push_back(Pair("fLocalValidity",  pGovObj->IsValidLocally(chainActive.Tip(), strError)));
+        objResult.push_back(Pair("fLocalValidity",  pGovObj->IsValidLocally(chainActive.Tip(), strError, false)));
         objResult.push_back(Pair("fCachedValid",  pGovObj->fCachedValid));
 
         return objResult;
@@ -581,7 +592,7 @@ UniValue voteraw(const UniValue& params, bool fHelp)
     }
 
     std::string strError = "";
-    if(governance.UpdateGovernanceObject(vote, NULL, strError)){
+    if(governance.AddOrUpdateVote(vote, NULL, strError)){
         governance.mapSeenVotes.insert(make_pair(vote.GetHash(), SEEN_OBJECT_IS_VALID));
         vote.Relay();
         return "Voted successfully";
