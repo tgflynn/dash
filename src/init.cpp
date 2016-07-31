@@ -1783,7 +1783,6 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)
         LogPrintf("MASTERNODE:\n");
         activeMasternode.strMasterNodeAddr = GetArg("-masternodeaddr", "");
 
-
         CService service;
         if(activeMasternode.strMasterNodeAddr.empty()) {
             if(!GetLocal(service)) {
