@@ -62,20 +62,25 @@ std::vector<std::string> SplitBy(std::string strCommand, std::string strDelimit)
 bool CGovernanceTriggerManager::AddNewTrigger(uint256 nHash)
 {
 
+    printf("AddNewTrigger 1");
+
     // IF WE DON'T HAVE THIS HASH, WE SHOULD ADD IT
 
     if(!mapTrigger.count(nHash))
     {
+        printf("2");
         CGovernanceObject* pObj = governance.FindGovernanceObject(nHash);
 
         // IF THIS ISN'T A TRIGGER, WHY ARE WE HERE?
         if(pObj->GetObjectType() != GOVERNANCE_OBJECT_TRIGGER)
         {
+            printf("3\n");
             mapTrigger.insert(make_pair(nHash, SEEN_OBJECT_IS_VALID));
             return true;
         }
     }
 
+    printf("4\n");
     return false;
 }
 
@@ -93,7 +98,6 @@ void CGovernanceTriggerManager::CleanAndRemove()
     {
         //int nNewStatus = -1;
         CGovernanceObject* pObj = governance.FindGovernanceObject((*it1).first);
-
         // IF THIS ISN'T A TRIGGER, WHY ARE WE HERE?
         if(pObj->GetObjectType() != GOVERNANCE_OBJECT_TRIGGER)
         {
@@ -101,7 +105,6 @@ void CGovernanceTriggerManager::CleanAndRemove()
             it1++;
             continue;
         }
-
         it1++;
     }
 }
@@ -114,7 +117,6 @@ void CGovernanceTriggerManager::CleanAndRemove()
 
 bool CGovernanceTriggerManager::UpdateStatus(uint256 nHash, int nNewStatus)
 {
-
     if(mapTrigger.count(nHash))
     {
         mapTrigger[nHash] = nNewStatus;
@@ -124,6 +126,7 @@ bool CGovernanceTriggerManager::UpdateStatus(uint256 nHash, int nNewStatus)
         return false;
     }
 }
+
 
 /**
 *
@@ -194,13 +197,18 @@ bool CSuperblockManager::IsValidSuperblockHeight(int nBlockHeight)
 bool CSuperblockManager::IsSuperblockTriggered(int nBlockHeight)
 {
     // GET ALL ACTIVE TRIGGERS
+    printf("IsSuperblockTriggered\n");
     std::vector<CGovernanceObject*> vecTriggers = triggerman.GetActiveTriggers();
     //int nYesCount = 0;
+
+    printf("1");
 
     BOOST_FOREACH(CGovernanceObject* pObj, vecTriggers)
     {
         if(pObj)
         {
+            printf("2");
+
             // note : 12.1 - is epoch calculation correct?
 
             CSuperblock t(pObj);
@@ -210,11 +218,13 @@ bool CSuperblockManager::IsSuperblockTriggered(int nBlockHeight)
 
             if(pObj->fCachedFunding)
             {
+                printf("3\n");
                 return true;
             }
         }       
     }
 
+    printf("4\n");
     return false;
 }
 
@@ -224,10 +234,14 @@ bool CSuperblockManager::GetBestSuperblock(CSuperblock* pBlock, int nBlockHeight
     std::vector<CGovernanceObject*> vecTriggers = triggerman.GetActiveTriggers();
     int nYesCount = 0;
 
+    printf("GetBestSuperblock\n");
+
     BOOST_FOREACH(CGovernanceObject* pObj, vecTriggers)
     {
+        printf("1");
         if(pObj)
         {
+            printf("2");
             CSuperblock t(pObj);
             if(nBlockHeight != t.GetBlockStart()) continue;
 
@@ -236,11 +250,15 @@ bool CSuperblockManager::GetBestSuperblock(CSuperblock* pBlock, int nBlockHeight
             int nTempYesCount = pObj->GetAbsoluteYesCount(VOTE_SIGNAL_FUNDING);
             if(nTempYesCount > nYesCount)
             {
+                printf("3");
+
                 nYesCount = nTempYesCount;
                 pBlock = &t;
             }
         }       
     }
+
+    printf("4\n");
 
     return nYesCount > 0;
 }
@@ -253,6 +271,8 @@ bool CSuperblockManager::GetBestSuperblock(CSuperblock* pBlock, int nBlockHeight
 
 void CSuperblockManager::CreateSuperblock(CMutableTransaction& txNew, CAmount nFees, int nBlockHeight)
 {
+    printf("CreateSuperblock");
+
     AssertLockHeld(cs_main);
     if(!chainActive.Tip()) return;
 
@@ -262,6 +282,7 @@ void CSuperblockManager::CreateSuperblock(CMutableTransaction& txNew, CAmount nF
     if(!CSuperblockManager::GetBestSuperblock(pBlock, nBlockHeight))
     {
         LogPrint("superblock", "CSuperblockManager::CreateSuperblock: Can't find superblock for height %d\n", nBlockHeight);
+        printf("2\n");
         return;
     }
 
@@ -270,9 +291,11 @@ void CSuperblockManager::CreateSuperblock(CMutableTransaction& txNew, CAmount nF
     txNew.vout.resize(pBlock->CountPayments());
     for(int i = 0; i <= pBlock->CountPayments(); i++)
     {
+        printf("3");
         CGovernancePayment payment;
         if(pBlock->GetPayment(i, payment))
         {
+            printf("4");
             // SET COINBASE OUTPUT TO SUPERBLOCK SETTING
 
             txNew.vout[i].scriptPubKey = payment.script;
@@ -289,6 +312,8 @@ void CSuperblockManager::CreateSuperblock(CMutableTransaction& txNew, CAmount nF
             LogPrintf("NEW Superblock : output %d (addr %s, amount %d)\n", i, address2.ToString(), payment.nAmount);
         }
     }
+
+    printf("5\n");
 }
 
 bool CSuperblockManager::IsValid(const CTransaction& txNew, int nBlockHeight)
@@ -312,17 +337,22 @@ bool CSuperblockManager::IsValid(const CTransaction& txNew, int nBlockHeight)
 
 bool CSuperblock::IsValid(const CTransaction& txNew)
 {
+    printf("IsValid");
     // TODO : LOCK(cs);
     std::string strPayeesPossible = "";
+
+    printf("1");
 
     // CONFIGURE SUPERBLOCK OUTPUTS 
 
     int nPayments = CountPayments();    
     for(int i = 0; i <= nPayments; i++)
     {
+        printf("2");
         CGovernancePayment payment;
         if(GetPayment(i, payment))
         {
+            printf("3");
             // SET COINBASE OUTPUT TO SUPERBLOCK SETTING
 
             if(payment.script == txNew.vout[i].scriptPubKey && payment.nAmount == txNew.vout[i].nValue)
@@ -339,10 +369,14 @@ bool CSuperblock::IsValid(const CTransaction& txNew)
 
                 LogPrintf("SUPERBLOCK: output n %d payment %d to %s\n", payment.nAmount, address2.ToString());
 
+                printf("4\n");
+
                 return false;
             }
         }
     }
+
+    printf("5\n");
 
     return true;
 }
