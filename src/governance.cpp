@@ -376,10 +376,10 @@ CGovernanceObject *CGovernanceManager::FindGovernanceObject(const std::string &s
 
     std::map<uint256, CGovernanceObject>::iterator it = mapObjects.begin();
     while(it != mapObjects.end()){
-        pGovObj = &((*it).second);
         int nGovObjYesCount = pGovObj->GetYesCount(VOTE_SIGNAL_FUNDING);
         if((*it).second.strName == strName && nGovObjYesCount > nYesCount){
             nYesCount = nGovObjYesCount;
+            pGovObj = &((*it).second);
         }
         ++it;
     }
@@ -690,6 +690,8 @@ uint256 CGovernanceObject::GetHash()
     // fee_tx is left out on purpose
     uint256 h1 = ss.GetHash();
 
+    printf("%i %s %i %s\n", nRevision, strName, nTime, strData);
+
     return h1;
 }
 
@@ -709,7 +711,8 @@ void CGovernanceObject::LoadData()
 
     try
     {
-        nObjectType = objResult["type"].get_int();
+        // std::string strObjectType = objResult["type"].get_str();
+        // nObjectType = boost::lexical_cast<int>(strObjectType);
     }
     catch (int e)
     {

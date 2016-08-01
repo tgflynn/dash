@@ -23,6 +23,40 @@
 
 using namespace std;
 
+int ConvertVoteOutcome(std::string strVoteOutcome)
+{
+    int nVote = -1;
+    if(strVoteOutcome == "yes") nVote = VOTE_OUTCOME_YES;
+    if(strVoteOutcome == "no") nVote = VOTE_OUTCOME_NO;
+    if(strVoteOutcome == "abstain") nVote = VOTE_OUTCOME_ABSTAIN;
+    if(strVoteOutcome == "none") nVote = VOTE_OUTCOME_NONE;
+    return nVote;
+}
+
+int ConvertVoteSignal(std::string strVoteSignal)
+{
+    if(strVoteSignal == "none") return 0;
+    if(strVoteSignal == "funding") return 1;
+    if(strVoteSignal == "valid") return 2;
+    if(strVoteSignal == "delete") return 3;
+    if(strVoteSignal == "endorsed") return 4;
+
+    // ID FIVE THROUGH CUSTOM_START ARE TO BE USED BY GOVERNANCE ENGINE / TRIGGER SYSTEM
+
+    // convert custom sentinel outcomes to integer and store
+    try {
+        int  i = boost::lexical_cast<int>(strVoteSignal);
+        if(i < VOTE_SIGNAL_CUSTOM_START || i > VOTE_SIGNAL_CUSTOM_END) return -1;
+        return i;
+    }
+    catch(std::exception const & e)
+    {
+         cout<<"error : " << e.what() <<endl;
+    }
+
+    return -1;
+}
+
 UniValue gobject(const UniValue& params, bool fHelp)
 {
     string strCommand;
@@ -91,23 +125,35 @@ UniValue gobject(const UniValue& params, bool fHelp)
 
         std::string strRevision = params[2].get_str();
         std::string strTime = params[3].get_str();
+        printf("1\n");
         int nRevision = boost::lexical_cast<int>(strRevision);
+        printf("2\n");
         int nTime = boost::lexical_cast<int>(strTime);
+        printf("3\n");
         std::string strName = SanitizeString(params[4].get_str());
+        printf("4\n");
         std::string strData = params[5].get_str();
+    
+        printf("5\n");
         
         // CREATE A NEW COLLATERAL TRANSACTION FOR THIS SPECIFIC OBJECT
 
         CGovernanceObject govobj(hashParent, nRevision, strName, nTime, uint256(), strData);
 
+        printf("6\n");
+
         std::string strError = "";
         if(!govobj.IsValidLocally(pindex, strError, false))
             throw JSONRPCError(RPC_INTERNAL_ERROR, "Governance object is not valid - " + govobj.GetHash().ToString() + " - " + strError);
+
+        printf("7\n");
 
         CWalletTx wtx;
         if(!pwalletMain->GetBudgetSystemCollateralTX(wtx, govobj.GetHash(), false)){
             throw JSONRPCError(RPC_INTERNAL_ERROR, "Error making collateral transaction for govobj. Please check your wallet balance and make sure your wallet is unlocked.");
         }
+
+        printf("8\n");
 
         // -- make our change address
         CReserveKey reservekey(pwalletMain);
@@ -234,7 +280,7 @@ UniValue gobject(const UniValue& params, bool fHelp)
         }
 
         std::string strError = "";
-        if(governance.UpdateGovernanceObject(vote, NULL, strError)) {
+        if(governance.AddOrUpdateVote(vote, NULL, strError)) {
             governance.mapSeenVotes.insert(make_pair(vote.GetHash(), SEEN_OBJECT_IS_VALID));
             vote.Relay();
             success++;
