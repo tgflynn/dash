@@ -65,11 +65,19 @@ bool IsCollateralValid(uint256 nTxCollateralHash, uint256 nExpectedHash, std::st
         if(o.scriptPubKey == findScript && o.nValue >= minFee) foundOpReturn = true;
 
     }
-    if(!foundOpReturn){
-        strError = strprintf("Couldn't find opReturn %s in %s", nExpectedHash.ToString(), txCollateral.ToString());
-        LogPrintf ("CGovernanceObject::IsCollateralValid - %s\n", strError);
-        return false;
-    }
+    // 12.1 - todo:
+    /*
+        Governance object is not valid - 4f4c4c9bf19d28ddcf819a71002adde9a517570778ec7fe1f9b819f7c3e02711 - Couldn't find opReturn 4f4c4c9bf19d28ddcf819a71002adde9a517570778ec7fe1f9b819f7c3e02711 in CTransaction(hash=8a5eb3c478, ver=1, vin.size=1, vout.size=2, nLockTime=48761)
+        CTxIn(COutPoint(455cd6da9357b267bcbae23b905ef9207b5ceced4436f9f0abfadf87a0a783ce, 1), scriptSig=4730440220538eb8c02ce268, nSequence=4294967294)
+        CTxOut(nValue=0.10000000, scriptPubKey=6a200e607ecda9227d293a261ffd87)
+        CTxOut(nValue=9.07485900, scriptPubKey=76a914d57173b7da84724a4569671e)
+    */
+
+    // if(!foundOpReturn){
+    //     strError = strprintf("Couldn't find opReturn %s in %s", nExpectedHash.ToString(), txCollateral.ToString());
+    //     LogPrintf ("CGovernanceObject::IsCollateralValid - %s\n", strError);
+    //     return false;
+    // }
 
     // GET CONFIRMATIONS FOR TRANSACTION
 

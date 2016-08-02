@@ -35,7 +35,7 @@ class CGovernanceVote;
 class CNode;
 
 static const CAmount GOVERNANCE_FEE_TX = (0.1*COIN);
-static const int64_t GOVERNANCE_FEE_CONFIRMATIONS = 6;
+static const int64_t GOVERNANCE_FEE_CONFIRMATIONS = 1; //todo 12.1 -- easy testing
 static const int64_t GOVERNANCE_UPDATE_MIN = 60*60;
 
 extern std::map<uint256, int64_t> mapAskedForGovernanceObject;
