@@ -713,6 +713,9 @@ uint256 CGovernanceObject::GetHash()
 
 void CGovernanceObject::LoadData()
 {
+    // todo : 12.1
+    return;
+
     // ATTEMPT TO LOAD JSON STRING FROM STRDATA
     UniValue objResult(UniValue::VOBJ);
     if(!GetData(objResult)) fUnparsable = true;
