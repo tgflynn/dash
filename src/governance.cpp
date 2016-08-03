@@ -281,6 +281,8 @@ bool CGovernanceManager::AddGovernanceObject(CGovernanceObject& govobj)
     LOCK(cs);
     std::string strError = "";
 
+    cout << "CGovernanceManager::AddGovernanceObject START" << endl;
+
     // MAKE SURE THIS OBJECT IS OK
 
     if(!govobj.IsValidLocally(pCurrentBlockIndex, strError, true)) {
@@ -302,8 +304,14 @@ bool CGovernanceManager::AddGovernanceObject(CGovernanceObject& govobj)
 
     // SHOULD WE ADD THIS OBJECT TO ANY OTHER MANANGERS?
 
+    cout << "CGovernanceManager::AddGovernanceObject Before trigger block, strData = "
+         << govobj.GetDataAsString()
+         << ", nObjectType = " << govobj.nObjectType
+         << endl;
+
     if(govobj.nObjectType == GOVERNANCE_OBJECT_TRIGGER)
     {
+        cout << "CGovernanceManager::AddGovernanceObject Before AddNewTrigger" << endl;
         triggerman.AddNewTrigger(govobj.GetHash());
     }
 
@@ -698,7 +706,7 @@ uint256 CGovernanceObject::GetHash()
     // fee_tx is left out on purpose
     uint256 h1 = ss.GetHash();
 
-    printf("%i %s %i %s\n", nRevision, strName, nTime, strData);
+    printf("%i %s %li %s\n", nRevision, strName.c_str(), nTime, strData.c_str());
 
     return h1;
 }
@@ -714,16 +722,29 @@ uint256 CGovernanceObject::GetHash()
 void CGovernanceObject::LoadData()
 {
     // todo : 12.1
-    return;
+    //return;
+
+    if(strData.empty())  {
+        return;
+    }
 
     // ATTEMPT TO LOAD JSON STRING FROM STRDATA
     UniValue objResult(UniValue::VOBJ);
     if(!GetData(objResult)) fUnparsable = true;
 
+    cout << "CGovernanceObject::LoadData strData = "
+         << GetDataAsString()
+         << endl;
+
     try
     {
-        // std::string strObjectType = objResult["type"].get_str();
-        // nObjectType = boost::lexical_cast<int>(strObjectType);
+        //std::string strObjectType = objResult["type"].get_str();
+        //nObjectType = boost::lexical_cast<int>(strObjectType);
+
+        std::vector<UniValue> arr1 = objResult.getValues();
+        std::vector<UniValue> arr2 = arr1.at( 0 ).getValues();
+        UniValue obj = arr2.at( 1 );
+        nObjectType = obj["type"].get_int();
     }
     catch (int e)
     {
@@ -799,7 +820,7 @@ std::string CGovernanceObject::GetDataAsString()
     vector<unsigned char> v = ParseHex(strData);
     string s(v.begin(), v.end());
 
-    return strData;
+    return s;
 }
 
 void CGovernanceObject::UpdateLocalValidity(const CBlockIndex *pCurrentBlockIndex)

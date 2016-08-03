@@ -202,6 +202,9 @@ UniValue gobject(const UniValue& params, bool fHelp)
 
         CGovernanceObject govobj(hashParent, nRevision, strName, nTime, fee_tx, strData);
 
+        cout << "gobject: submit strName = " << strName
+             << ", strData = " << govobj.GetDataAsString() << endl;
+
         std::string strError = "";
         if(!govobj.IsValidLocally(pindex, strError, true)){
             throw JSONRPCError(RPC_INTERNAL_ERROR, "Governance object is not valid - " + govobj.GetHash().ToString() + " - " + strError);
