@@ -234,6 +234,7 @@ public:
         READWRITE(nTime);
         READWRITE(nCollateralHash);
         READWRITE(strData);
+        READWRITE(nObjectType);
 
         // AFTER DESERIALIZATION OCCURS, CACHED VARIABLES MUST BE CALCULATED MANUALLY
     }

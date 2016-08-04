@@ -158,6 +158,8 @@ std::vector<CGovernanceObject*> CGovernanceTriggerManager::GetActiveTriggers()
 {
     std::vector<CGovernanceObject*> vecResults;
 
+    cout << "GetActiveTriggers: mapTrigger.size() = " << mapTrigger.size() << endl;
+
     // LOOK AT THESE OBJECTS AND COMPILE A VALID LIST OF TRIGGERS
     std::map<uint256, int>::iterator it1 = mapTrigger.begin();
     while(it1 != mapTrigger.end()){
@@ -167,11 +169,14 @@ std::vector<CGovernanceObject*> CGovernanceTriggerManager::GetActiveTriggers()
 
         if(pObj)
         {
+            cout << "GetActiveTriggers: pObj->GetDataAsString() = " << pObj->GetDataAsString() << endl;
             CSuperblock t(pObj);
             vecResults.push_back(&t);
         }
-
+        ++it1;
     }
+
+    cout << "GetActiveTriggers: vecResults.size() = " << vecResults.size() << endl;
 
     return vecResults;
 } 
@@ -200,6 +205,8 @@ bool CSuperblockManager::IsSuperblockTriggered(int nBlockHeight)
     printf("IsSuperblockTriggered\n");
     std::vector<CGovernanceObject*> vecTriggers = triggerman.GetActiveTriggers();
     //int nYesCount = 0;
+
+    cout << "Number triggers = " << vecTriggers.size() << endl;
 
     printf("1");
 
