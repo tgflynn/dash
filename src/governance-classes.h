@@ -5,6 +5,9 @@
 #ifndef GOVERANCE_CLASSES_H
 #define GOVERANCE_CLASSES_H
 
+//#define ENABLE_DASH_DEBUG
+
+#include "util.h"
 #include "main.h"
 #include "sync.h"
 #include "net.h"
@@ -37,7 +40,7 @@ struct trigger_man_rec_t  {
 
     trigger_man_rec_t(int status_= SEEN_OBJECT_UNKNOWN,CSuperblock_sptr superblock_=CSuperblock_sptr())
     : status(status_),
-        superblock(superblock_)
+      superblock(superblock_)
     {}
 
     int status;
@@ -200,9 +203,9 @@ public:
           nExecuted(false),
           vecPayments()
     {
-        cout << "CSuperblock Constructor Start" << endl;
+        DBG( cout << "CSuperblock Constructor Start" << endl; );
         if(!pGovObj) {
-            cout << "CSuperblock Constructor pGovObj is NULL, returning" << endl;
+            DBG( cout << "CSuperblock Constructor pGovObj is NULL, returning" << endl; );
             return;
         }
 
@@ -229,12 +232,12 @@ public:
         catch(...)  {
             fError = true;
             strError = "Unparsable";
-            cout << "CSuperblock Constructor A parse error occurred" 
-                 << ", obj = " << obj.write()
-                 << endl;
+            DBG( cout << "CSuperblock Constructor A parse error occurred" 
+                      << ", obj = " << obj.write()
+                      << endl; );
         }
 
-        cout << "CSuperblock Constructor End" << endl;
+        DBG( cout << "CSuperblock Constructor End" << endl; );
     }
 
     CGovernanceObject* GetGovernanceObject()  {

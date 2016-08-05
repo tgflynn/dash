@@ -271,7 +271,7 @@ bool CGovernanceManager::AddGovernanceObject(CGovernanceObject& govobj)
     LOCK(cs);
     std::string strError = "";
 
-    cout << "CGovernanceManager::AddGovernanceObject START" << endl;
+    DBG( cout << "CGovernanceManager::AddGovernanceObject START" << endl; );
 
     // MAKE SURE THIS OBJECT IS OK
 
@@ -294,19 +294,19 @@ bool CGovernanceManager::AddGovernanceObject(CGovernanceObject& govobj)
 
     // SHOULD WE ADD THIS OBJECT TO ANY OTHER MANANGERS?
 
-    cout << "CGovernanceManager::AddGovernanceObject Before trigger block, strData = "
-         << govobj.GetDataAsString()
-         << ", nObjectType = " << govobj.nObjectType
-         << endl;
+    DBG( cout << "CGovernanceManager::AddGovernanceObject Before trigger block, strData = "
+              << govobj.GetDataAsString()
+              << ", nObjectType = " << govobj.nObjectType
+              << endl; );
 
     if(govobj.nObjectType == GOVERNANCE_OBJECT_TRIGGER)
     {
-        cout << "CGovernanceManager::AddGovernanceObject Before AddNewTrigger" << endl;
+        DBG( cout << "CGovernanceManager::AddGovernanceObject Before AddNewTrigger" << endl; );
         triggerman.AddNewTrigger(govobj.GetHash());
-        cout << "CGovernanceManager::AddGovernanceObject After AddNewTrigger" << endl;
+        DBG( cout << "CGovernanceManager::AddGovernanceObject After AddNewTrigger" << endl; );
     }
 
-    cout << "CGovernanceManager::AddGovernanceObject END" << endl;
+    DBG( cout << "CGovernanceManager::AddGovernanceObject END" << endl; );
 
     return true;
 }
@@ -758,9 +758,9 @@ void CGovernanceObject::LoadData()
         fUnparsable = true;
     }
 
-    cout << "CGovernanceObject::LoadData strData = "
-         << GetDataAsString()
-         << endl;
+    DBG( cout << "CGovernanceObject::LoadData strData = "
+              << GetDataAsString()
+              << endl; );
 
     try
     {
