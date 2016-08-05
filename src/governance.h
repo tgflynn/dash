@@ -5,6 +5,9 @@
 #ifndef GOVERANCE_H
 #define GOVERANCE_H
 
+//#define ENABLE_DASH_DEBUG
+
+#include "util.h"
 #include "main.h"
 #include "sync.h"
 #include "net.h"
