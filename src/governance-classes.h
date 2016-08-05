@@ -13,6 +13,7 @@
 #include "base58.h"
 #include "masternode.h"
 #include <boost/lexical_cast.hpp>
+#include <boost/shared_ptr.hpp>
 #include "init.h"
 
 using namespace std;
@@ -24,11 +25,24 @@ class CSuperblock;
 class CGovernanceTrigger;
 class CGovernanceTriggerManager;
 
+typedef boost::shared_ptr<CSuperblock> CSuperblock_sptr;
+
 // DECLARE GLOBAL VARIABLES FOR GOVERNANCE CLASSES
 extern CGovernanceTriggerManager triggerman;
 
 // SPLIT A STRING UP - USED FOR SUPERBLOCK PAYMENTS
 std::vector<std::string> SplitBy(std::string strCommand, std::string strDelimit);
+
+struct trigger_man_rec_t  {
+
+    trigger_man_rec_t(int status_= SEEN_OBJECT_UNKNOWN,CSuperblock_sptr superblock_=CSuperblock_sptr())
+    : status(status_),
+        superblock(superblock_)
+    {}
+
+    int status;
+    CSuperblock_sptr superblock;
+};
 
 /**
 *   Trigger Mananger
@@ -39,12 +53,17 @@ std::vector<std::string> SplitBy(std::string strCommand, std::string strDelimit)
 
 class CGovernanceTriggerManager
 {
+    typedef std::map<uint256, trigger_man_rec_t> trigger_m_t;
+
+    typedef trigger_m_t::iterator trigger_m_it;
+
+    typedef trigger_m_t::const_iterator trigger_m_cit;
 
 private:
-    std::map<uint256, int> mapTrigger;
+    trigger_m_t mapTrigger;
 
 public:
-    std::vector<CGovernanceObject*> GetActiveTriggers();
+    std::vector<CSuperblock_sptr> GetActiveTriggers();
     bool AddNewTrigger(uint256 nHash);
     void CleanAndRemove();
 
@@ -83,7 +102,7 @@ public:
 
     static std::string GetRequiredPaymentsString(int nBlockHeight);
     static bool IsValid(const CTransaction& txNew, int nBlockHeight);
-    static bool GetBestSuperblock(CSuperblock* pBlock, int nBlockHeight);
+    static bool GetBestSuperblock(CSuperblock_sptr& pBlock, int nBlockHeight);
 };
 
 /**
@@ -164,22 +183,38 @@ private:
 
 public:
 
-    CSuperblock(){}
+    CSuperblock()
+        : pGovObj(NULL),
+          fError(true),
+          strError(),
+          nEpochStart(0),
+          nExecuted(false),
+          vecPayments()
+    {}
 
     CSuperblock(CGovernanceObject* pGovObjIn)
+        : pGovObj(pGovObjIn),
+          fError(true),
+          strError(),
+          nEpochStart(0),
+          nExecuted(false),
+          vecPayments()
     {
-        if(!pGovObj) return;
-        pGovObj = pGovObjIn;
+        cout << "CSuperblock Constructor Start" << endl;
+        if(!pGovObj) {
+            cout << "CSuperblock Constructor pGovObj is NULL, returning" << endl;
+            return;
+        }
 
-        UniValue obj(UniValue::VOBJ);
+        UniValue obj = pGovObj->GetJSONObject();
         
-        if(pGovObj->GetData(obj))
-        {
-            vecPayments.clear();
-
+        try  {
             // FIRST WE GET THE START EPOCH, THE DATE WHICH THE PAYMENT SHALL OCCUR
             strError = "Error parsing start epoch";
-            nEpochStart = obj["start_epoch"].get_int();
+            std::string nEpochStartStr = obj["event_block_height"].get_str();
+            if(!ParseInt32(nEpochStartStr, &nEpochStart))  {
+                throw runtime_error("Parse error parsing event_block_height");
+            }
 
             // NEXT WE GET THE PAYMENT INFORMATION AND RECONSTRUCT THE PAYMENT VECTOR
             strError = "Missing payment information";
@@ -190,31 +225,42 @@ public:
             nExecuted = false;
             fError = false;
             strError = "";
-        } else {
+        }
+        catch(...)  {
             fError = true;
             strError = "Unparsable";
+            cout << "CSuperblock Constructor A parse error occurred" 
+                 << ", obj = " << obj.write()
+                 << endl;
         }
+
+        cout << "CSuperblock Constructor End" << endl;
+    }
+
+    CGovernanceObject* GetGovernanceObject()  {
+        return pGovObj;
     }
 
     int GetBlockStart()
     {
-        // 12.1 TRIGGER EXECUTION
-        // NOTE : Is this over complicated?
+        /* // 12.1 TRIGGER EXECUTION */
+        /* // NOTE : Is this over complicated? */
 
-        //int nRet = 0;
-        int nTipEpoch = 0;
-        int nTipBlock = chainActive.Tip()->nHeight+1;
+        /* //int nRet = 0; */
+        /* int nTipEpoch = 0; */
+        /* int nTipBlock = chainActive.Tip()->nHeight+1; */
 
-        // GET TIP EPOCK / BLOCK
+        /* // GET TIP EPOCK / BLOCK */
 
-        // typically it should be more than the current time
-        int nDiff = nEpochStart - nTipEpoch;
-        int nBlockDiff = nDiff / (2.6*60);
+        /* // typically it should be more than the current time */
+        /* int nDiff = nEpochStart - nTipEpoch; */
+        /* int nBlockDiff = nDiff / (2.6*60); */
 
-        // calculate predicted block height
-        int nMod = (nTipBlock + nBlockDiff) % Params().GetConsensus().nSuperblockCycle;
+        /* // calculate predicted block height */
+        /* int nMod = (nTipBlock + nBlockDiff) % Params().GetConsensus().nSuperblockCycle; */
 
-        return (nTipBlock + nBlockDiff)-nMod;
+        /* return (nTipBlock + nBlockDiff)-nMod; */
+        return nEpochStart;
     }
 
     bool ParsePaymentSchedule(std::string& strPaymentAddresses, std::string& strPaymentAmounts)
