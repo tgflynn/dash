@@ -27,6 +27,7 @@ using namespace std;
 class CSuperblock;
 class CGovernanceTrigger;
 class CGovernanceTriggerManager;
+class CSuperblockManager;
 
 typedef boost::shared_ptr<CSuperblock> CSuperblock_sptr;
 
@@ -56,6 +57,10 @@ struct trigger_man_rec_t  {
 
 class CGovernanceTriggerManager
 {
+    friend class CSuperblock;
+    friend class CSuperblockManager;
+
+public: // Typedefs
     typedef std::map<uint256, trigger_man_rec_t> trigger_m_t;
 
     typedef trigger_m_t::iterator trigger_m_it;
@@ -65,9 +70,17 @@ class CGovernanceTriggerManager
 private:
     trigger_m_t mapTrigger;
 
+    CCriticalSection cs;
+
 public:
-    std::vector<CSuperblock_sptr> GetActiveTriggers();
+    CGovernanceTriggerManager()
+        : mapTrigger()
+    {}
+
     bool AddNewTrigger(uint256 nHash);
+
+private:
+    std::vector<CSuperblock_sptr> GetActiveTriggers();
     void CleanAndRemove();
 
     bool UpdateStatus(uint256 nHash, int nNewStatus);
@@ -75,7 +88,7 @@ public:
 };
 
 /**
-*   Superblock Mananger
+*   Superblock Manager
 *
 *   Class for querying superblock information
 */

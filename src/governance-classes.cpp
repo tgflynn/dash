@@ -62,6 +62,7 @@ std::vector<std::string> SplitBy(std::string strCommand, std::string strDelimit)
 bool CGovernanceTriggerManager::AddNewTrigger(uint256 nHash)
 {
     DBG( cout << "CGovernanceTriggerManager::AddNewTrigger: Start" << endl; );
+    LOCK(cs);
 
     // IF WE ALREADY HAVE THIS HASH, RETURN
     if(mapTrigger.count(nHash))  {
@@ -215,6 +216,7 @@ bool CSuperblockManager::IsValidSuperblockHeight(int nBlockHeight)
 
 bool CSuperblockManager::IsSuperblockTriggered(int nBlockHeight)
 {
+    LOCK(triggerman.cs);
     // GET ALL ACTIVE TRIGGERS
     printf("IsSuperblockTriggered\n");
     std::vector<CSuperblock_sptr> vecTriggers = triggerman.GetActiveTriggers();
@@ -268,6 +270,8 @@ bool CSuperblockManager::GetBestSuperblock(CSuperblock_sptr& pBlock, int nBlockH
 
     printf("GetBestSuperblock\n");
 
+    AssertLockHeld(triggerman.cs);
+
     BOOST_FOREACH(CSuperblock_sptr superblock, vecTriggers)
     {
         if(!superblock)  {
@@ -310,6 +314,7 @@ bool CSuperblockManager::GetBestSuperblock(CSuperblock_sptr& pBlock, int nBlockH
 void CSuperblockManager::CreateSuperblock(CMutableTransaction& txNew, CAmount nFees, int nBlockHeight)
 {
     printf("CSuperblockManager::CreateSuperblock Start\n");
+    LOCK(triggerman.cs);
 
     AssertLockHeld(cs_main);
     if(!chainActive.Tip()) {
@@ -364,6 +369,7 @@ void CSuperblockManager::CreateSuperblock(CMutableTransaction& txNew, CAmount nF
 bool CSuperblockManager::IsValid(const CTransaction& txNew, int nBlockHeight)
 {
     // GET BEST SUPERBLOCK, SHOULD MATCH
+    LOCK(triggerman.cs);
 
     CSuperblock_sptr pBlock;
     if(CSuperblockManager::GetBestSuperblock(pBlock, nBlockHeight))
@@ -384,6 +390,7 @@ bool CSuperblock::IsValid(const CTransaction& txNew)
 {
     printf("IsValid");
     // TODO : LOCK(cs);
+
     std::string strPayeesPossible = "";
 
     printf("1");
@@ -412,7 +419,7 @@ bool CSuperblock::IsValid(const CTransaction& txNew)
 
                 // TODO: PRINT NICE N.N DASH OUTPUT
 
-                LogPrintf("SUPERBLOCK: output n %d payment %d to %s\n", payment.nAmount, address2.ToString());
+                LogPrintf("SUPERBLOCK: output n %d payment %d to %s\n", i, payment.nAmount, address2.ToString());
 
                 printf("4\n");
 
@@ -434,8 +441,7 @@ bool CSuperblock::IsValid(const CTransaction& txNew)
 
 std::string CSuperblockManager::GetRequiredPaymentsString(int nBlockHeight)
 {
-    // TODO : LOCK(cs);
-
+    LOCK(triggerman.cs);
     std::string ret = "Unknown";
 
     // GET BEST SUPERBLOCK
