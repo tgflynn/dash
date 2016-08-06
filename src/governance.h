@@ -5,6 +5,9 @@
 #ifndef GOVERANCE_H
 #define GOVERANCE_H
 
+//#define ENABLE_DASH_DEBUG
+
+#include "util.h"
 #include "main.h"
 #include "sync.h"
 #include "net.h"
@@ -24,8 +27,9 @@
 
 using namespace std;
 
-#define GOVERNANCE_OBJECT_PROPOSAL          1
-#define GOVERNANCE_OBJECT_TRIGGER           2
+static const int GOVERNANCE_OBJECT_UNKNOWN = 0;
+static const int GOVERNANCE_OBJECT_PROPOSAL = 1;
+static const int GOVERNANCE_OBJECT_TRIGGER = 2;
 
 extern CCriticalSection cs_budget;
 
@@ -42,10 +46,11 @@ extern std::map<uint256, int64_t> mapAskedForGovernanceObject;
 extern CGovernanceManager governance;
 
 // FOR SEEN MAP ARRAYS - GOVERNANCE OBJECTS AND VOTES
-#define SEEN_OBJECT_IS_VALID          0
-#define SEEN_OBJECT_ERROR_INVALID     1
-#define SEEN_OBJECT_ERROR_IMMATURE    2
-#define SEEN_OBJECT_EXECUTED          3 //used for triggers
+static const int SEEN_OBJECT_IS_VALID = 0;
+static const int SEEN_OBJECT_ERROR_INVALID = 1;
+static const int SEEN_OBJECT_ERROR_IMMATURE = 2;
+static const int SEEN_OBJECT_EXECUTED = 3; //used for triggers
+static const int SEEN_OBJECT_UNKNOWN = 4; // the default
 
 //Check the collateral transaction for the budget proposal/finalized budget
 extern bool IsCollateralValid(uint256 nTxCollateralHash, uint256 nExpectedHash, std::string& strError, int& nConf, CAmount minFee);
@@ -200,6 +205,9 @@ public:
     int GetObjectType();
     int GetObjectSubtype();
     std::string GetName() {return strName; }
+
+    UniValue GetJSONObject();
+
     void Relay();
     uint256 GetHash();
 

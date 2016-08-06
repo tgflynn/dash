@@ -2,6 +2,9 @@
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
+//#define ENABLE_DASH_DEBUG
+
+#include "util.h"
 #include "main.h"
 #include "db.h"
 #include "init.h"
@@ -200,8 +203,8 @@ UniValue gobject(const UniValue& params, bool fHelp)
 
         CGovernanceObject govobj(hashParent, nRevision, strName, nTime, fee_tx, strData);
 
-        cout << "gobject: submit strName = " << strName
-             << ", strData = " << govobj.GetDataAsString() << endl;
+        DBG( cout << "gobject: submit strName = " << strName
+                  << ", strData = " << govobj.GetDataAsString() << endl; );
 
         std::string strError = "";
         if(!govobj.IsValidLocally(pindex, strError, true)){

@@ -271,7 +271,7 @@ bool CGovernanceManager::AddGovernanceObject(CGovernanceObject& govobj)
     LOCK(cs);
     std::string strError = "";
 
-    cout << "CGovernanceManager::AddGovernanceObject START" << endl;
+    DBG( cout << "CGovernanceManager::AddGovernanceObject START" << endl; );
 
     // MAKE SURE THIS OBJECT IS OK
 
@@ -294,16 +294,19 @@ bool CGovernanceManager::AddGovernanceObject(CGovernanceObject& govobj)
 
     // SHOULD WE ADD THIS OBJECT TO ANY OTHER MANANGERS?
 
-    cout << "CGovernanceManager::AddGovernanceObject Before trigger block, strData = "
-         << govobj.GetDataAsString()
-         << ", nObjectType = " << govobj.nObjectType
-         << endl;
+    DBG( cout << "CGovernanceManager::AddGovernanceObject Before trigger block, strData = "
+              << govobj.GetDataAsString()
+              << ", nObjectType = " << govobj.nObjectType
+              << endl; );
 
     if(govobj.nObjectType == GOVERNANCE_OBJECT_TRIGGER)
     {
-        cout << "CGovernanceManager::AddGovernanceObject Before AddNewTrigger" << endl;
+        DBG( cout << "CGovernanceManager::AddGovernanceObject Before AddNewTrigger" << endl; );
         triggerman.AddNewTrigger(govobj.GetHash());
+        DBG( cout << "CGovernanceManager::AddGovernanceObject After AddNewTrigger" << endl; );
     }
+
+    DBG( cout << "CGovernanceManager::AddGovernanceObject END" << endl; );
 
     return true;
 }
@@ -607,6 +610,7 @@ CGovernanceObject::CGovernanceObject()
 
     strName = "unknown";
     nTime = 0;
+    nObjectType = GOVERNANCE_OBJECT_UNKNOWN;
 
     nHashParent = uint256(); //parent object, 0 is root
     nRevision = 0; //object revision in the system
@@ -633,7 +637,8 @@ CGovernanceObject::CGovernanceObject(uint256 nHashParentIn, int nRevisionIn, std
     nRevision = nRevisionIn; //object revision in the system
     strName = strNameIn;
     nTime = nTimeIn;
-    nCollateralHash = nCollateralHashIn; //fee-tx    
+    nCollateralHash = nCollateralHashIn; //fee-tx
+    nObjectType = GOVERNANCE_OBJECT_UNKNOWN; // Avoid having an uninitialized variable    
     strData = strDataIn;
 
     // CACHING FOR VARIOUS FLAGS
@@ -659,6 +664,7 @@ CGovernanceObject::CGovernanceObject(const CGovernanceObject& other)
     nTime = other.nTime;
     nCollateralHash = other.nCollateralHash;
     strData = other.strData;
+    nObjectType = other.nObjectType;
     fUnparsable = true;
 
     // caching
@@ -696,9 +702,37 @@ uint256 CGovernanceObject::GetHash()
     // fee_tx is left out on purpose
     uint256 h1 = ss.GetHash();
 
-    printf("%i %s %li %s\n", nRevision, strName.c_str(), nTime, strData.c_str());
+    printf("CGovernanceObject::GetHash %i %s %li %s\n", nRevision, strName.c_str(), nTime, strData.c_str());
 
     return h1;
+}
+
+/**
+   Return the actual object from the strData JSON structure.
+
+   Returns an empty object on error.
+ */
+UniValue CGovernanceObject::GetJSONObject()
+{
+    UniValue obj(UniValue::VOBJ);
+    if(strData.empty())  {
+        return obj;
+    }
+
+    UniValue objResult(UniValue::VOBJ);
+    if(!GetData(objResult)) {
+        return obj;
+    }
+
+    try  {
+        std::vector<UniValue> arr1 = objResult.getValues();
+        std::vector<UniValue> arr2 = arr1.at( 0 ).getValues();
+        obj = arr2.at( 1 );
+    }
+    catch(...)  {
+        obj = UniValue(UniValue::VOBJ);
+    }
+    return obj;
 }
 
 /**
@@ -720,20 +754,17 @@ void CGovernanceObject::LoadData()
 
     // ATTEMPT TO LOAD JSON STRING FROM STRDATA
     UniValue objResult(UniValue::VOBJ);
-    if(!GetData(objResult)) fUnparsable = true;
+    if(!GetData(objResult)) {
+        fUnparsable = true;
+    }
 
-    cout << "CGovernanceObject::LoadData strData = "
-         << GetDataAsString()
-         << endl;
+    DBG( cout << "CGovernanceObject::LoadData strData = "
+              << GetDataAsString()
+              << endl; );
 
     try
     {
-        //std::string strObjectType = objResult["type"].get_str();
-        //nObjectType = boost::lexical_cast<int>(strObjectType);
-
-        std::vector<UniValue> arr1 = objResult.getValues();
-        std::vector<UniValue> arr2 = arr1.at( 0 ).getValues();
-        UniValue obj = arr2.at( 1 );
+        UniValue obj = GetJSONObject();
         nObjectType = obj["type"].get_int();
     }
     catch (int e)
@@ -964,7 +995,9 @@ void CGovernanceObject::UpdateSentinelVariables(const CBlockIndex *pCurrentBlock
     // CALCULATE THE MINUMUM VOTE COUNT REQUIRED FOR FULL SIGNAL
 
     // todo - 12.1 - should be set to `10` after governance vote compression is implemented
-    int nAbsVoteReq = nMnCount / 10;
+    //int nAbsVoteReq = nMnCount / 10;
+    // Temporarily set to 1 for testing
+    int nAbsVoteReq = 1;
 
     // SET SENTINEL FLAGS TO FALSE
 
@@ -1003,7 +1036,8 @@ void CGovernanceObject::swap(CGovernanceObject& first, CGovernanceObject& second
     swap(first.nRevision, second.nRevision);
     swap(first.nTime, second.nTime);
     swap(first.nCollateralHash, second.nCollateralHash);
-    swap(first.strData, second.strData);     
+    swap(first.strData, second.strData);
+    swap(first.nObjectType, second.nObjectType);
 
     // swap all cached valid flags
     swap(first.fCachedFunding, second.fCachedFunding);
