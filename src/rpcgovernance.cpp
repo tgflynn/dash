@@ -128,36 +128,24 @@ UniValue gobject(const UniValue& params, bool fHelp)
 
         std::string strRevision = params[2].get_str();
         std::string strTime = params[3].get_str();
-        printf("1\n");
         int nRevision = boost::lexical_cast<int>(strRevision);
-        printf("2\n");
         int nTime = boost::lexical_cast<int>(strTime);
-        printf("3\n");
         std::string strName = SanitizeString(params[4].get_str());
-        printf("4\n");
         std::string strData = params[5].get_str();
-    
-        printf("5\n");
         
         // CREATE A NEW COLLATERAL TRANSACTION FOR THIS SPECIFIC OBJECT
 
         CGovernanceObject govobj(hashParent, nRevision, strName, nTime, uint256(), strData);
 
-        printf("6\n");
-
         std::string strError = "";
         if(!govobj.IsValidLocally(pindex, strError, false))
             throw JSONRPCError(RPC_INTERNAL_ERROR, "Governance object is not valid - " + govobj.GetHash().ToString() + " - " + strError);
-
-        printf("7\n");
 
         CWalletTx wtx;
         if(!pwalletMain->GetBudgetSystemCollateralTX(wtx, govobj.GetHash(), false)){
             throw JSONRPCError(RPC_INTERNAL_ERROR, "Error making collateral transaction for govobj. Please check your wallet balance and make sure your wallet is unlocked.");
         }
-
-        printf("8\n");
-
+        
         // -- make our change address
         CReserveKey reservekey(pwalletMain);
         // -- send the tx to the network
