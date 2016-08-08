@@ -146,6 +146,7 @@ void CGovernanceManager::ProcessMessage(CNode* pfrom, std::string& strCommand, C
     else if (strCommand == NetMsgType::MNGOVERNANCEOBJECT)
 
     {
+        UpdateCachedBlockHeight();
         LOCK(cs);
         // MAKE SURE WE HAVE A VALID REFERENCE TO THE TIP BEFORE CONTINUING
 
@@ -252,6 +253,7 @@ void CGovernanceManager::ProcessMessage(CNode* pfrom, std::string& strCommand, C
 
 void CGovernanceManager::CheckOrphanVotes()
 {
+    UpdateCachedBlockHeight();
     LOCK(cs);
 
     std::string strError = "";
@@ -268,6 +270,7 @@ void CGovernanceManager::CheckOrphanVotes()
 
 bool CGovernanceManager::AddGovernanceObject(CGovernanceObject& govobj)
 {
+    UpdateCachedBlockHeight();
     LOCK(cs);
     std::string strError = "";
 
@@ -473,6 +476,7 @@ struct sortProposalsByVotes {
 
 void CGovernanceManager::NewBlock()
 {
+    UpdateCachedBlockHeight();
     TRY_LOCK(cs, fBudgetNewBlock);
     if(!fBudgetNewBlock || !pCurrentBlockIndex) return;
 
@@ -498,6 +502,7 @@ void CGovernanceManager::NewBlock()
 
 void CGovernanceManager::Sync(CNode* pfrom, uint256 nProp)
 {
+    UpdateCachedBlockHeight();
     LOCK(cs);
 
     /*
@@ -544,6 +549,7 @@ void CGovernanceManager::SyncParentObjectByVote(CNode* pfrom, const CGovernanceV
 
 bool CGovernanceManager::AddOrUpdateVote(const CGovernanceVote& vote, CNode* pfrom, std::string& strError)
 {
+    UpdateCachedBlockHeight();
     LOCK(cs);
 
     // MAKE SURE WE HAVE THE PARENT OBJECT THE VOTE IS FOR

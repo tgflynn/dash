@@ -487,12 +487,6 @@ UniValue gobject(const UniValue& params, bool fHelp)
         if(pGovObj == NULL)
             throw JSONRPCError(RPC_INVALID_PARAMETER, "Unknown govobj");
 
-        CBlockIndex* pindex;
-        {
-            LOCK(cs_main);
-            pindex = chainActive.Tip();
-        }
-
         // REPORT BASIC OBJECT STATS
 
         LOCK2(cs_main, governance.cs);
