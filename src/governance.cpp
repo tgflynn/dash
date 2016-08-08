@@ -315,6 +315,8 @@ void CGovernanceManager::UpdateCachesAndClean()
 {
     LogPrintf("CGovernanceManager::UpdateCachesAndClean \n");
 
+    AssertLockHeld(cs);
+
     // DOUBLE CHECK THAT WE HAVE A VALID POINTER TO TIP
 
     if(!pCurrentBlockIndex) return;
@@ -357,6 +359,9 @@ void CGovernanceManager::UpdateCachesAndClean()
             ++it;
         }
     }
+
+    // Clean up any expired or invalid triggers
+    triggerman.CleanAndRemove();
 
     // CHECK EACH GOVERNANCE OBJECTS VALIDITY (CPU HEAVY)
 
