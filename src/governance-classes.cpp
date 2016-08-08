@@ -135,10 +135,10 @@ void CGovernanceTriggerManager::CleanAndRemove()
             DBG( cout << "CGovernanceTriggerManager::CleanAndRemove: superblock status = " << superblock->GetStatus() << endl; );
             switch(superblock->GetStatus())  {
             case SEEN_OBJECT_ERROR_INVALID:
+            case SEEN_OBJECT_UNKNOWN:
                 remove = true;
                 break;
             case SEEN_OBJECT_EXECUTED:
-            case SEEN_OBJECT_UNKNOWN:
                 {
                     CGovernanceObject* govobj = superblock->GetGovernanceObject();
                     if(govobj)  {
@@ -147,6 +147,20 @@ void CGovernanceTriggerManager::CleanAndRemove()
                 }
                 remove = true;
                 break;
+            case SEEN_OBJECT_IS_VALID:
+                {
+                    // Rough approximation: 30 days per month * 576 blocks per day
+                    static const int nMonthlyBlocks = 30*576;
+                    int nTriggerBlock = superblock->GetBlockStart();
+                    int nExpirationBlock = nTriggerBlock + nMonthlyBlocks;
+                    if(governance.GetCachedBlockHeight() > nExpirationBlock)  {
+                        remove = true;
+                        CGovernanceObject* govobj = superblock->GetGovernanceObject();
+                        if(govobj)  {
+                            govobj->fExpired = true;
+                        }
+                    }
+                }
             default:
                 break;
             }

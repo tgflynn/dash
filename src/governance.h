@@ -69,6 +69,7 @@ private:
     const CBlockIndex *pCurrentBlockIndex;
 
     int64_t nTimeLastDiff;
+    int nCachedBlockHeight;
 
 public:
     // critical section to protect the inner data structures
@@ -87,9 +88,14 @@ public:
     std::map<uint256, CGovernanceVote> mapVotesByHash;
     std::map<uint256, CGovernanceVote> mapVotesByType;
 
-    CGovernanceManager() {
-        mapObjects.clear();
-    }
+    CGovernanceManager()
+        : mapCollateral(),
+          pCurrentBlockIndex(NULL),
+          nTimeLastDiff(0),
+          nCachedBlockHeight(0),
+          cs(),
+          mapObjects()
+    {}
 
     void ClearSeen() {
         mapSeenGovernanceObjects.clear();
@@ -157,6 +163,15 @@ public:
     void UpdatedBlockTip(const CBlockIndex *pindex);
     int64_t GetLastDiffTime() {return nTimeLastDiff;}
     void UpdateLastDiffTime(int64_t nTimeIn) {nTimeLastDiff=nTimeIn;}
+
+    int GetCachedBlockHeight() { return nCachedBlockHeight; }
+
+private:
+    void UpdateCachedBlockHeight()  {
+        LOCK(cs_main);
+        nCachedBlockHeight = chainActive.Height();
+    }
+
 };
 
 /**
