@@ -135,8 +135,16 @@ void CGovernanceTriggerManager::CleanAndRemove()
             DBG( cout << "CGovernanceTriggerManager::CleanAndRemove: superblock status = " << superblock->GetStatus() << endl; );
             switch(superblock->GetStatus())  {
             case SEEN_OBJECT_ERROR_INVALID:
+                remove = true;
+                break;
             case SEEN_OBJECT_EXECUTED:
             case SEEN_OBJECT_UNKNOWN:
+                {
+                    CGovernanceObject* govobj = superblock->GetGovernanceObject();
+                    if(govobj)  {
+                        govobj->fExpired = true;
+                    }
+                }
                 remove = true;
                 break;
             default:
@@ -146,8 +154,8 @@ void CGovernanceTriggerManager::CleanAndRemove()
         
         if(remove)  {
             DBG( 
-                CGovernanceObject* govobj = superblock->GetGovernanceObject();
                 string strdata = "NULL";
+                CGovernanceObject* govobj = superblock->GetGovernanceObject();
                 if(govobj)  {
                     strdata = govobj->GetDataAsString();
                 }

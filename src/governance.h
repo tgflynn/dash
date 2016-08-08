@@ -191,6 +191,7 @@ public:
     bool fCachedEndorsed; // true == minimum network support has been reached flagging this object as endorsed by an elected representative body (e.g. business review board / technecial review board /etc)
     bool fDirtyCache; // object was updated and cached values should be updated soon
     bool fUnparsable; // data field was unparsible, object will be rejected
+    bool fExpired; // Object is no longer of interest
 
     CGovernanceObject();
     CGovernanceObject(uint256 nHashParentIn, int nRevisionIn, std::string strNameIn, int64_t nTime, uint256 nCollateralHashIn, std::string strDataIn);
