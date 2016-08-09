@@ -278,7 +278,7 @@ CBlockTemplate* CreateNewBlock(const CChainParams& chainparams, const CScript& s
         }
 
         // DASH : Masternode and general budget payments
-        printf("CreateNewBlock 1\n");
+        DBG( printf("CreateNewBlock 1\n"); );
         FillBlockPayee(txNew, nFees);
 
         // Make payee

@@ -241,7 +241,7 @@ bool CSuperblockManager::IsSuperblockTriggered(int nBlockHeight)
 {
     LOCK(governance.cs);
     // GET ALL ACTIVE TRIGGERS
-    printf("IsSuperblockTriggered\n");
+    DBG( printf("IsSuperblockTriggered\n"); );
     std::vector<CSuperblock_sptr> vecTriggers = triggerman.GetActiveTriggers();
     //int nYesCount = 0;
 
@@ -288,7 +288,7 @@ bool CSuperblockManager::IsSuperblockTriggered(int nBlockHeight)
 
 bool CSuperblockManager::GetBestSuperblock(CSuperblock_sptr& pBlock, int nBlockHeight)
 {
-    printf("GetBestSuperblock\n");
+    DBG( printf("GetBestSuperblock\n"); );
     AssertLockHeld(governance.cs);
     std::vector<CSuperblock_sptr> vecTriggers = triggerman.GetActiveTriggers();
     int nYesCount = 0;
@@ -334,7 +334,7 @@ bool CSuperblockManager::GetBestSuperblock(CSuperblock_sptr& pBlock, int nBlockH
 
 void CSuperblockManager::CreateSuperblock(CMutableTransaction& txNew, CAmount nFees, int nBlockHeight)
 {
-    printf("CSuperblockManager::CreateSuperblock Start\n");
+    DBG( printf("CSuperblockManager::CreateSuperblock Start\n"); );
     LOCK(governance.cs);
     AssertLockHeld(cs_main);
 
@@ -410,23 +410,23 @@ bool CSuperblockManager::IsValid(const CTransaction& txNew, int nBlockHeight)
 
 bool CSuperblock::IsValid(const CTransaction& txNew)
 {
-    printf("IsValid");
+    DBG( printf("IsValid"); );
     // TODO : LOCK(cs);
 
     std::string strPayeesPossible = "";
 
-    printf("1");
+    DBG( printf("1"); );
 
     // CONFIGURE SUPERBLOCK OUTPUTS 
 
     int nPayments = CountPayments();    
     for(int i = 0; i <= nPayments; i++)
     {
-        printf("2");
+        DBG( printf("2"); );
         CGovernancePayment payment;
         if(GetPayment(i, payment))
         {
-            printf("3");
+            DBG( printf("3"); );
             // SET COINBASE OUTPUT TO SUPERBLOCK SETTING
 
             if(payment.script == txNew.vout[i].scriptPubKey && payment.nAmount == txNew.vout[i].nValue)
@@ -443,14 +443,14 @@ bool CSuperblock::IsValid(const CTransaction& txNew)
 
                 LogPrintf("SUPERBLOCK: output n %d payment %d to %s\n", i, payment.nAmount, address2.ToString());
 
-                printf("4\n");
+                DBG( printf("4\n"); );
 
                 return false;
             }
         }
     }
 
-    printf("5\n");
+    DBG( printf("5\n"); );
 
     return true;
 }
