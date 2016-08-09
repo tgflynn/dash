@@ -103,7 +103,7 @@ void CActiveMasternode::ManageStatus()
                 return;
             }
 
-            LOCK(pwalletMain->cs_wallet);
+            LOCK2(cs_main, pwalletMain->cs_wallet);
             pwalletMain->LockCoin(vin.prevout);
 
             // send to all nodes
@@ -295,6 +295,8 @@ bool CActiveMasternode::GetMasterNodeVin(CTxIn& vin, CPubKey& pubkey, CKey& secr
     if (fImporting || fReindex) return false;
 
     // Find possible candidates
+    TRY_LOCK(cs_main, fMain);
+    if(!fMain) return false;
     TRY_LOCK(pwalletMain->cs_wallet, fWallet);
     if(!fWallet) return false;
 

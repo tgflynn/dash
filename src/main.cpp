@@ -4478,11 +4478,20 @@ void static ProcessGetData(CNode* pfrom, const Consensus::Params& consensusParam
                 // Send stream from relay memory
                 bool pushed = false;
                 {
-                    LOCK(cs_mapRelay);
-                    map<CInv, CDataStream>::iterator mi = mapRelay.find(inv);
-                    if (mi != mapRelay.end()) {
-                        pfrom->PushMessage(inv.GetCommand(), (*mi).second);
-                        pushed = true;
+                    bool topush = false;
+                    CDataStream ss(SER_NETWORK, PROTOCOL_VERSION);
+                    {
+                        LOCK(cs_mapRelay);
+                        map<CInv, CDataStream>::iterator mi = mapRelay.find(inv);
+                        if (mi != mapRelay.end()) {
+                            ss = (*mi).second;
+                            topush = true;
+                        }
+                    }
+                    // Don't hold the lock while pushing the message
+                    if(topush)  { 
+                        pfrom->PushMessage(inv.GetCommand(), ss);
+                        pushed = true;                           
                     }
                 }
 
@@ -4538,22 +4547,34 @@ void static ProcessGetData(CNode* pfrom, const Consensus::Params& consensusParam
                 }
             
                 if (!pushed && inv.type == MSG_GOVERNANCE_VOTE) {
-                    LOCK(governance.cs);
-                    if(governance.mapVotesByHash.count(inv.hash)) {
-                        CDataStream ss(SER_NETWORK, PROTOCOL_VERSION);
-                        ss.reserve(1000);
-                        ss << governance.mapVotesByHash[inv.hash];
+                    CDataStream ss(SER_NETWORK, PROTOCOL_VERSION);
+                    bool topush = false;
+                    {
+                        LOCK(governance.cs);
+                        if(governance.mapVotesByHash.count(inv.hash)) {
+                            ss.reserve(1000);
+                            ss << governance.mapVotesByHash[inv.hash];
+                            topush = true;
+                        }
+                    }
+                    if(topush)  {
                         pfrom->PushMessage(NetMsgType::MNGOVERNANCEVOTE, ss);
                         pushed = true;
                     }
                 }
 
                 if (!pushed && inv.type == MSG_GOVERNANCE_OBJECT) {
-                    LOCK(governance.cs);
-                    if(governance.mapObjects.count(inv.hash)) {
-                        CDataStream ss(SER_NETWORK, PROTOCOL_VERSION);
-                        ss.reserve(1000);
-                        ss << governance.mapObjects[inv.hash];
+                    CDataStream ss(SER_NETWORK, PROTOCOL_VERSION);
+                    bool topush = false;
+                    {
+                        LOCK(governance.cs);
+                        if(governance.mapObjects.count(inv.hash)) {
+                            ss.reserve(1000);
+                            ss << governance.mapObjects[inv.hash];
+                            topush = true;
+                        }
+                    }
+                    if(topush)  {
                         pfrom->PushMessage(NetMsgType::MNGOVERNANCEOBJECT, ss);
                         pushed = true;
                     }

@@ -1913,9 +1913,12 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)
     CFlatDB<CMasternodePayments> flatdb2("mnpayments.dat", "magicMasternodePaymentsCache");
     flatdb2.Load(mnpayments);
 
-    CFlatDB<CGovernanceManager> flatdb3("governance.dat", "magicGovernanceCache");
-    flatdb3.Load(governance);
-    governance.ClearSeen();
+    {
+        LOCK(governance.cs);
+        CFlatDB<CGovernanceManager> flatdb3("governance.dat", "magicGovernanceCache");
+        flatdb3.Load(governance);
+        governance.ClearSeen();
+    }
 
     // ********************************************************* Step 11c: update block tip in Dash modules
 

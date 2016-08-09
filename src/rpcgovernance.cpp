@@ -270,9 +270,9 @@ UniValue gobject(const UniValue& params, bool fHelp)
             return "Failure to sign.";
         }
 
-        LOCK(governance.cs);
         std::string strError = "";
         if(governance.AddOrUpdateVote(vote, NULL, strError)) {
+            LOCK(governance.cs);
             governance.mapSeenVotes.insert(make_pair(vote.GetHash(), SEEN_OBJECT_IS_VALID));
             vote.Relay();
             success++;
@@ -379,9 +379,9 @@ UniValue gobject(const UniValue& params, bool fHelp)
 
             // UPDATE LOCAL DATABASE WITH NEW OBJECT SETTINGS
 
-            LOCK(governance.cs);
             std::string strError = "";
             if(governance.AddOrUpdateVote(vote, NULL, strError)) {
+                LOCK(governance.cs);
                 governance.mapSeenVotes.insert(make_pair(vote.GetHash(), SEEN_OBJECT_IS_VALID));
                 vote.Relay();
                 success++;
