@@ -61,43 +61,72 @@ extern bool IsCollateralValid(uint256 nTxCollateralHash, uint256 nExpectedHash, 
 //
 class CGovernanceManager
 {
+public: // Types
+
+    typedef std::map<uint256, CGovernanceObject> object_m_t;
+
+    typedef object_m_t::iterator object_m_it;
+
+    typedef object_m_t::const_iterator object_m_cit;
+
+    typedef std::map<uint256, int> count_m_t;
+
+    typedef count_m_t::iterator count_m_it;
+
+    typedef count_m_t::const_iterator count_m_cit;
+
+    typedef std::map<uint256, CGovernanceVote> vote_m_t;
+
+    typedef vote_m_t::iterator vote_m_it;
+
+    typedef vote_m_t::const_iterator vote_m_cit;
+
+    typedef std::map<uint256, CTransaction> transaction_m_t;
+
+    typedef transaction_m_t::iterator transaction_m_it;
+
+    typedef transaction_m_t::const_iterator transaction_m_cit;
+
+    typedef object_m_t::size_type size_type;
+
 private:
 
     //hold txes until they mature enough to use
-    map<uint256, CTransaction> mapCollateral;
+    transaction_m_t mapCollateral;
     // Keep track of current block index
     const CBlockIndex *pCurrentBlockIndex;
 
     int64_t nTimeLastDiff;
     int nCachedBlockHeight;
 
+    // keep track of the scanning errors
+    object_m_t mapObjects;
+
+    // note: move to private for better encapsulation 
+    count_m_t mapSeenGovernanceObjects;
+    count_m_t mapSeenVotes;
+    vote_m_t mapOrphanVotes;
+
+    // todo: one of these should point to the other
+    //   -- must be carefully managed while adding/removing/updating
+    vote_m_t mapVotesByHash;
+    vote_m_t mapVotesByType;
+
 public:
     // critical section to protect the inner data structures
     mutable CCriticalSection cs;
     
-    // keep track of the scanning errors
-    map<uint256, CGovernanceObject> mapObjects;
-
-    // note: move to private for better encapsulation 
-    std::map<uint256, int> mapSeenGovernanceObjects;
-    std::map<uint256, int> mapSeenVotes;
-    std::map<uint256, CGovernanceVote> mapOrphanVotes;
-
-    // todo: one of these should point to the other
-    //   -- must be carefully managed while adding/removing/updating
-    std::map<uint256, CGovernanceVote> mapVotesByHash;
-    std::map<uint256, CGovernanceVote> mapVotesByType;
-
     CGovernanceManager()
         : mapCollateral(),
           pCurrentBlockIndex(NULL),
           nTimeLastDiff(0),
           nCachedBlockHeight(0),
-          cs(),
-          mapObjects()
+          mapObjects(),
+          cs()
     {}
 
     void ClearSeen() {
+        LOCK(cs);
         mapSeenGovernanceObjects.clear();
         mapSeenVotes.clear();
     }
@@ -152,6 +181,7 @@ public:
 
     template <typename Stream, typename Operation>
     inline void SerializationOp(Stream& s, Operation ser_action, int nType, int nVersion) {
+        LOCK(cs);
         READWRITE(mapSeenGovernanceObjects);
         READWRITE(mapSeenVotes);
         READWRITE(mapOrphanVotes);
@@ -165,6 +195,21 @@ public:
     void UpdateLastDiffTime(int64_t nTimeIn) {nTimeLastDiff=nTimeIn;}
 
     int GetCachedBlockHeight() { return nCachedBlockHeight; }
+
+    // Accessors for thread-safe access to maps
+    bool HaveObjectForHash(uint256 nHash);
+
+    bool HaveVoteForHash(uint256 nHash);
+
+    // int GetVoteCountByHash(uint256 nHash);
+
+    bool SerializeObjectForHash(uint256 nHash, CDataStream& ss);
+
+    bool SerializeVoteForHash(uint256 nHash, CDataStream& ss);
+
+    void AddSeenGovernanceObject(uint256 nHash, int status);
+
+    void AddSeenVote(uint256 nHash, int status);
 
 private:
     void UpdateCachedBlockHeight()  {

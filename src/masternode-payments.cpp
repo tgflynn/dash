@@ -101,7 +101,7 @@ bool IsBlockPayeeValid(const CTransaction& txNew, int nBlockHeight)
 
     // SEE IF THIS IS A VALID SUPERBLOCK
 
-    printf("IsBlockPayeeValid 1");
+    DBG( printf("IsBlockPayeeValid 1"); );
 
     if(CSuperblockManager::IsValidSuperblockHeight(nBlockHeight))
     {
@@ -110,40 +110,40 @@ bool IsBlockPayeeValid(const CTransaction& txNew, int nBlockHeight)
             // IF WE HAVE A ACTIVATED TRIGGER
 
             if(CSuperblockManager::IsValid(txNew, nBlockHeight)){
-                printf("2\n");
+                DBG( printf("2\n"); );
                 return true;
             } else {
                 LogPrintf("Invalid superblock detected %s\n", txNew.ToString());
                 if(IsSporkActive(SPORK_9_MASTERNODE_SUPERBLOCK_ENFORCEMENT)){
-                    printf("3\n");
+                    DBG( printf("3\n"); );
                     return false;
                 } else {
-                    printf("4\n");
+                    DBG( printf("4\n"); );
                     LogPrintf("Superblock enforcement is disabled, accepting block\n");
                     return true;
                 }
             }
 
-            printf("5\n");
+            DBG( printf("5\n"); );
             return false; //note, is this correct?
         }
     }
 
-    printf("6");
+    DBG( printf("6"); );
 
     // IF THIS ISN'T A SUPERBLOCK, IT SHOULD PAY A MASTERNODE DIRECTLY
 
     if(mnpayments.IsTransactionValid(txNew, nBlockHeight))
     {
-        printf("7\n");
+        DBG( printf("7\n"); );
         return true;
     } else {
         LogPrintf("Invalid masternode payment detected %s\n", txNew.ToString());
         if(IsSporkActive(SPORK_8_MASTERNODE_PAYMENT_ENFORCEMENT)){
-            printf("8\n");
+            DBG( printf("8\n"); );
             return false;
         } else {
-            printf("9\n");
+            DBG( printf("9\n"); );
             LogPrintf("Masternode payment enforcement is disabled, accepting block\n");
             return true;
         }
@@ -163,17 +163,17 @@ void FillBlockPayee(CMutableTransaction& txNew, CAmount nFees)
     // SEE IF THIS IS A VALID SUPERBLOCK
 
 
-    printf("FillBlockPayee 1");
+    DBG( printf("FillBlockPayee 1"); );
 
     if(CSuperblockManager::IsValidSuperblockHeight(nHeight))
     {
-        printf("2");
+        DBG( printf("2"); );
         if(CSuperblockManager::IsSuperblockTriggered(nHeight))
         {
             // IF WE HAVE A ACTIVATED TRIGGER
             LogPrint("gobject", "FillBlockPayee, triggered superblock creation @ height %d\n", nHeight);
             CSuperblockManager::CreateSuperblock(txNew, nFees, nHeight);
-            printf("3\n");
+            DBG( printf("3\n"); );
             return;
         }
     }
@@ -181,7 +181,7 @@ void FillBlockPayee(CMutableTransaction& txNew, CAmount nFees)
     // FILL BLOCK PAYEE WITH MASTERNODE PAYMENT OTHERWISE
 
     mnpayments.FillBlockPayee(txNew, nFees);
-    printf("5\n");
+    DBG( printf("5\n"); );
 }
 
 std::string GetRequiredPaymentsString(int nBlockHeight)

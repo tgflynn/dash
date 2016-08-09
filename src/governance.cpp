@@ -107,6 +107,59 @@ bool IsCollateralValid(uint256 nTxCollateralHash, uint256 nExpectedHash, std::st
     return true;
 }
 
+// Accessors for thread-safe access to maps
+bool CGovernanceManager::HaveObjectForHash(uint256 nHash)  {
+    LOCK(cs);
+    return (mapObjects.count(nHash) == 1);
+}
+
+bool CGovernanceManager::HaveVoteForHash(uint256 nHash)  {
+    LOCK(cs);
+    return (mapVotesByHash.count(nHash) == 1);
+}
+
+// int CGovernanceManager::GetVoteCountByHash(uint256 nHash)  {
+//     int count = 0;
+//     LOCK(cs);
+//     count_m_cit it = mapVotesByHash.find(nHash);
+//     if (it != mapVotesByHash.end())  {
+//         count = it->second;
+//     }
+//     return count;
+// }
+
+bool CGovernanceManager::SerializeObjectForHash(uint256 nHash, CDataStream& ss)  {
+    LOCK(cs);
+    object_m_it it = mapObjects.find(nHash);
+    if (it == mapObjects.end())  {
+        return false;
+    }
+    ss << it->second;
+    return true;
+}
+
+bool CGovernanceManager::SerializeVoteForHash(uint256 nHash, CDataStream& ss)  {
+    LOCK(cs);
+    vote_m_it it = mapVotesByHash.find(nHash);
+    if (it == mapVotesByHash.end())  {
+        return false;
+    }
+    ss << it->second;
+    return true;
+}
+
+void CGovernanceManager::AddSeenGovernanceObject(uint256 nHash, int status)
+{
+    LOCK(cs);
+    mapSeenGovernanceObjects[nHash] = status;
+}
+
+void CGovernanceManager::AddSeenVote(uint256 nHash, int status)
+{
+    LOCK(cs);
+    mapSeenVotes[nHash] = status;
+}
+
 void CGovernanceManager::ProcessMessage(CNode* pfrom, std::string& strCommand, CDataStream& vRecv)
 {
     // lite mode is not supported
@@ -318,7 +371,7 @@ void CGovernanceManager::UpdateCachesAndClean()
 {
     LogPrintf("CGovernanceManager::UpdateCachesAndClean \n");
 
-    AssertLockHeld(cs);
+    LOCK(cs);
 
     // DOUBLE CHECK THAT WE HAVE A VALID POINTER TO TIP
 
@@ -1000,6 +1053,7 @@ int CGovernanceManager::CountMatchingVotes(CGovernanceObject& govobj, int nVoteS
     *
     */
 
+    LOCK(cs);
     int nCount = 0;
 
     std::map<uint256, CGovernanceVote>::iterator it2 = mapVotesByHash.begin();

@@ -4355,17 +4355,10 @@ bool static AlreadyHave(const CInv& inv) EXCLUSIVE_LOCKS_REQUIRED(cs_main)
         return mnpayments.mapMasternodePayeeVotes.count(inv.hash);
 
     case MSG_GOVERNANCE_VOTE:
-        {
-            LOCK(governance.cs);
-            return governance.mapVotesByHash.count(inv.hash);            
-        }
-
+        return governance.HaveVoteForHash(inv.hash);            
 
     case MSG_GOVERNANCE_OBJECT:
-        {
-            LOCK(governance.cs);
-            return governance.mapObjects.count(inv.hash);
-        }
+        return governance.HaveObjectForHash(inv.hash);
 
     case MSG_MASTERNODE_ANNOUNCE:
         return mnodeman.mapSeenMasternodeBroadcast.count(inv.hash);
@@ -4550,11 +4543,11 @@ void static ProcessGetData(CNode* pfrom, const Consensus::Params& consensusParam
                     CDataStream ss(SER_NETWORK, PROTOCOL_VERSION);
                     bool topush = false;
                     {
-                        LOCK(governance.cs);
-                        if(governance.mapVotesByHash.count(inv.hash)) {
+                        if(governance.HaveObjectForHash(inv.hash)) {
                             ss.reserve(1000);
-                            ss << governance.mapVotesByHash[inv.hash];
-                            topush = true;
+                            if(governance.SerializeVoteForHash(inv.hash, ss))  {
+                                topush = true;
+                            }
                         }
                     }
                     if(topush)  {
@@ -4567,11 +4560,11 @@ void static ProcessGetData(CNode* pfrom, const Consensus::Params& consensusParam
                     CDataStream ss(SER_NETWORK, PROTOCOL_VERSION);
                     bool topush = false;
                     {
-                        LOCK(governance.cs);
-                        if(governance.mapObjects.count(inv.hash)) {
+                        if(governance.HaveObjectForHash(inv.hash)) {
                             ss.reserve(1000);
-                            ss << governance.mapObjects[inv.hash];
-                            topush = true;
+                            if(governance.SerializeObjectForHash(inv.hash, ss))  {
+                                topush = true;
+                            }
                         }
                     }
                     if(topush)  {
