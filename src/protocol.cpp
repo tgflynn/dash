@@ -254,8 +254,10 @@ bool CInv::IsKnownType() const
 
 const char* CInv::GetCommand() const
 {
-    if (!IsKnownType())
+    if (!IsKnownType())  {
         LogPrint("net", "CInv::GetCommand() : type=%d unknown type\n", type);
+        return ppszTypeName[0]; // "ERROR"
+    }
 
     return ppszTypeName[type];
 }
