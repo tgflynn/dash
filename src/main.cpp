@@ -4959,18 +4959,18 @@ bool static AlreadyHave(const CInv& inv) EXCLUSIVE_LOCKS_REQUIRED(cs_main)
     case MSG_DSTX:
         return mapDarksendBroadcastTxes.count(inv.hash);
 
-    case MSG_GOVERNANCE_VOTE:
-        {
-            LOCK(governance.cs);
-            return governance.mapVotesByHash.count(inv.hash);            
-        }
-
-
     case MSG_GOVERNANCE_OBJECT:
         {
             LOCK(governance.cs);
             return governance.mapObjects.count(inv.hash);
         }
+
+    case MSG_GOVERNANCE_OBJECT_VOTE:
+        {
+            LOCK(governance.cs);
+            return governance.mapVotesByHash.count(inv.hash);
+        }
+    }
 
     // Don't know what it is, just say we already got one
     return true;
@@ -5132,28 +5132,6 @@ void static ProcessGetData(CNode* pfrom, const Consensus::Params& consensusParam
                         pushed = true;
                     }
                 }
-                if (!pushed && inv.type == MSG_GOVERNANCE_VOTE) {
-                    LOCK(governance.cs);
-                    if(governance.mapVotesByHash.count(inv.hash)) {
-
-                if (!pushed && inv.type == MSG_MASTERNODE_ANNOUNCE) {
-                    if(mnodeman.mapSeenMasternodeBroadcast.count(inv.hash)){
-                        CDataStream ss(SER_NETWORK, PROTOCOL_VERSION);
-                        ss.reserve(1000);
-                        pushed = true;
-                    }
-                }
-
-                if (!pushed && inv.type == MSG_GOVERNANCE_OBJECT) {
-                    LOCK(governance.cs);
-                    if(governance.mapObjects.count(inv.hash)) {
-                        CDataStream ss(SER_NETWORK, PROTOCOL_VERSION);
-                        ss.reserve(1000);
-                        ss << governance.mapObjects[inv.hash];
-                        pfrom->PushMessage(NetMsgType::MNGOVERNANCEOBJECT, ss);
-                        pushed = true;
-                    }
-                }
 
                 if (!pushed && inv.type == MSG_MASTERNODE_ANNOUNCE) {
                     if(mnodeman.mapSeenMasternodeBroadcast.count(inv.hash)){
@@ -5186,6 +5164,7 @@ void static ProcessGetData(CNode* pfrom, const Consensus::Params& consensusParam
                 }
 
                 if (!pushed && inv.type == MSG_GOVERNANCE_OBJECT) {
+                    LOCK(governance.cs);
                     if(governance.mapObjects.count(inv.hash)) {
                         CDataStream ss(SER_NETWORK, PROTOCOL_VERSION);
                         ss.reserve(1000);
@@ -5196,6 +5175,7 @@ void static ProcessGetData(CNode* pfrom, const Consensus::Params& consensusParam
                 }
 
                 if (!pushed && inv.type == MSG_GOVERNANCE_OBJECT_VOTE) {
+                    LOCK(governance.cs);
                     if(governance.mapVotesByHash.count(inv.hash)) {
                         CDataStream ss(SER_NETWORK, PROTOCOL_VERSION);
                         ss.reserve(1000);

@@ -51,7 +51,7 @@ bool CMasternodeSync::IsBlockchainSynced()
 }
 
 void CMasternodeSync::Reset()
-{   
+{
     lastMasternodeList = GetTime();
     lastMasternodeWinner = GetTime();
     lastBudgetItem = GetTime();
@@ -205,7 +205,7 @@ void CMasternodeSync::ProcessMessage(CNode* pfrom, std::string& strCommand, CDat
                 countBudgetItemFin++;
                 break;
         }
-        
+
         LogPrintf("CMasternodeSync:ProcessMessage - ssc - got inventory count %d %d\n", nItemID, nCount);
     }
 }
@@ -236,14 +236,14 @@ void CMasternodeSync::Process()
     // RESET SYNCING INCASE OF FAILURE
     {
         if(IsSynced()) {
-            /* 
+            /*
                 Resync if we lose all masternodes from sleep/wake or failure to sync originally
             */
             if(nMnCount == 0) {
                 Reset();
             } else {
                 //if syncing is complete and we have masternodes, return
-                return; 
+                return;
             }
         }
 
@@ -256,18 +256,16 @@ void CMasternodeSync::Process()
     }
 
     // INITIAL SYNC SETUP / LOG REPORTING
-    {
-        double nSyncProgress = double(RequestedMasternodeAttempt + (RequestedMasternodeAssets - 1) * 8) / (8*4);
-        LogPrintf("CMasternodeSync::Process() - tick %d RequestedMasternodeAttempt %d RequestedMasternodeAssets %d nSyncProgress %f\n", tick, RequestedMasternodeAttempt, RequestedMasternodeAssets, nSyncProgress);
-        uiInterface.NotifyAdditionalDataSyncProgressChanged(nSyncProgress);
+    double nSyncProgress = double(RequestedMasternodeAttempt + (RequestedMasternodeAssets - 1) * 8) / (8*4);
+    LogPrintf("CMasternodeSync::Process() - tick %d RequestedMasternodeAttempt %d RequestedMasternodeAssets %d nSyncProgress %f\n", tick, RequestedMasternodeAttempt, RequestedMasternodeAssets, nSyncProgress);
+    uiInterface.NotifyAdditionalDataSyncProgressChanged(nSyncProgress);
 
-        // sporks synced but blockchain is not, wait until we're almost at a recent block to continue
-        if(Params().NetworkIDString() != CBaseChainParams::REGTEST &&
-                !IsBlockchainSynced() && RequestedMasternodeAssets > MASTERNODE_SYNC_SPORKS) return;
+    // sporks synced but blockchain is not, wait until we're almost at a recent block to continue
+    if(Params().NetworkIDString() != CBaseChainParams::REGTEST &&
+            !IsBlockchainSynced() && RequestedMasternodeAssets > MASTERNODE_SYNC_SPORKS) return;
 
-        TRY_LOCK(cs_vNodes, lockRecv);
-        if(!lockRecv) return;
-    }
+    TRY_LOCK(cs_vNodes, lockRecv);
+    if(!lockRecv) return;
 
     if(RequestedMasternodeAssets == MASTERNODE_SYNC_INITIAL) GetNextAsset();
 
@@ -279,7 +277,7 @@ void CMasternodeSync::Process()
             if(RequestedMasternodeAttempt <= 2) {
                 pnode->PushMessage(NetMsgType::GETSPORKS); //get current network sporks
             } else if(RequestedMasternodeAttempt < 4) {
-                mnodeman.DsegUpdate(pnode); 
+                mnodeman.DsegUpdate(pnode);
             } else if(RequestedMasternodeAttempt < 6) {
                 int nMnCount = mnodeman.CountEnabled();
                 pnode->PushMessage(NetMsgType::MNWINNERSSYNC, nMnCount); //sync payees
@@ -293,7 +291,7 @@ void CMasternodeSync::Process()
         }
 
         // NORMAL NETWORK MODE - TESTNET/MAINNET
-        {   
+        {
             // SPORK : ALWAYS ASK FOR SPORKS AS WE SYNC (we skip this mode now)
 
             if(!pnode->HasFulfilledRequest("spork-sync")) {
@@ -301,8 +299,8 @@ void CMasternodeSync::Process()
                 pnode->FulfilledRequest("spork-sync");
 
                 // get current network sporks
-                pnode->PushMessage(NetMsgType::GETSPORKS); 
-                
+                pnode->PushMessage(NetMsgType::GETSPORKS);
+
                 // we always ask for sporks, so just skip this
                 if(RequestedMasternodeAssets == MASTERNODE_SYNC_SPORKS) GetNextAsset();
 
@@ -311,6 +309,7 @@ void CMasternodeSync::Process()
 
             // MNLIST : SYNC MASTERNODE LIST FROM OTHER CONNECTED CLIENTS
 
+            if(RequestedMasternodeAssets == MASTERNODE_SYNC_LIST) {
                 // check for timeout first
                 if(lastMasternodeList < GetTime() - MASTERNODE_SYNC_TIMEOUT) {
                     LogPrintf("CMasternodeSync::Process -- tick %d  asset %d -- timeout\n", tick, RequestedMasternodeAssets);
@@ -345,9 +344,7 @@ void CMasternodeSync::Process()
 
             // MNW : SYNC MASTERNODE WINNERS FROM OTHER CONNECTED CLIENTS
 
-            if(RequestedMasternodeAssets == MASTERNODE_SYNC_MNW)
-            {
-                if (pnode->nVersion < mnpayments.GetMinMasternodePaymentsProto()) continue;
+            if(RequestedMasternodeAssets == MASTERNODE_SYNC_MNW) {
                 // check for timeout first
                 // This might take a lot longer than MASTERNODE_SYNC_TIMEOUT minutes due to new blocks,
                 // but that should be OK and it should timeout eventually.
@@ -380,9 +377,8 @@ void CMasternodeSync::Process()
 
                 return; //this will cause each peer to get one request each six seconds for the various assets we need
             }
-           
-            // GOVOBJ : SYNC GOVERNANCE ITEMS FROM OUR PEERS
 
+            // GOVOBJ : SYNC GOVERNANCE ITEMS FROM OUR PEERS
 
             if(RequestedMasternodeAssets == MASTERNODE_SYNC_GOVERNANCE) {
                 // check for timeout first

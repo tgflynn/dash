@@ -932,27 +932,27 @@ bool CGovernanceObject::IsValidLocally(const CBlockIndex* pindex, std::string& s
 
 int CGovernanceObject::GetAbsoluteYesCount(int nVoteSignalIn)
 {
-    return governance.CountMatchingVotes((*this), nVoteSignalIn, VOTE_OUTCOME_YES) - governance.CountMatchingVotes((*this), nVoteSignalIn, VOTE_OUTCOME_NO)*100;
+    return governance.CountMatchingVotes((*this), nVoteSignalIn, VOTE_OUTCOME_YES) - governance.CountMatchingVotes((*this), nVoteSignalIn, VOTE_OUTCOME_NO);
 }
 
 int CGovernanceObject::GetAbsoluteNoCount(int nVoteSignalIn)
 {
-    return governance.CountMatchingVotes((*this), nVoteSignalIn, VOTE_OUTCOME_NO) - governance.CountMatchingVotes((*this), nVoteSignalIn, VOTE_OUTCOME_YES)*100;
+    return governance.CountMatchingVotes((*this), nVoteSignalIn, VOTE_OUTCOME_NO) - governance.CountMatchingVotes((*this), nVoteSignalIn, VOTE_OUTCOME_YES);
 }
 
 int CGovernanceObject::GetYesCount(int nVoteSignalIn)
 {
-    return governance.CountMatchingVotes((*this), nVoteSignalIn, VOTE_OUTCOME_YES)*100;
+    return governance.CountMatchingVotes((*this), nVoteSignalIn, VOTE_OUTCOME_YES);
 }
 
 int CGovernanceObject::GetNoCount(int nVoteSignalIn)
 {
-    return governance.CountMatchingVotes((*this), nVoteSignalIn, VOTE_OUTCOME_NO)*100;
+    return governance.CountMatchingVotes((*this), nVoteSignalIn, VOTE_OUTCOME_NO);
 }
 
 int CGovernanceObject::GetAbstainCount(int nVoteSignalIn)
 {
-    return governance.CountMatchingVotes((*this), nVoteSignalIn, VOTE_OUTCOME_ABSTAIN)*100;
+    return governance.CountMatchingVotes((*this), nVoteSignalIn, VOTE_OUTCOME_ABSTAIN);
 }
 
 void CGovernanceObject::Relay()

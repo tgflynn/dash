@@ -239,21 +239,9 @@ UniValue gobject(const UniValue& params, bool fHelp)
         std::vector<unsigned char> vchMasterNodeSignature;
         std::string strMasterNodeSignMessage;
 
-        CPubKey pubKeyCollateralAddress;
-        CKey keyCollateralAddress;
-        CPubKey pubKeyMasternode;
-        CKey keyMasternode;
-
         UniValue statusObj(UniValue::VOBJ);
 
-        if(!darkSendSigner.SetKey(strMasterNodePrivKey, errorMessage, keyMasternode, pubKeyMasternode))
-        {
-            std::string notCapableReason = "Error upon calling SetKey: " + errorMessage + " - " + strMasterNodePrivKey; 
-            LogPrintf("CActiveMasternode::ManageStatus() - %s\n", notCapableReason);
-            return notCapableReason;
-        }
-
-        CMasternode* pmn = mnodeman.Find(pubKeyMasternode);
+        CMasternode* pmn = mnodeman.Find(activeMasternode.pubKeyMasternode);
         if(pmn == NULL)
         {
             failed++;
@@ -264,7 +252,7 @@ UniValue gobject(const UniValue& params, bool fHelp)
         }
 
         CGovernanceVote vote(pmn->vin, hash, nVoteOutcome, nVoteSignal);
-        if(!vote.Sign(keyMasternode, pubKeyMasternode)){
+        if(!vote.Sign(activeMasternode.keyMasternode, activeMasternode.pubKeyMasternode)){
             failed++;
             statusObj.push_back(Pair("result", "failed"));
             statusObj.push_back(Pair("errorMessage", "Failure to sign."));
