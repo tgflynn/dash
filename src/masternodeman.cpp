@@ -318,7 +318,7 @@ CMasternode *CMasternodeMan::Find(const CPubKey &pubKeyMasternode)
 //
 CMasternode* CMasternodeMan::GetNextMasternodeInQueueForPayment(int nBlockHeight, bool fFilterSigTime, int& nCount)
 {
-    LOCK(cs);
+    LOCK2(cs_main, cs);
 
     CMasternode *pBestMasternode = NULL;
     std::vector<pair<int64_t, CTxIn> > vecMasternodeLastPaid;

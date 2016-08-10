@@ -107,6 +107,59 @@ bool IsCollateralValid(uint256 nTxCollateralHash, uint256 nExpectedHash, std::st
     return true;
 }
 
+// Accessors for thread-safe access to maps
+bool CGovernanceManager::HaveObjectForHash(uint256 nHash)  {
+    LOCK(cs);
+    return (mapObjects.count(nHash) == 1);
+}
+
+bool CGovernanceManager::HaveVoteForHash(uint256 nHash)  {
+    LOCK(cs);
+    return (mapVotesByHash.count(nHash) == 1);
+}
+
+// int CGovernanceManager::GetVoteCountByHash(uint256 nHash)  {
+//     int count = 0;
+//     LOCK(cs);
+//     count_m_cit it = mapVotesByHash.find(nHash);
+//     if (it != mapVotesByHash.end())  {
+//         count = it->second;
+//     }
+//     return count;
+// }
+
+bool CGovernanceManager::SerializeObjectForHash(uint256 nHash, CDataStream& ss)  {
+    LOCK(cs);
+    object_m_it it = mapObjects.find(nHash);
+    if (it == mapObjects.end())  {
+        return false;
+    }
+    ss << it->second;
+    return true;
+}
+
+bool CGovernanceManager::SerializeVoteForHash(uint256 nHash, CDataStream& ss)  {
+    LOCK(cs);
+    vote_m_it it = mapVotesByHash.find(nHash);
+    if (it == mapVotesByHash.end())  {
+        return false;
+    }
+    ss << it->second;
+    return true;
+}
+
+void CGovernanceManager::AddSeenGovernanceObject(uint256 nHash, int status)
+{
+    LOCK(cs);
+    mapSeenGovernanceObjects[nHash] = status;
+}
+
+void CGovernanceManager::AddSeenVote(uint256 nHash, int status)
+{
+    LOCK(cs);
+    mapSeenVotes[nHash] = status;
+}
+
 void CGovernanceManager::ProcessMessage(CNode* pfrom, std::string& strCommand, CDataStream& vRecv)
 {
     // lite mode is not supported
@@ -328,7 +381,7 @@ void CGovernanceManager::UpdateCachesAndClean()
 {
     LogPrintf("CGovernanceManager::UpdateCachesAndClean \n");
 
-    AssertLockHeld(cs);
+    LOCK(cs);
 
     // DOUBLE CHECK THAT WE HAVE A VALID POINTER TO TIP
 
@@ -513,7 +566,6 @@ void CGovernanceManager::NewBlock()
 void CGovernanceManager::Sync(CNode* pfrom, uint256 nProp)
 {
     UpdateCachedBlockHeight();
-    LOCK(cs);
 
     /*
         This code checks each of the hash maps for all known budget proposals and finalized budget proposals, then checks them against the
@@ -524,25 +576,28 @@ void CGovernanceManager::Sync(CNode* pfrom, uint256 nProp)
 
     // SYNC GOVERNANCE OBJECTS WITH OTHER CLIENT
 
-    std::map<uint256, CGovernanceObject>::iterator it1 = mapObjects.begin();
-    while(it1 != mapObjects.end()) {
-        uint256 h = (*it1).first;
+    {
+       LOCK(cs);
+       std::map<uint256, CGovernanceObject>::iterator it1 = mapObjects.begin();
+       while(it1 != mapObjects.end()) {
+          uint256 h = (*it1).first;
 
-        if((*it1).second.fCachedValid && ((nProp == uint256() || (h == nProp)))){
-            // Push the inventory budget proposal message over to the other client
-            pfrom->PushInventory(CInv(MSG_GOVERNANCE_OBJECT, h));
-            nInvCount++;
-        }
-        ++it1;
-    }
+           if((*it1).second.fCachedValid && ((nProp == uint256() || (h == nProp)))){
+              // Push the inventory budget proposal message over to the other client
+              pfrom->PushInventory(CInv(MSG_GOVERNANCE_OBJECT, h));
+              nInvCount++;
+           }
+           ++it1;
+       }
 
-    // SYNC OUR GOVERNANCE OBJECT VOTES WITH THEIR GOVERNANCE OBJECT VOTES
+       // SYNC OUR GOVERNANCE OBJECT VOTES WITH THEIR GOVERNANCE OBJECT VOTES
 
-    std::map<uint256, CGovernanceVote>::iterator it2 = mapVotesByHash.begin();
-    while(it2 != mapVotesByHash.end()) {
-        pfrom->PushInventory(CInv(MSG_GOVERNANCE_OBJECT_VOTE, (*it2).first));
-        nInvCount++;
-        ++it2;
+       std::map<uint256, CGovernanceVote>::iterator it2 = mapVotesByHash.begin();
+       while(it2 != mapVotesByHash.end()) {
+          pfrom->PushInventory(CInv(MSG_GOVERNANCE_OBJECT_VOTE, (*it2).first));
+          nInvCount++;
+          ++it2;
+       }
     }
 
     pfrom->PushMessage(NetMsgType::SYNCSTATUSCOUNT, MASTERNODE_SYNC_GOVOBJ, nInvCount);
@@ -560,31 +615,46 @@ void CGovernanceManager::SyncParentObjectByVote(CNode* pfrom, const CGovernanceV
 bool CGovernanceManager::AddOrUpdateVote(const CGovernanceVote& vote, CNode* pfrom, std::string& strError)
 {
     UpdateCachedBlockHeight();
-    LOCK(cs);
+
 
     // MAKE SURE WE HAVE THE PARENT OBJECT THE VOTE IS FOR
 
-    if(!mapObjects.count(vote.nParentHash))
+    bool syncparent = false;
+    uint256 votehash;
     {
-        if(pfrom){
-            // only ask for missing items after our syncing process is complete -- 
-            //   otherwise we'll think a full sync succeeded when they return a result
-            if(!masternodeSync.IsSynced()) return false;
+        LOCK(cs);
+        if(!mapObjects.count(vote.nParentHash))  {
+                if(pfrom)  {
+                    // only ask for missing items after our syncing process is complete -- 
+                    //   otherwise we'll think a full sync succeeded when they return a result
+                    if(!masternodeSync.IsSynced()) return false;
+                    
+                    // ADD THE VOTE AS AN ORPHAN, TO BE USED UPON RECEIVAL OF THE PARENT OBJECT
+                    
+                    LogPrintf("CGovernanceManager::AddOrUpdateVote - Unknown object %d, asking for source\n", vote.nParentHash.ToString());
+                    mapOrphanVotes[vote.nParentHash] = vote;
+                    
+                    // ASK FOR THIS VOTES PARENT SPECIFICALLY FROM THIS USER (THEY SHOULD HAVE IT, NO?)
 
-            // ADD THE VOTE AS AN ORPHAN, TO BE USED UPON RECEIVAL OF THE PARENT OBJECT
+                    if(!mapAskedForGovernanceObject.count(vote.nParentHash)){
+                        syncparent = true;
+                        votehash = vote.nParentHash;
+                        mapAskedForGovernanceObject[vote.nParentHash] = GetTime();
+                    }
+                }
 
-            LogPrintf("CGovernanceManager::AddOrUpdateVote - Unknown object %d, asking for source\n", vote.nParentHash.ToString());
-            mapOrphanVotes[vote.nParentHash] = vote;
-
-            // ASK FOR THIS VOTES PARENT SPECIFICALLY FROM THIS USER (THEY SHOULD HAVE IT, NO?)
-
-            SyncParentObjectByVote(pfrom, vote);
+                strError = "Governance object not found!";
+                return false;
         }
-
-        strError = "Governance object not found!";
-        return false;
     }
 
+    // Need to keep this out of the locked section
+    if(syncparent)  {
+        pfrom->PushMessage(NetMsgType::MNGOVERNANCESYNC, votehash);
+    }
+
+    // Reestablish lock
+    LOCK(cs);
     // GET DETERMINISTIC HASH WHICH COLLIDES ON MASTERNODE-VIN/GOVOBJ-HASH/VOTE-SIGNAL
     
     uint256 nTypeHash = vote.GetTypeHash();
@@ -993,6 +1063,7 @@ int CGovernanceManager::CountMatchingVotes(CGovernanceObject& govobj, int nVoteS
     *
     */
 
+    LOCK(cs);
     int nCount = 0;
 
     std::map<uint256, CGovernanceVote>::iterator it2 = mapVotesByHash.begin();

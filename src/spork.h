@@ -55,9 +55,9 @@ private:
     std::vector<unsigned char> vchSig;
 
 public:
+    int nSporkID;
     int64_t nValue;
     int64_t nTimeSigned;
-    int nSporkID;
 
     CSporkMessage(int nSporkID, int64_t nValue, int64_t nTimeSigned) : nSporkID(nSporkID), nValue(nValue), nTimeSigned(nTimeSigned) {}
     CSporkMessage() : nSporkID(0), nValue(0), nTimeSigned(0) {}

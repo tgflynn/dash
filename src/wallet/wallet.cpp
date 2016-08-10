@@ -2759,6 +2759,8 @@ bool CWallet::GetMasternodeVinAndKeys(CTxIn& vinRet, CPubKey& pubKeyRet, CKey& k
     if (fImporting || fReindex) return false;
 
     // Find possible candidates
+    TRY_LOCK(cs_main, fMain);
+    if(!fMain) return false;
     TRY_LOCK(cs_wallet, fWallet);
     if(!fWallet) return false;
 

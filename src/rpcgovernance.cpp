@@ -166,7 +166,7 @@ UniValue gobject(const UniValue& params, bool fHelp)
 
         // ASSEMBLE NEW GOVERNANCE OBJECT FROM USER PARAMETERS
 
-        LOCK2(cs_main, governance.cs);
+        LOCK(cs_main);
         CBlockIndex* pindex = chainActive.Tip();
 
         std::vector<CMasternodeConfig::CMasternodeEntry> mnEntries;
@@ -202,7 +202,7 @@ UniValue gobject(const UniValue& params, bool fHelp)
         }
 
         // RELAY THIS OBJECT
-        governance.mapSeenGovernanceObjects.insert(make_pair(govobj.GetHash(), SEEN_OBJECT_IS_VALID));
+        governance.AddSeenGovernanceObject(govobj.GetHash(), SEEN_OBJECT_IS_VALID);
         govobj.Relay();
         governance.AddGovernanceObject(govobj);
 
@@ -260,10 +260,9 @@ UniValue gobject(const UniValue& params, bool fHelp)
             return "Failure to sign.";
         }
 
-        LOCK(governance.cs);
         std::string strError = "";
         if(governance.AddOrUpdateVote(vote, NULL, strError)) {
-            governance.mapSeenVotes.insert(make_pair(vote.GetHash(), SEEN_OBJECT_IS_VALID));
+            governance.AddSeenVote(vote.GetHash(), SEEN_OBJECT_IS_VALID);
             vote.Relay();
             success++;
             statusObj.push_back(Pair("result", "success"));
@@ -370,10 +369,9 @@ UniValue gobject(const UniValue& params, bool fHelp)
 
             // UPDATE LOCAL DATABASE WITH NEW OBJECT SETTINGS
 
-            LOCK(governance.cs);
             std::string strError = "";
             if(governance.AddOrUpdateVote(vote, NULL, strError)) {
-                governance.mapSeenVotes.insert(make_pair(vote.GetHash(), SEEN_OBJECT_IS_VALID));
+                governance.AddSeenVote(vote.GetHash(), SEEN_OBJECT_IS_VALID);
                 vote.Relay();
                 success++;
                 statusObj.push_back(Pair("result", "success"));
@@ -472,6 +470,8 @@ UniValue gobject(const UniValue& params, bool fHelp)
         // COLLECT VARIABLES FROM OUR USER
         uint256 hash = ParseHashV(params[1], "GovObj hash");
 
+        LOCK2(cs_main, governance.cs);
+
         // FIND THE GOVERNANCE OBJECT THE USER IS LOOKING FOR
         CGovernanceObject* pGovObj = governance.FindGovernanceObject(hash);
 
@@ -479,8 +479,6 @@ UniValue gobject(const UniValue& params, bool fHelp)
             throw JSONRPCError(RPC_INVALID_PARAMETER, "Unknown govobj");
 
         // REPORT BASIC OBJECT STATS
-
-        LOCK2(cs_main, governance.cs);
 
         UniValue objResult(UniValue::VOBJ);
         objResult.push_back(Pair("Name",  pGovObj->GetName()));
@@ -621,7 +619,7 @@ UniValue voteraw(const UniValue& params, bool fHelp)
 
     std::string strError = "";
     if(governance.AddOrUpdateVote(vote, NULL, strError)){
-        governance.mapSeenVotes.insert(make_pair(vote.GetHash(), SEEN_OBJECT_IS_VALID));
+        governance.AddSeenVote(vote.GetHash(), SEEN_OBJECT_IS_VALID);
         vote.Relay();
         return "Voted successfully";
     } else {

@@ -4960,16 +4960,10 @@ bool static AlreadyHave(const CInv& inv) EXCLUSIVE_LOCKS_REQUIRED(cs_main)
         return mapDarksendBroadcastTxes.count(inv.hash);
 
     case MSG_GOVERNANCE_OBJECT:
-        {
-            LOCK(governance.cs);
-            return governance.mapObjects.count(inv.hash);
-        }
+        return governance.HaveVoteForHash(inv.hash);
 
     case MSG_GOVERNANCE_OBJECT_VOTE:
-        {
-            LOCK(governance.cs);
-            return governance.mapVotesByHash.count(inv.hash);
-        }
+        return governance.HaveObjectForHash(inv.hash);
     }
 
     // Don't know what it is, just say we already got one
@@ -5163,24 +5157,36 @@ void static ProcessGetData(CNode* pfrom, const Consensus::Params& consensusParam
                     }
                 }
 
-                if (!pushed && inv.type == MSG_GOVERNANCE_OBJECT) {
-                    LOCK(governance.cs);
-                    if(governance.mapObjects.count(inv.hash)) {
-                        CDataStream ss(SER_NETWORK, PROTOCOL_VERSION);
-                        ss.reserve(1000);
-                        ss << governance.mapObjects[inv.hash];
-                        pfrom->PushMessage(NetMsgType::MNGOVERNANCEOBJECT, ss);
+                if (!pushed && inv.type == MSG_GOVERNANCE_OBJECT_VOTE) {
+                    CDataStream ss(SER_NETWORK, PROTOCOL_VERSION);
+                    bool topush = false;
+                    {
+                        if(governance.HaveObjectForHash(inv.hash)) {
+                            ss.reserve(1000);
+                            if(governance.SerializeVoteForHash(inv.hash, ss))  {
+                                topush = true;
+                            }
+                        }
+                    }
+                    if(topush)  {
+                        pfrom->PushMessage(NetMsgType::MNGOVERNANCEOBJECTVOTE, ss);
                         pushed = true;
                     }
                 }
 
-                if (!pushed && inv.type == MSG_GOVERNANCE_OBJECT_VOTE) {
-                    LOCK(governance.cs);
-                    if(governance.mapVotesByHash.count(inv.hash)) {
-                        CDataStream ss(SER_NETWORK, PROTOCOL_VERSION);
-                        ss.reserve(1000);
-                        ss << governance.mapVotesByHash[inv.hash];
-                        pfrom->PushMessage(NetMsgType::MNGOVERNANCEOBJECTVOTE, ss);
+                if (!pushed && inv.type == MSG_GOVERNANCE_OBJECT) {
+                    CDataStream ss(SER_NETWORK, PROTOCOL_VERSION);
+                    bool topush = false;
+                    {
+                        if(governance.HaveObjectForHash(inv.hash)) {
+                            ss.reserve(1000);
+                            if(governance.SerializeObjectForHash(inv.hash, ss))  {
+                                topush = true;
+                            }
+                        }
+                    }
+                    if(topush)  {
+                        pfrom->PushMessage(NetMsgType::MNGOVERNANCEOBJECT, ss);
                         pushed = true;
                     }
                 }
