@@ -211,12 +211,6 @@ public:
 
     void AddSeenVote(uint256 nHash, int status);
 
-private:
-    void UpdateCachedBlockHeight()  {
-        LOCK(cs_main);
-        nCachedBlockHeight = chainActive.Height();
-    }
-
 };
 
 /**

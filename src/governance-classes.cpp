@@ -356,7 +356,7 @@ void CSuperblockManager::CreateSuperblock(CMutableTransaction& txNew, CAmount nF
     DBG( cout << "CSuperblockManager::CreateSuperblock Number payments: " << pBlock->CountPayments() << endl; );
 
     txNew.vout.resize(pBlock->CountPayments());
-    for(int i = 0; i <= pBlock->CountPayments(); i++)  {
+    for(int i = 0; i < pBlock->CountPayments(); i++)  {
         CGovernancePayment payment;
         DBG( cout << "CSuperblockManager::CreateSuperblock i = " << i << endl; );
         if(pBlock->GetPayment(i, payment))  {
@@ -401,6 +401,119 @@ bool CSuperblockManager::IsValid(const CTransaction& txNew, int nBlockHeight)
     return false;
 }
 
+CSuperblock::
+CSuperblock()
+    : nGovObjHash(),
+      fError(true),
+      strError(),
+      nEpochStart(0),
+      status(SEEN_OBJECT_UNKNOWN),
+      vecPayments()
+{}
+
+CSuperblock::
+CSuperblock(uint256& nHash)
+    : nGovObjHash(nHash),
+      fError(true),
+      strError(),
+      nEpochStart(0),
+      status(SEEN_OBJECT_UNKNOWN),
+      vecPayments()
+{
+    DBG( cout << "CSuperblock Constructor Start" << endl; );
+    
+    CGovernanceObject* pGovObj = GetGovernanceObject();
+    
+    if(!pGovObj) {
+        DBG( cout << "CSuperblock Constructor pGovObjIn is NULL, returning" << endl; );
+        strError = "Failed to find Governance Object";
+        return;
+    }
+    
+    DBG( cout << "CSuperblock Constructor pGovObj : "
+         << pGovObj->GetDataAsString()
+         << ", nObjectType = " << pGovObj->nObjectType
+         << endl; );
+    
+    if(pGovObj->GetObjectType() != GOVERNANCE_OBJECT_TRIGGER)  {
+        DBG( cout << "CSuperblock Constructor pHoObj not a trigger, returning" << endl; );
+        strError = "Governance Object not a trigger";
+        return;
+    }
+
+    UniValue obj = pGovObj->GetJSONObject();
+        
+    try  {
+        // FIRST WE GET THE START EPOCH, THE DATE WHICH THE PAYMENT SHALL OCCUR
+        strError = "Error parsing start epoch";
+        std::string nEpochStartStr = obj["event_block_height"].get_str();
+        if(!ParseInt32(nEpochStartStr, &nEpochStart))  {
+            throw runtime_error("Parse error parsing event_block_height");
+        }
+
+        // NEXT WE GET THE PAYMENT INFORMATION AND RECONSTRUCT THE PAYMENT VECTOR
+        strError = "Missing payment information";
+        std::string strAddresses = obj["payment_addresses"].get_str();
+        std::string strAmounts = obj["payment_amounts"].get_str();
+        ParsePaymentSchedule(strAddresses, strAmounts);
+        
+        fError = false;
+        strError = "";
+    }
+    catch(...)  {
+        fError = true;
+        strError = "Unparsable";
+        DBG( cout << "CSuperblock Constructor A parse error occurred" 
+             << ", obj = " << obj.write()
+             << endl; );
+    }
+    
+    DBG( cout << "CSuperblock Constructor End" << endl; );
+}
+
+bool 
+CSuperblock::
+ParsePaymentSchedule(std::string& strPaymentAddresses, std::string& strPaymentAmounts)
+{
+    // SPLIT UP ADDR/AMOUNT STRINGS AND PUT IN VECTORS
+    
+    std::vector<std::string> vecParsed1;
+    std::vector<std::string> vecParsed2;
+    vecParsed1 = SplitBy(strPaymentAddresses, "|");
+    vecParsed2 = SplitBy(strPaymentAmounts, "|");
+    
+    // IF THESE DONT MATCH, SOMETHING IS WRONG
+    
+    if(vecParsed1.size() != vecParsed2.size()) 
+        {
+            strError = "Mismatched payments and amounts";
+            return false;
+        }
+    
+    // LOOP THROUGH THE ADDRESSES/AMOUNTS AND CREATE PAYMENTS
+    /*
+      ADDRESSES = [ADDR1|2|3|4|5\6]
+      AMOUNTS = [AMOUNT1|2|3|4|5\6]
+    */
+    
+    for(int i = 0; i < (int)vecParsed1.size(); i++)  {
+        CBitcoinAddress address(vecParsed1[i]);
+        if (!address.IsValid())  {
+            strError = "Invalid Dash Address : " +  vecParsed1[i];
+            return false;
+        }
+        int nAmount = boost::lexical_cast<int>(vecParsed2[i]);
+        
+        CGovernancePayment payment(address, nAmount);
+        if(payment.IsValid())  {
+            vecPayments.push_back(payment);   
+        }
+    }
+
+    return false;
+}
+
+
 /**
 *   Is Transaction Valid
 *
@@ -416,7 +529,7 @@ bool CSuperblock::IsValid(const CTransaction& txNew)
     // CONFIGURE SUPERBLOCK OUTPUTS 
 
     int nPayments = CountPayments();    
-    for(int i = 0; i <= nPayments; i++)
+    for(int i = 0; i < nPayments; i++)
     {
         CGovernancePayment payment;
         if(GetPayment(i, payment))
@@ -467,7 +580,7 @@ std::string CSuperblockManager::GetRequiredPaymentsString(int nBlockHeight)
 
     // LOOP THROUGH SUPERBLOCK PAYMENTS, CONFIGURE OUTPUT STRING 
 
-    for(int i = 0; i <= pBlock->CountPayments(); i++)
+    for(int i = 0; i < pBlock->CountPayments(); i++)
     {
         CGovernancePayment payment;
         if(pBlock->GetPayment(i, payment))

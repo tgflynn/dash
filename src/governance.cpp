@@ -210,7 +210,6 @@ void CGovernanceManager::ProcessMessage(CNode* pfrom, std::string& strCommand, C
     else if (strCommand == NetMsgType::MNGOVERNANCEOBJECT)
 
     {
-        UpdateCachedBlockHeight();
         LOCK(cs);
         // MAKE SURE WE HAVE A VALID REFERENCE TO THE TIP BEFORE CONTINUING
 
@@ -316,7 +315,6 @@ void CGovernanceManager::ProcessMessage(CNode* pfrom, std::string& strCommand, C
 
 void CGovernanceManager::CheckOrphanVotes()
 {
-    UpdateCachedBlockHeight();
     LOCK(cs);
 
     std::string strError = "";
@@ -333,7 +331,6 @@ void CGovernanceManager::CheckOrphanVotes()
 
 bool CGovernanceManager::AddGovernanceObject(CGovernanceObject& govobj)
 {
-    UpdateCachedBlockHeight();
     LOCK(cs);
     std::string strError = "";
 
@@ -539,7 +536,6 @@ struct sortProposalsByVotes {
 
 void CGovernanceManager::NewBlock()
 {
-    UpdateCachedBlockHeight();
     TRY_LOCK(cs, fBudgetNewBlock);
     if(!fBudgetNewBlock || !pCurrentBlockIndex) return;
 
@@ -565,7 +561,6 @@ void CGovernanceManager::NewBlock()
 
 void CGovernanceManager::Sync(CNode* pfrom, uint256 nProp)
 {
-    UpdateCachedBlockHeight();
 
     /*
         This code checks each of the hash maps for all known budget proposals and finalized budget proposals, then checks them against the
@@ -614,9 +609,6 @@ void CGovernanceManager::SyncParentObjectByVote(CNode* pfrom, const CGovernanceV
 
 bool CGovernanceManager::AddOrUpdateVote(const CGovernanceVote& vote, CNode* pfrom, std::string& strError)
 {
-    UpdateCachedBlockHeight();
-
-
     // MAKE SURE WE HAVE THE PARENT OBJECT THE VOTE IS FOR
 
     bool syncparent = false;
@@ -1046,7 +1038,14 @@ std::string CGovernanceManager::ToString() const
 
 void CGovernanceManager::UpdatedBlockTip(const CBlockIndex *pindex)
 {
+    // Note this gets called from ActivateBestChain without cs_main being held
+    // so it should be safe to lock our mutex here without risking a deadlock
+    // On the other hand it should be safe for us to access pindex without holding a lock 
+    // on cs_main because the CBlockIndex objects are dynamically allocated and
+    // presumably never deleted.
+    LOCK(cs);
     pCurrentBlockIndex = pindex;
+    nCachedBlockHeight = pCurrentBlockIndex->nHeight;
     LogPrint("gobject", "pCurrentBlockIndex->nHeight: %d\n", pCurrentBlockIndex->nHeight);
 
     // TO REPROCESS OBJECTS WE SHOULD BE SYNCED
