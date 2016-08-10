@@ -124,21 +124,16 @@ bool IsBlockPayeeValid(const CTransaction& txNew, int nBlockHeight)
         }
     }
 
-    printf("6");
-
     // IF THIS ISN'T A SUPERBLOCK, IT SHOULD PAY A MASTERNODE DIRECTLY
 
     if(mnpayments.IsTransactionValid(txNew, nBlockHeight))
     {
-        printf("7\n");
         return true;
     } else {
         LogPrintf("Invalid masternode payment detected %s\n", txNew.ToString());
         if(sporkManager.IsSporkActive(SPORK_8_MASTERNODE_PAYMENT_ENFORCEMENT)) {
-            printf("8\n");
             return false;
         } else {
-            printf("9\n");
             LogPrintf("Masternode payment enforcement is disabled, accepting block\n");
             return true;
         }
