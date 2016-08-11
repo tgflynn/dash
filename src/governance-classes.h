@@ -184,7 +184,7 @@ private:
     std::string strError;
 
     int nEpochStart;
-    int status;
+    int nStatus;
     std::vector<CGovernancePayment> vecPayments;
 
 public:
@@ -194,11 +194,11 @@ public:
     CSuperblock(uint256& nHash);
 
     int GetStatus()  {
-        return status;
+        return nStatus;
     }
 
-    void SetStatus(int status_)  {
-        status = status_;
+    void SetStatus(int nStatus_)  {
+        nStatus = nStatus_;
     }
 
     int GetErrorState()  {
@@ -242,13 +242,13 @@ public:
     // IS THIS TRIGGER ALREADY EXECUTED?
     bool IsExecuted()
     {
-        return (status == SEEN_OBJECT_EXECUTED);
+        return (nStatus == SEEN_OBJECT_EXECUTED);
     }
 
     // TELL THE ENGINE WE EXECUTED THIS EVENT
     void SetExecuted()
     {
-        status = SEEN_OBJECT_EXECUTED;
+        nStatus = SEEN_OBJECT_EXECUTED;
     }
 
     int CountPayments()

@@ -408,7 +408,7 @@ CSuperblock()
       fError(true),
       strError(),
       nEpochStart(0),
-      status(SEEN_OBJECT_UNKNOWN),
+      nStatus(SEEN_OBJECT_UNKNOWN),
       vecPayments()
 {}
 
@@ -418,7 +418,7 @@ CSuperblock(uint256& nHash)
       fError(true),
       strError(),
       nEpochStart(0),
-      status(SEEN_OBJECT_UNKNOWN),
+      nStatus(SEEN_OBJECT_UNKNOWN),
       vecPayments()
 {
     DBG( cout << "CSuperblock Constructor Start" << endl; );
