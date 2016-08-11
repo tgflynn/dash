@@ -55,14 +55,29 @@ bool IsCollateralValid(uint256 nTxCollateralHash, uint256 nExpectedHash, std::st
     CScript findScript;
     findScript << OP_RETURN << ToByteVector(nExpectedHash);
 
+    DBG( cout << "IsCollateralValid txCollateral.vout.size() = " << txCollateral.vout.size() << endl; );
+
+    DBG( cout << "IsCollateralValid: findScript = " << ScriptToAsmStr( findScript, false ) << endl; );
+
+
     bool foundOpReturn = false;
     BOOST_FOREACH(const CTxOut o, txCollateral.vout){
+        DBG( cout << "IsCollateralValid txout : " << o.ToString() 
+             << ", o.nValue = " << o.nValue
+             << ", o.scriptPubKey = " << ScriptToAsmStr( o.scriptPubKey, false )
+             << endl; );
         if(!o.scriptPubKey.IsNormalPaymentScript() && !o.scriptPubKey.IsUnspendable()){
             strError = strprintf("Invalid Script %s", txCollateral.ToString());
             LogPrintf ("CGovernanceObject::IsCollateralValid - %s\n", strError);
             return false;
         }
-        if(o.scriptPubKey == findScript && o.nValue >= minFee) foundOpReturn = true;
+        if(o.scriptPubKey == findScript && o.nValue >= minFee) {
+            DBG( cout << "IsCollateralValid foundOpReturn = true" << endl; );
+            foundOpReturn = true;
+        }
+        else  {
+            DBG( cout << "IsCollateralValid No match, continuing" << endl; );
+        }
 
     }
     // 12.1 - todo:
@@ -73,11 +88,11 @@ bool IsCollateralValid(uint256 nTxCollateralHash, uint256 nExpectedHash, std::st
         CTxOut(nValue=9.07485900, scriptPubKey=76a914d57173b7da84724a4569671e)
     */
 
-    // if(!foundOpReturn){
-    //     strError = strprintf("Couldn't find opReturn %s in %s", nExpectedHash.ToString(), txCollateral.ToString());
-    //     LogPrintf ("CGovernanceObject::IsCollateralValid - %s\n", strError);
-    //     return false;
-    // }
+    if(!foundOpReturn){
+        strError = strprintf("Couldn't find opReturn %s in %s", nExpectedHash.ToString(), txCollateral.ToString());
+        LogPrintf ("CGovernanceObject::IsCollateralValid - %s\n", strError);
+        return false;
+    }
 
     // GET CONFIRMATIONS FOR TRANSACTION
 

@@ -482,7 +482,6 @@ void CleanTransactionLocksList()
 
     std::map<uint256, CTransactionLock>::iterator it = mapTxLocks.begin();
 
-    int nHeight = chainActive.Height();
     while(it != mapTxLocks.end()) {
         CTransactionLock &txLock = it->second;
         if(GetTime() > txLock.nLockExpirationBlock) {

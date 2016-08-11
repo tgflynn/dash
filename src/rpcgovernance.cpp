@@ -151,6 +151,12 @@ UniValue gobject(const UniValue& params, bool fHelp)
         // -- send the tx to the network
         pwalletMain->CommitTransaction(wtx, reservekey, NetMsgType::TX);
 
+        DBG( cout << "gobject: prepare strName = " << strName
+             << ", strData = " << govobj.GetDataAsString()
+             << ", hash = " << govobj.GetHash().GetHex()
+             << ", fee_tx = " << wtx.GetHash().GetHex()
+             << endl; );
+
         return wtx.GetHash().ToString();
     }
 
@@ -194,7 +200,10 @@ UniValue gobject(const UniValue& params, bool fHelp)
         CGovernanceObject govobj(hashParent, nRevision, strName, nTime, fee_tx, strData);
 
         DBG( cout << "gobject: submit strName = " << strName
-                  << ", strData = " << govobj.GetDataAsString() << endl; );
+             << ", strData = " << govobj.GetDataAsString()
+             << ", hash = " << govobj.GetHash().GetHex()
+             << ", fee_tx = " << fee_tx.GetHex()
+             << endl; );
 
         std::string strError = "";
         if(!govobj.IsValidLocally(pindex, strError, true)){

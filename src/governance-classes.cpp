@@ -161,6 +161,7 @@ void CGovernanceTriggerManager::CleanAndRemove()
                         }
                     }
                 }
+                break;
             default:
                 break;
             }
