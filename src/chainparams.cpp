@@ -84,7 +84,7 @@ public:
         consensus.nBudgetProposalEstablishingTime = 60*60*24;
         consensus.nSuperblockStartBlock = 543210; // TODO, the block at which 12.1 goes live.
         consensus.nSuperblockCycle = 576; // Superblocks can be issued daily
-        consensus.nMinGovernanceQuorum = 10;
+        consensus.nGovernanceMinQuorum = 10;
         consensus.nMasternodeMinimumConfirmations = 15;
         consensus.nMajorityEnforceBlockUpgrade = 750;
         consensus.nMajorityRejectBlockOutdated = 950;
@@ -206,7 +206,7 @@ public:
         consensus.nBudgetProposalEstablishingTime = 60*20;
         consensus.nSuperblockStartBlock = 54321; // TODO, the block at which 12.1 goes live.
         consensus.nSuperblockCycle = 24; // Superblocks can be issued hourly on testnet
-        consensus.nMinGovernanceQuorum = 1;
+        consensus.nGovernanceMinQuorum = 1;
         consensus.nMasternodeMinimumConfirmations = 1;
         consensus.nMajorityEnforceBlockUpgrade = 51;
         consensus.nMajorityRejectBlockOutdated = 75;
@@ -308,7 +308,7 @@ public:
         consensus.nBudgetProposalEstablishingTime = 60*20;
         consensus.nSuperblockStartBlock = 1500;
         consensus.nSuperblockCycle = 10;
-        consensus.nMinGovernanceQuorum = 1;
+        consensus.nGovernanceMinQuorum = 1;
         consensus.nMasternodeMinimumConfirmations = 1;
         consensus.nMajorityEnforceBlockUpgrade = 750;
         consensus.nMajorityRejectBlockOutdated = 950;
