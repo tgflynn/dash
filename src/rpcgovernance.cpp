@@ -44,6 +44,7 @@ UniValue gobject(const UniValue& params, bool fHelp)
                 "  prepare            - Prepare govobj by signing and creating tx\n"
                 "  submit             - Submit govobj to network\n"
                 "  get                - Get govobj hash(es) by govobj name\n"
+                "  getvotes           - Get votes for a govobj hash\n"
                 "  list               - List all govobjs\n"
                 "  diff               - List differences since last diff\n"
                 "  vote-conf          - Vote on a governance object by masternode configured in dash.conf\n"
@@ -526,7 +527,7 @@ UniValue gobject(const UniValue& params, bool fHelp)
     {
         if (params.size() != 3)
             throw runtime_error(
-                "Correct usage is 'gobject getvotes <governance-hash> <vote-outcome>'"
+                "Correct usage is 'gobject getvotes <governance-hash> <vote-signal>'"
                 );
 
         // COLLECT PARAMETERS FROM USER
