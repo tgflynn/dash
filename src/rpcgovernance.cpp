@@ -36,7 +36,7 @@ UniValue gobject(const UniValue& params, bool fHelp)
 
     if (fHelp  ||
         (strCommand != "vote-conf" && strCommand != "vote-alias" && strCommand != "prepare" && strCommand != "submit" &&
-         strCommand != "vote" && strCommand != "get" && strCommand != "list" && strCommand != "diff" && strCommand != "deserialize"))
+         strCommand != "vote" && strCommand != "get" && strCommand != "getvotes" && strCommand != "list" && strCommand != "diff" && strCommand != "deserialize"))
         throw runtime_error(
                 "gobject \"command\"...\n"
                 "Manage governance objects\n"
@@ -245,7 +245,7 @@ UniValue gobject(const UniValue& params, bool fHelp)
             return "Can't find masternode by pubkey";
         }
 
-        CGovernanceVote vote(pmn->vin, hash, nVoteOutcome, nVoteSignal);
+        CGovernanceVote vote(pmn->vin, hash, nVoteSignal, nVoteOutcome);
         if(!vote.Sign(activeMasternode.keyMasternode, activeMasternode.pubKeyMasternode)){
             failed++;
             statusObj.push_back(Pair("result", "failed"));
@@ -352,7 +352,7 @@ UniValue gobject(const UniValue& params, bool fHelp)
 
             // CREATE NEW GOVERNANCE OBJECT VOTE WITH OUTCOME/SIGNAL
 
-            CGovernanceVote vote(pmn->vin, hash, nVoteOutcome, nVoteSignal);
+            CGovernanceVote vote(pmn->vin, hash, nVoteSignal, nVoteOutcome);
             if(!vote.Sign(keyMasternode, pubKeyMasternode)){
                 failed++;
                 statusObj.push_back(Pair("result", "failed"));
@@ -603,7 +603,7 @@ UniValue voteraw(const UniValue& params, bool fHelp)
         throw JSONRPCError(RPC_INTERNAL_ERROR, "Failure to find masternode in list : " + vin.ToString());
     }
 
-    CGovernanceVote vote(vin, hashGovObj, nVoteOutcome, VOTE_SIGNAL_NONE);
+    CGovernanceVote vote(vin, hashGovObj, VOTE_SIGNAL_NONE, nVoteOutcome);
     vote.nTime = nTime;
     vote.vchSig = vchSig;
 
