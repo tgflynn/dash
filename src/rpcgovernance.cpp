@@ -43,7 +43,7 @@ UniValue gobject(const UniValue& params, bool fHelp)
                 "\nAvailable commands:\n"
                 "  prepare            - Prepare govobj by signing and creating tx\n"
                 "  submit             - Submit govobj to network\n"
-                "  get                - Get govobj hash(es) by govobj name\n"
+                "  get                - Get govobj by hash\n"
                 "  getvotes           - Get votes for a govobj hash\n"
                 "  list               - List all govobjs\n"
                 "  diff               - List differences since last diff\n"
