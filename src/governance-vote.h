@@ -19,31 +19,76 @@ using namespace std;
 
 class CGovernanceVote;
 
-#define VOTE_OUTCOME_NONE     0
-#define VOTE_OUTCOME_YES      1
-#define VOTE_OUTCOME_NO       2
-#define VOTE_OUTCOME_ABSTAIN  3
-// INTENTION OF MASTERNODES REGARDING ITEM
+enum vote_outcome_enum_t  {
+    VOTE_OUTCOME_NONE      = 0,
+    VOTE_OUTCOME_YES       = 1,
+    VOTE_OUTCOME_NO        = 2,
+    VOTE_OUTCOME_ABSTAIN   = 3
+};
 
-#define VOTE_SIGNAL_NONE                0 // SIGNAL VARIOUS THINGS TO HAPPEN:
-#define VOTE_SIGNAL_FUNDING             1 //   -- fund this object for it's stated amount
-#define VOTE_SIGNAL_VALID               2 //   -- this object checks out in sentinel engine
-#define VOTE_SIGNAL_DELETE              3 //   -- this object should be deleted from memory entirely
-#define VOTE_SIGNAL_ENDORSED            4 //   -- officially endorsed by the network somehow (delegation)
-#define VOTE_SIGNAL_NOOP1               5 // FOR FURTHER EXPANSION
-#define VOTE_SIGNAL_NOOP2               6 // 
-#define VOTE_SIGNAL_NOOP3               7 // 
-#define VOTE_SIGNAL_NOOP4               8 // 
-#define VOTE_SIGNAL_NOOP5               9 // 
-#define VOTE_SIGNAL_NOOP6               10 // 
-#define VOTE_SIGNAL_NOOP7               11 // 
-#define VOTE_SIGNAL_NOOP8               12 // 
-#define VOTE_SIGNAL_NOOP9               13 // 
-#define VOTE_SIGNAL_NOOP10              14 // 
-#define VOTE_SIGNAL_NOOP11              15 // 
-#define VOTE_SIGNAL_CUSTOM_START        16 // SENTINEL CUSTOM ACTIONS 
-#define VOTE_SIGNAL_CUSTOM_END          35 //        16-35
+// #define VOTE_OUTCOME_NONE     0
+// #define VOTE_OUTCOME_YES      1
+// #define VOTE_OUTCOME_NO       2
+// #define VOTE_OUTCOME_ABSTAIN  3
+// // INTENTION OF MASTERNODES REGARDING ITEM
 
+// #define VOTE_SIGNAL_NONE                0 // SIGNAL VARIOUS THINGS TO HAPPEN:
+// #define VOTE_SIGNAL_FUNDING             1 //   -- fund this object for it's stated amount
+// #define VOTE_SIGNAL_VALID               2 //   -- this object checks out in sentinel engine
+// #define VOTE_SIGNAL_DELETE              3 //   -- this object should be deleted from memory entirely
+// #define VOTE_SIGNAL_ENDORSED            4 //   -- officially endorsed by the network somehow (delegation)
+// #define VOTE_SIGNAL_NOOP1               5 // FOR FURTHER EXPANSION
+// #define VOTE_SIGNAL_NOOP2               6 // 
+// #define VOTE_SIGNAL_NOOP3               7 // 
+// #define VOTE_SIGNAL_NOOP4               8 // 
+// #define VOTE_SIGNAL_NOOP5               9 // 
+// #define VOTE_SIGNAL_NOOP6               10 // 
+// #define VOTE_SIGNAL_NOOP7               11 // 
+// #define VOTE_SIGNAL_NOOP8               12 // 
+// #define VOTE_SIGNAL_NOOP9               13 // 
+// #define VOTE_SIGNAL_NOOP10              14 // 
+// #define VOTE_SIGNAL_NOOP11              15 // 
+// #define VOTE_SIGNAL_CUSTOM_START        16 // SENTINEL CUSTOM ACTIONS 
+// #define VOTE_SIGNAL_CUSTOM_END          35 //        16-35
+
+enum vote_signal_enum_t  {
+    VOTE_SIGNAL_NONE       = 0,
+    VOTE_SIGNAL_FUNDING    = 1,
+    VOTE_SIGNAL_VALID      = 2,
+    VOTE_SIGNAL_DELETE     = 3,
+    VOTE_SIGNAL_ENDORSED   = 4,
+    VOTE_SIGNAL_NOOP1      = 5,
+    VOTE_SIGNAL_NOOP2      = 6,
+    VOTE_SIGNAL_NOOP3      = 7,
+    VOTE_SIGNAL_NOOP4      = 8,
+    VOTE_SIGNAL_NOOP5      = 9,
+    VOTE_SIGNAL_NOOP6      = 10,
+    VOTE_SIGNAL_NOOP7      = 11,
+    VOTE_SIGNAL_NOOP8      = 12,
+    VOTE_SIGNAL_NOOP9      = 13,
+    VOTE_SIGNAL_NOOP10     = 14,
+    VOTE_SIGNAL_NOOP11     = 15,
+    VOTE_SIGNAL_CUSTOM1    = 16,
+    VOTE_SIGNAL_CUSTOM2    = 17,
+    VOTE_SIGNAL_CUSTOM3    = 18,
+    VOTE_SIGNAL_CUSTOM4    = 19,
+    VOTE_SIGNAL_CUSTOM5    = 20,
+    VOTE_SIGNAL_CUSTOM6    = 21,
+    VOTE_SIGNAL_CUSTOM7    = 22,
+    VOTE_SIGNAL_CUSTOM8    = 23,
+    VOTE_SIGNAL_CUSTOM9    = 24,
+    VOTE_SIGNAL_CUSTOM10   = 25,
+    VOTE_SIGNAL_CUSTOM11   = 26,
+    VOTE_SIGNAL_CUSTOM12   = 27,
+    VOTE_SIGNAL_CUSTOM13   = 28,
+    VOTE_SIGNAL_CUSTOM14   = 29,
+    VOTE_SIGNAL_CUSTOM15   = 30,
+    VOTE_SIGNAL_CUSTOM16   = 31,
+    VOTE_SIGNAL_CUSTOM17   = 32,
+    VOTE_SIGNAL_CUSTOM18   = 33,
+    VOTE_SIGNAL_CUSTOM19   = 34,
+    VOTE_SIGNAL_CUSTOM20   = 35
+};
 
 /**
 * Governance Voting
@@ -54,10 +99,10 @@ class CGovernanceVote;
 class CGovernanceVoting
 {
 public:
-    static int ConvertVoteOutcome(std::string strVoteOutcome);
-    static int ConvertVoteSignal(std::string strVoteSignal);
-    static std::string ConvertOutcomeToString(int nOutcome);
-    static std::string ConvertSignalToString(int nSignal);
+    static vote_outcome_enum_t ConvertVoteOutcome(std::string strVoteOutcome);
+    static vote_signal_enum_t ConvertVoteSignal(std::string strVoteSignal);
+    static std::string ConvertOutcomeToString(vote_outcome_enum_t nOutcome);
+    static std::string ConvertSignalToString(vote_signal_enum_t nSignal);
 };
 
 //
@@ -77,7 +122,11 @@ public:
     std::vector<unsigned char> vchSig;
 
     CGovernanceVote();
-    CGovernanceVote(CTxIn vinMasternodeIn, uint256 nParentHashIn, int nVoteSignalIn, int nVoteOutcomeIn);
+    CGovernanceVote(CTxIn vinMasternodeIn, uint256 nParentHashIn, vote_signal_enum_t nVoteSignalIn, vote_outcome_enum_t nVoteOutcomeIn);
+
+    vote_signal_enum_t GetSignal()  { return vote_signal_enum_t(nVoteSignal); }
+
+    vote_outcome_enum_t GetOutcome()  { return vote_outcome_enum_t(nVoteOutcome); }
 
     bool Sign(CKey& keyMasternode, CPubKey& pubKeyMasternode);
     bool IsValid(bool fSignatureCheck);
@@ -111,7 +160,7 @@ public:
 
     std::string ToString()
     {
-        std::string strRet = CGovernanceVoting::ConvertOutcomeToString(nVoteOutcome) + ":" + CGovernanceVoting::ConvertSignalToString(nVoteSignal);
+        std::string strRet = CGovernanceVoting::ConvertOutcomeToString(GetOutcome()) + ":" + CGovernanceVoting::ConvertSignalToString(GetSignal());
         return strRet;
     }
 
