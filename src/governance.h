@@ -291,9 +291,6 @@ public:
 
     // FUNCTIONS FOR DEALING WITH DATA STRING 
 
-    void LoadData();
-    bool SetData(std::string& strError, std::string strDataIn);
-    bool GetData(UniValue& objResult);
     std::string GetDataAsHex();
     std::string GetDataAsString();
 
@@ -319,6 +316,13 @@ public:
 
         // AFTER DESERIALIZATION OCCURS, CACHED VARIABLES MUST BE CALCULATED MANUALLY
     }
+
+private:
+    // FUNCTIONS FOR DEALING WITH DATA STRING 
+
+    void LoadData();
+    bool SetData(std::string& strError, std::string strDataIn);
+    void GetData(UniValue& objResult);
 
 };
 

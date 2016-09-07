@@ -806,18 +806,12 @@ UniValue CGovernanceObject::GetJSONObject()
     }
 
     UniValue objResult(UniValue::VOBJ);
-    if(!GetData(objResult)) {
-        return obj;
-    }
+    GetData(objResult);
 
-    try  {
-        std::vector<UniValue> arr1 = objResult.getValues();
-        std::vector<UniValue> arr2 = arr1.at( 0 ).getValues();
-        obj = arr2.at( 1 );
-    }
-    catch(...)  {
-        obj = UniValue(UniValue::VOBJ);
-    }
+    std::vector<UniValue> arr1 = objResult.getValues();
+    std::vector<UniValue> arr2 = arr1.at( 0 ).getValues();
+    obj = arr2.at( 1 );
+
     return obj;
 }
 
@@ -838,17 +832,15 @@ void CGovernanceObject::LoadData()
         return;
     }
 
-    // ATTEMPT TO LOAD JSON STRING FROM STRDATA
-    UniValue objResult(UniValue::VOBJ);
-    if(!GetData(objResult)) {
-        fUnparsable = true;
-    }
-
-    DBG( cout << "CGovernanceObject::LoadData strData = "
-              << GetDataAsString()
-              << endl; );
-
     try  {
+        // ATTEMPT TO LOAD JSON STRING FROM STRDATA
+        UniValue objResult(UniValue::VOBJ);
+        GetData(objResult);
+        
+        DBG( cout << "CGovernanceObject::LoadData strData = "
+             << GetDataAsString()
+             << endl; );
+        
         UniValue obj = GetJSONObject();
         nObjectType = obj["type"].get_int();
     }
@@ -901,23 +893,12 @@ bool CGovernanceObject::SetData(std::string& strError, std::string strDataIn)
 *    
 */
 
-bool CGovernanceObject::GetData(UniValue& objResult)
+void CGovernanceObject::GetData(UniValue& objResult)
 {
-    // NOTE : IS THIS SAFE? 
-
-    try
-    {
-        UniValue o(UniValue::VOBJ);
-        std::string s = GetDataAsString();
-        o.read(s);
-        objResult = o;
-    }
-    catch (int e)
-    {
-        return false;
-    }
-
-    return true;
+    UniValue o(UniValue::VOBJ);
+    std::string s = GetDataAsString();
+    o.read(s);
+    objResult = o;
 }
 
 /**
