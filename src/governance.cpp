@@ -24,7 +24,6 @@ class CNode;
 class CBudgetVote;
 
 CGovernanceManager governance;
-CCriticalSection cs_budget;
 
 std::map<uint256, int64_t> mapAskedForGovernanceObject;
 
