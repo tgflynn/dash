@@ -111,7 +111,7 @@ public:
 
 class CGovernanceVote
 {
-public:
+private:
     bool fValid; //if the vote is currently valid / counted
     bool fSynced; //if we've sent this to our peers
     int nVoteSignal; // see VOTE_ACTIONS above
@@ -121,25 +121,35 @@ public:
     int64_t nTime;
     std::vector<unsigned char> vchSig;
 
+public:
     CGovernanceVote();
-    CGovernanceVote(CTxIn vinMasternodeIn, uint256 nParentHashIn, vote_signal_enum_t nVoteSignalIn, vote_outcome_enum_t nVoteOutcomeIn);
+    CGovernanceVote(CTxIn vinMasternodeIn, uint256 nParentHashIn, vote_signal_enum_t eVoteSignalIn, vote_outcome_enum_t eVoteOutcomeIn);
+
+    bool IsValid() const { return fValid; }
+
+    bool IsSynced() const { return fSynced; }
+
+    int64_t GetTimestamp() const { return nTime; }
 
     vote_signal_enum_t GetSignal()  { return vote_signal_enum_t(nVoteSignal); }
 
     vote_outcome_enum_t GetOutcome()  { return vote_outcome_enum_t(nVoteOutcome); }
+
+    const uint256& GetParentHash() const { return nParentHash; }
+
+    void SetTime(int64_t nTimeIn) { nTime = nTimeIn; }
+
+    void SetSignature(const std::vector<unsigned char>& vchSigIn) { vchSig = vchSigIn; }
 
     bool Sign(CKey& keyMasternode, CPubKey& pubKeyMasternode);
     bool IsValid(bool fSignatureCheck);
     void Relay();
 
     std::string GetVoteString() {
-        std::string ret = "ERROR";
-        if(nVoteOutcome == VOTE_OUTCOME_NONE)         ret = "NONE";
-        else if(nVoteOutcome == VOTE_OUTCOME_ABSTAIN) ret = "ABSTAIN";
-        else if(nVoteOutcome == VOTE_OUTCOME_YES)     ret = "YES";
-        else if(nVoteOutcome == VOTE_OUTCOME_NO)      ret = "NO";
-        return ret;
+        return CGovernanceVoting::ConvertOutcomeToString(GetOutcome());
     }
+
+    CTxIn& GetVinMasternode() { return vinMasternode; }
 
     /**
     *   GetHash()
@@ -190,10 +200,6 @@ public:
         //  -- no outcome 
         //  -- timeless
         return ss.GetHash();
-    }
-
-    uint256 GetParentHash() const {
-        return nParentHash;
     }
 
     ADD_SERIALIZE_METHODS;

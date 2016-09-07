@@ -214,27 +214,26 @@ vote_signal_enum_t CGovernanceVoting::ConvertVoteSignal(std::string strVoteSigna
 }
 
 CGovernanceVote::CGovernanceVote()
-{
-    vinMasternode = CTxIn();
-    nParentHash = uint256();
-    nVoteSignal = VOTE_SIGNAL_NONE;
-    nVoteOutcome = VOTE_OUTCOME_NONE;
-    nTime = 0;
-    fValid = true;
-    fSynced = false;
-    vchSig.clear();
-}
+    : fValid(true),
+      fSynced(false),
+      nVoteSignal(int(VOTE_SIGNAL_NONE)),
+      vinMasternode(),
+      nParentHash(),
+      nVoteOutcome(int(VOTE_OUTCOME_NONE)),
+      nTime(0),
+      vchSig()
+{}
 
-CGovernanceVote::CGovernanceVote(CTxIn vinMasternodeIn, uint256 nParentHashIn, vote_signal_enum_t nVoteSignalIn, vote_outcome_enum_t nVoteOutcomeIn)
-{
-    vinMasternode = vinMasternodeIn;
-    nParentHash = nParentHashIn;
-    nVoteSignal = nVoteSignalIn;
-    nVoteOutcome = nVoteOutcomeIn;
-    nTime = GetAdjustedTime();
-    fValid = true;
-    fSynced = false;
-}
+CGovernanceVote::CGovernanceVote(CTxIn vinMasternodeIn, uint256 nParentHashIn, vote_signal_enum_t eVoteSignalIn, vote_outcome_enum_t eVoteOutcomeIn)
+    : fValid(true),
+      fSynced(false),
+      nVoteSignal(eVoteSignalIn),
+      vinMasternode(vinMasternodeIn),
+      nParentHash(nParentHashIn),
+      nVoteOutcome(eVoteOutcomeIn),
+      nTime(GetAdjustedTime()),
+      vchSig()
+{}
 
 void CGovernanceVote::Relay()
 {

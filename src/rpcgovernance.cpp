@@ -613,8 +613,8 @@ UniValue voteraw(const UniValue& params, bool fHelp)
     }
 
     CGovernanceVote vote(vin, hashGovObj, eVoteSignal, eVoteOutcome);
-    vote.nTime = nTime;
-    vote.vchSig = vchSig;
+    vote.SetTime(nTime);
+    vote.SetSignature(vchSig);
 
     if(!vote.IsValid(true)){
         throw JSONRPCError(RPC_INTERNAL_ERROR, "Failure to verify vote.");
