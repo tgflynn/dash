@@ -19,6 +19,7 @@ using namespace std;
 
 class CGovernanceVote;
 
+// INTENTION OF MASTERNODES REGARDING ITEM
 enum vote_outcome_enum_t  {
     VOTE_OUTCOME_NONE      = 0,
     VOTE_OUTCOME_YES       = 1,
@@ -26,38 +27,15 @@ enum vote_outcome_enum_t  {
     VOTE_OUTCOME_ABSTAIN   = 3
 };
 
-// #define VOTE_OUTCOME_NONE     0
-// #define VOTE_OUTCOME_YES      1
-// #define VOTE_OUTCOME_NO       2
-// #define VOTE_OUTCOME_ABSTAIN  3
-// // INTENTION OF MASTERNODES REGARDING ITEM
 
-// #define VOTE_SIGNAL_NONE                0 // SIGNAL VARIOUS THINGS TO HAPPEN:
-// #define VOTE_SIGNAL_FUNDING             1 //   -- fund this object for it's stated amount
-// #define VOTE_SIGNAL_VALID               2 //   -- this object checks out in sentinel engine
-// #define VOTE_SIGNAL_DELETE              3 //   -- this object should be deleted from memory entirely
-// #define VOTE_SIGNAL_ENDORSED            4 //   -- officially endorsed by the network somehow (delegation)
-// #define VOTE_SIGNAL_NOOP1               5 // FOR FURTHER EXPANSION
-// #define VOTE_SIGNAL_NOOP2               6 // 
-// #define VOTE_SIGNAL_NOOP3               7 // 
-// #define VOTE_SIGNAL_NOOP4               8 // 
-// #define VOTE_SIGNAL_NOOP5               9 // 
-// #define VOTE_SIGNAL_NOOP6               10 // 
-// #define VOTE_SIGNAL_NOOP7               11 // 
-// #define VOTE_SIGNAL_NOOP8               12 // 
-// #define VOTE_SIGNAL_NOOP9               13 // 
-// #define VOTE_SIGNAL_NOOP10              14 // 
-// #define VOTE_SIGNAL_NOOP11              15 // 
-// #define VOTE_SIGNAL_CUSTOM_START        16 // SENTINEL CUSTOM ACTIONS 
-// #define VOTE_SIGNAL_CUSTOM_END          35 //        16-35
-
+// SIGNAL VARIOUS THINGS TO HAPPEN:
 enum vote_signal_enum_t  {
     VOTE_SIGNAL_NONE       = 0,
-    VOTE_SIGNAL_FUNDING    = 1,
-    VOTE_SIGNAL_VALID      = 2,
-    VOTE_SIGNAL_DELETE     = 3,
-    VOTE_SIGNAL_ENDORSED   = 4,
-    VOTE_SIGNAL_NOOP1      = 5,
+    VOTE_SIGNAL_FUNDING    = 1, //   -- fund this object for it's stated amount
+    VOTE_SIGNAL_VALID      = 2, //   -- this object checks out in sentinel engine
+    VOTE_SIGNAL_DELETE     = 3, //   -- this object should be deleted from memory entirely
+    VOTE_SIGNAL_ENDORSED   = 4, //   -- officially endorsed by the network somehow (delegation)
+    VOTE_SIGNAL_NOOP1      = 5, // FOR FURTHER EXPANSION
     VOTE_SIGNAL_NOOP2      = 6,
     VOTE_SIGNAL_NOOP3      = 7,
     VOTE_SIGNAL_NOOP4      = 8,
@@ -68,8 +46,8 @@ enum vote_signal_enum_t  {
     VOTE_SIGNAL_NOOP9      = 13,
     VOTE_SIGNAL_NOOP10     = 14,
     VOTE_SIGNAL_NOOP11     = 15,
-    VOTE_SIGNAL_CUSTOM1    = 16,
-    VOTE_SIGNAL_CUSTOM2    = 17,
+    VOTE_SIGNAL_CUSTOM1    = 16,  // SENTINEL CUSTOM ACTIONS 
+    VOTE_SIGNAL_CUSTOM2    = 17,  //        16-35
     VOTE_SIGNAL_CUSTOM3    = 18,
     VOTE_SIGNAL_CUSTOM4    = 19,
     VOTE_SIGNAL_CUSTOM5    = 20,

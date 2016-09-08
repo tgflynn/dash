@@ -166,19 +166,13 @@ vote_outcome_enum_t CGovernanceVoting::ConvertVoteOutcome(std::string strVoteOut
     else if(strVoteOutcome == "abstain") {
         eVote = VOTE_OUTCOME_ABSTAIN;
     }
-    else if(strVoteOutcome == "none") {
-        eVote = VOTE_OUTCOME_NONE;
-    }
     return eVote;
 }
 
 vote_signal_enum_t CGovernanceVoting::ConvertVoteSignal(std::string strVoteSignal)
 {
     vote_signal_enum_t eSignal = VOTE_SIGNAL_NONE;
-    if(strVoteSignal == "none") {
-        eSignal = VOTE_SIGNAL_NONE;  
-    }
-    else if(strVoteSignal == "funding") {
+    if(strVoteSignal == "funding") {
         eSignal = VOTE_SIGNAL_FUNDING;
     }
     else if(strVoteSignal == "valid") {
@@ -189,6 +183,10 @@ vote_signal_enum_t CGovernanceVoting::ConvertVoteSignal(std::string strVoteSigna
     }
     if(strVoteSignal == "endorsed") {
         eSignal = VOTE_SIGNAL_ENDORSED;
+    }
+
+    if(eSignal != VOTE_SIGNAL_NONE)  {
+        return eSignal;
     }
 
     // ID FIVE THROUGH CUSTOM_START ARE TO BE USED BY GOVERNANCE ENGINE / TRIGGER SYSTEM
