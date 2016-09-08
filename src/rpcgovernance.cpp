@@ -190,6 +190,9 @@ UniValue gobject(const UniValue& params, bool fHelp)
             govobj.SetMasternodeInfo(mn.vin, activeMasternode.pubKeyMasternode);
             govobj.Sign(activeMasternode.keyMasternode);
         }
+        else {
+            throw JSONRPCError(RPC_INTERNAL_ERROR, "Only valid masternodes can submit this type of object");
+        }
 
         std::string strError = "";
         if(!govobj.IsValidLocally(pindex, strError, true)) {
