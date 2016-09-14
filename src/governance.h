@@ -228,13 +228,13 @@ public:
     std::string strData; // Data field - can be used for anything
     int nObjectType;
 
-    bool fCachedLocalValidity; // is valid by blockchain
-    std::string strLocalValidityError;
-
     // Masternode info for signed objects
     CTxIn vinMasternode;
     CPubKey pubkeyMasternode;
     std::vector<unsigned char> vchSig;
+
+    bool fCachedLocalValidity; // is valid by blockchain
+    std::string strLocalValidityError;
 
     // VARIOUS FLAGS FOR OBJECT / SET VIA MASTERNODE VOTING
 

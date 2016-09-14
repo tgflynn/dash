@@ -679,9 +679,11 @@ CGovernanceObject::CGovernanceObject(const CGovernanceObject& other)
     nCollateralHash = other.nCollateralHash;
     strData = other.strData;
     nObjectType = other.nObjectType;
+
     fUnparsable = true;
 
     vinMasternode = other.vinMasternode;
+    pubkeyMasternode = other.pubkeyMasternode;
     vchSig = other.vchSig;
 
     // caching
@@ -718,6 +720,10 @@ bool CGovernanceObject::Sign(CKey& keyMasternode)
         LogPrintf("CGovernanceObject::Sign -- VerifyMessage() failed, error: %s\n", strError);
         return false;
     }
+
+    LogPrint("gobject", "CGovernanceObject::Sign: pubkey id = %s, vin = %s\n", 
+             pubkeyMasternode.GetID().ToString(), vinMasternode.prevout.ToStringShort());
+
 
     return true;
 }
@@ -934,22 +940,22 @@ bool CGovernanceObject::IsValidLocally(const CBlockIndex* pindex, std::string& s
             std::string strVin = vinMasternode.prevout.ToStringShort();
             CMasternode mn;
             if(!mnodeman.Get(vinMasternode, mn)) {
-                strError = "Masternode not found: " + strVin;
+                strError = "Masternode not found vin: " + strVin;
                 return false;
             }
             if(!mn.IsEnabled()) {
-                strError = "Masternode not enabled: " + strVin;
+                strError = "Masternode not enabled vin: " + strVin;
                 return false;
             }
 
             // Check that we have a valid MN signature
             if(!CheckSignature()) {
-                strError = "Invalid masternode signature for: " + strVin;
+                strError = "Invalid masternode signature for vin: " + strVin + ", pubkey id = " + pubkeyMasternode.GetID().ToString();
                 return false;
             }
 
             if(!governance.MasternodeRateCheck(vinMasternode)) {
-                strError = "Masternode attempting to create too many objects: " + strVin;
+                strError = "Masternode attempting to create too many objects vin: " + strVin;
                 return false;
             }
 
