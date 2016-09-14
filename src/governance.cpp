@@ -281,7 +281,7 @@ bool CGovernanceManager::AddGovernanceObject(CGovernanceObject& govobj)
               << endl; );
 
     if(govobj.nObjectType == GOVERNANCE_OBJECT_TRIGGER) {
-        mapLastMasternodeTrigger[govobj.pubkeyMasternode.GetHash()] = nCachedBlockHeight;
+        mapLastMasternodeTrigger[govobj.vinMasternode.prevout] = nCachedBlockHeight;
         DBG( cout << "CGovernanceManager::AddGovernanceObject Before AddNewTrigger" << endl; );
         triggerman.AddNewTrigger(govobj.GetHash());
         DBG( cout << "CGovernanceManager::AddGovernanceObject After AddNewTrigger" << endl; );
@@ -601,10 +601,10 @@ bool CGovernanceManager::AddOrUpdateVote(const CGovernanceVote& vote, CNode* pfr
     return true;
 }
 
-bool CGovernanceManager::MasternodeRateCheck(const CPubKey& pubkey)
+bool CGovernanceManager::MasternodeRateCheck(const CTxIn& vin)
 {
     LOCK(cs);
-    count_m_it it  = mapLastMasternodeTrigger.find(pubkey.GetHash());
+    txout_m_it it  = mapLastMasternodeTrigger.find(vin.prevout);
     if(it == mapLastMasternodeTrigger.end()) {
         return true;
     }
@@ -615,7 +615,6 @@ bool CGovernanceManager::MasternodeRateCheck(const CPubKey& pubkey)
     }
     return false;
 }
-
 
 CGovernanceObject::CGovernanceObject()
 {
@@ -932,24 +931,25 @@ bool CGovernanceObject::IsValidLocally(const CBlockIndex* pindex, std::string& s
 
     if(fCheckCollateral) {
         if(nObjectType == GOVERNANCE_OBJECT_TRIGGER) {
+            std::string strVin = vinMasternode.prevout.ToStringShort();
             CMasternode mn;
-            if(!mnodeman.Get(pubkeyMasternode, mn)) {
-                strError = "Masternode not found";
+            if(!mnodeman.Get(vinMasternode, mn)) {
+                strError = "Masternode not found: " + strVin;
                 return false;
             }
             if(!mn.IsEnabled()) {
-                strError = "Masternode not enabled";
+                strError = "Masternode not enabled: " + strVin;
                 return false;
             }
 
             // Check that we have a valid MN signature
             if(!CheckSignature()) {
-                strError = "Invalid masternode signature";
+                strError = "Invalid masternode signature for: " + strVin;
                 return false;
             }
 
-            if(!governance.MasternodeRateCheck(pubkeyMasternode)) {
-                strError = "Masternode attempting to create too many objects";
+            if(!governance.MasternodeRateCheck(vinMasternode)) {
+                strError = "Masternode attempting to create too many objects: " + strVin;
                 return false;
             }
 
