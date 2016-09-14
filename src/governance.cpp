@@ -686,7 +686,6 @@ CGovernanceObject::CGovernanceObject(const CGovernanceObject& other)
     fUnparsable = true;
 
     vinMasternode = other.vinMasternode;
-    pubkeyMasternode = other.pubkeyMasternode;
     vchSig = other.vchSig;
 
     // caching
@@ -698,17 +697,14 @@ CGovernanceObject::CGovernanceObject(const CGovernanceObject& other)
     fExpired = other.fExpired;
 }
 
-void CGovernanceObject::SetMasternodeInfo(const CTxIn& vin, const CPubKey& pubkey)
+void CGovernanceObject::SetMasternodeInfo(const CTxIn& vin)
 {
     vinMasternode = vin;
-    pubkeyMasternode = pubkey;
 }
 
-bool CGovernanceObject::Sign(CKey& keyMasternode)
+bool CGovernanceObject::Sign(CKey& keyMasternode, CPubKey& pubkeyMasternode)
 {
     LOCK(cs);
-    CPubKey pubKeyCollateralAddress;
-    CKey keyCollateralAddress;
 
     std::string strError;
     uint256 nHash = GetHash();
@@ -731,7 +727,7 @@ bool CGovernanceObject::Sign(CKey& keyMasternode)
     return true;
 }
 
-bool CGovernanceObject::CheckSignature()
+bool CGovernanceObject::CheckSignature(CPubKey& pubkeyMasternode)
 {
     LOCK(cs);
     std::string strError;
@@ -952,8 +948,8 @@ bool CGovernanceObject::IsValidLocally(const CBlockIndex* pindex, std::string& s
             }
 
             // Check that we have a valid MN signature
-            if(!CheckSignature()) {
-                strError = "Invalid masternode signature for vin: " + strVin + ", pubkey id = " + pubkeyMasternode.GetID().ToString();
+            if(!CheckSignature(mn.pubkey2)) {
+                strError = "Invalid masternode signature for vin: " + strVin + ", pubkey id = " + mn.pubkey2.GetID().ToString();
                 return false;
             }
 

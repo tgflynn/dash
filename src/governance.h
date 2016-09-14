@@ -230,7 +230,6 @@ public:
 
     // Masternode info for signed objects
     CTxIn vinMasternode;
-    CPubKey pubkeyMasternode;
     std::vector<unsigned char> vchSig;
 
     bool fCachedLocalValidity; // is valid by blockchain
@@ -253,9 +252,9 @@ public:
 
     // Signature related functions
 
-    void SetMasternodeInfo(const CTxIn& vin, const CPubKey& pubkey);
-    bool Sign(CKey& keyMasternode);
-    bool CheckSignature();
+    void SetMasternodeInfo(const CTxIn& vin);
+    bool Sign(CKey& keyMasternode, CPubKey& pubkeyMasternode);
+    bool CheckSignature(CPubKey& pubkeyMasternode);
 
     // CORE OBJECT FUNCTIONS
 
@@ -307,7 +306,6 @@ public:
         READWRITE(strData);
         READWRITE(nObjectType);
         READWRITE(vinMasternode);
-        READWRITE(pubkeyMasternode);
         READWRITE(vchSig);
 
         // AFTER DESERIALIZATION OCCURS, CACHED VARIABLES MUST BE CALCULATED MANUALLY

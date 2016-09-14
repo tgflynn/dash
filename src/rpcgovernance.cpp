@@ -190,8 +190,8 @@ UniValue gobject(const UniValue& params, bool fHelp)
         // Attempt to sign triggers if we are a MN
         if(govobj.GetObjectType() == GOVERNANCE_OBJECT_TRIGGER) {
             if(mnFound) {
-                govobj.SetMasternodeInfo(mn.vin, activeMasternode.pubKeyMasternode);
-                govobj.Sign(activeMasternode.keyMasternode);
+                govobj.SetMasternodeInfo(mn.vin);
+                govobj.Sign(activeMasternode.keyMasternode, activeMasternode.pubKeyMasternode);
             }
             else {
                 throw JSONRPCError(RPC_INTERNAL_ERROR, "Only valid masternodes can submit this type of object");
