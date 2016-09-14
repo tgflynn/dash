@@ -613,6 +613,9 @@ bool CGovernanceManager::MasternodeRateCheck(const CTxIn& vin)
     if((nCachedBlockHeight - it->second) > mindiff) {
         return true;
     }
+
+    LogPrintf("CGovernanceManager::MasternodeRateCheck Rate too high: vin = %s, current height = %d, last MN height = %d, minimum difference = %d\n", 
+              vin.prevout.ToStringShort(), nCachedBlockHeight, it->second, mindiff);
     return false;
 }
 
