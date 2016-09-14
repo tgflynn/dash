@@ -953,9 +953,13 @@ bool CGovernanceObject::IsValidLocally(const CBlockIndex* pindex, std::string& s
                 return false;
             }
 
-            if(!governance.MasternodeRateCheck(vinMasternode)) {
-                strError = "Masternode attempting to create too many objects vin: " + strVin;
-                return false;
+            // Only perform rate check if we are synced because during syncing it is expected
+            // that objects will be seen in rapid succession
+            if(masternodeSync.IsSynced()) {
+                if(!governance.MasternodeRateCheck(vinMasternode)) {
+                    strError = "Masternode attempting to create too many objects vin: " + strVin;
+                    return false;
+                }
             }
 
             return true;
