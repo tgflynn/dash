@@ -76,7 +76,7 @@ UniValue gobject(const UniValue& params, bool fHelp)
     // PREPARE THE GOVERNANCE OBJECT BY CREATING A COLLATERAL TRANSACTION
     if(strCommand == "prepare")
     {
-        if (params.size() != 6) {
+        if (params.size() != 5) {
             throw JSONRPCError(RPC_INVALID_PARAMETER, "Correct usage is 'gobject prepare <parent-hash> <revision> <time> <data-hex>'");
         }
 
