@@ -10,19 +10,49 @@
 #include "serialize.h"
 
 /**
+ * Serializable structure for key/value items
+ */
+template<typename K, typename V>
+struct CacheItem
+{
+    CacheItem()
+    {}
+
+    CacheItem(const K& keyIn, const V& valueIn)
+    : key(keyIn),
+      value(valueIn)
+    {}
+
+    K key;
+    V value;
+
+    ADD_SERIALIZE_METHODS;
+
+    template <typename Stream, typename Operation>
+    inline void SerializationOp(Stream& s, Operation ser_action, int nType, int nVersion)
+    {
+        READWRITE(key);
+        READWRITE(value);
+    }
+};
+
+
+/**
  * Map like container that keeps the N most recently added items
  */
 template<typename K, typename V>
 class CacheMap
 {
 public:
-    typedef std::list<K> list_t;
+    typedef CacheItem<K,V> item_t;
+
+    typedef std::list<item_t> list_t;
 
     typedef typename list_t::iterator list_it;
 
     typedef typename list_t::const_iterator list_cit;
 
-    typedef std::map<K, V> map_t;
+    typedef std::map<K, list_it> map_t;
 
     typedef typename map_t::iterator map_it;
 
@@ -33,22 +63,31 @@ private:
 
     std::size_t nCurrentSize;
 
-    list_t listKeys;
+    list_t listItems;
 
-    map_t mapItems;
+    map_t mapIndex;
 
 public:
     CacheMap(std::size_t nMaxSizeIn = 0)
-          : nMaxSize(nMaxSizeIn),
-            nCurrentSize(0),
-            listKeys(),
-            mapItems()
+        : nMaxSize(nMaxSizeIn),
+          nCurrentSize(0),
+          listItems(),
+          mapIndex()
     {}
+
+    CacheMap(const CacheMap<K,V>& other)
+        : nMaxSize(other.nMaxSize),
+          nCurrentSize(other.nCurrentSize),
+          listItems(other.listItems),
+          mapIndex()
+    {
+        RebuildIndex();
+    }
 
     void Clear()
     {
-        mapItems.clear();
-        listKeys.clear();
+        mapIndex.clear();
+        listItems.clear();
         nCurrentSize = 0;
     }
 
@@ -67,33 +106,59 @@ public:
 
     void Insert(const K& key, const V& value)
     {
-        map_it it = mapItems.find(key);
-        if(it != mapItems.end()) {
-            it->second = value;
+        map_it it = mapIndex.find(key);
+        if(it != mapIndex.end()) {
+            item_t& item = *(it->second);
+            item.value = value;
             return;
         }
         if(nCurrentSize == nMaxSize) {
             PruneLast();
         }
-        mapItems[key] = value;
-        listKeys.push_front(key);
+        listItems.push_front(item_t(key, value));
+        mapIndex[key] = listItems.begin();
         ++nCurrentSize;
     }
 
     bool HasKey(const K& key) const
     {
-        map_cit it = mapItems.find(key);
-        return (it != mapItems.end());
+        map_cit it = mapIndex.find(key);
+        return (it != mapIndex.end());
     }
 
     bool Get(const K& key, V& value) const
     {
-        map_cit it = mapItems.find(key);
-        if(it == mapItems.end()) {
+        map_cit it = mapIndex.find(key);
+        if(it == mapIndex.end()) {
             return false;
         }
-        value = it->second;
+        item_t& item = *(it->second);
+        value = item.value;
         return true;
+    }
+
+    void Erase(const K& key)
+    {
+        map_it it = mapIndex.find(key);
+        if(it == mapIndex.end()) {
+            return;
+        }
+        listItems.erase(it->second);
+        mapIndex.erase(it);
+        --nCurrentSize;
+    }
+
+    const list_t& GetItemList() const {
+        return listItems;
+    }
+
+    CacheMap<K,V>& operator=(const CacheMap<K,V>& other)
+    {
+        nMaxSize = other.nMaxSize;
+        nCurrentSize = other.nCurrentSize;
+        listItems = other.listItems;
+        RebuildIndex();
+        return *this;
     }
 
     ADD_SERIALIZE_METHODS;
@@ -103,8 +168,10 @@ public:
     {
         READWRITE(nMaxSize);
         READWRITE(nCurrentSize);
-        READWRITE(listKeys);
-        READWRITE(mapItems);
+        READWRITE(listItems);
+        if(ser_action.ForRead()) {
+            RebuildIndex();
+        }
     }
 
 private:
@@ -113,10 +180,18 @@ private:
         if(nCurrentSize < 1) {
             return;
         }
-        K keyLast = listKeys.back();
-        mapItems.erase(keyLast);
-        listKeys.pop_back();
+        item_t& item = listItems.back();
+        mapIndex.erase(item.key);
+        listItems.pop_back();
         --nCurrentSize;
+    }
+
+    void RebuildIndex()
+    {
+        mapIndex.clear();
+        for(list_it it = listItems.begin(); it != listItems.end(); ++it) {
+            mapIndex[it->key] = it;
+        }
     }
 };
 
