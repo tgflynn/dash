@@ -1,10 +1,8 @@
-Dash Core staging tree 0.12.1
-===============================
+WARNING: This is a Development Branch Used only for Backup Purposes, Not Recommended for Use
+============================================================================================
 
-`master:` [![Build Status](https://travis-ci.org/dashpay/dash.svg?branch=master)](https://travis-ci.org/dashpay/dash) `v0.12.0.x:` [![Build Status](https://travis-ci.org/dashpay/dash.svg?branch=v0.12.0.x)](https://travis-ci.org/dashpay/dash/branches) `v0.12.1.x:` [![Build Status](https://travis-ci.org/dashpay/dash.svg?branch=v0.12.1.x)](https://travis-ci.org/dashpay/dash/branches)
-
-https://www.dash.org
-
+Dash Core Development Branch for 0.12.1 Governance Voting Changes 
+=================================================================
 
 What is Dash?
 ----------------
