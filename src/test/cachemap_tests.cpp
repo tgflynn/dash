@@ -112,14 +112,6 @@ BOOST_AUTO_TEST_CASE(cachemap_test)
     CacheMap<int,int> mapTest2;
     ss >> mapTest2;
 
-//    const CacheMap<int,int>::list_t& items1 = mapTest1.GetItemList();
-//    for(CacheMap<int,int>::list_cit it = items1.begin(); it != items1.end(); ++it) {
-//        BOOST_CHECK(mapTest2.HasKey(it->key) == true);
-//        int val = 0;
-//        BOOST_CHECK(mapTest2.Get(it->key, val) == true);
-//        BOOST_CHECK(it->value == val);
-//    }
-
     BOOST_CHECK(Compare(mapTest1, mapTest2));
 
     // test copy constructor
