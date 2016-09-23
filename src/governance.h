@@ -21,6 +21,7 @@
 #include "init.h"
 #include <univalue.h>
 #include "utilstrencodings.h"
+#include "cachemap.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -75,11 +76,7 @@ public: // Types
 
     typedef vote_m_t::const_iterator vote_m_cit;
 
-    typedef std::map<uint256, CTransaction> transaction_m_t;
-
-    typedef transaction_m_t::iterator transaction_m_it;
-
-    typedef transaction_m_t::const_iterator transaction_m_cit;
+    typedef CacheMap<uint256, CGovernanceVote> vote_cache_t;
 
     typedef object_m_t::size_type size_type;
 
@@ -91,8 +88,8 @@ public: // Types
 
 private:
 
-    //hold txes until they mature enough to use
-    transaction_m_t mapCollateral;
+    static const int MAX_CACHE_SIZE = 1000;
+
     // Keep track of current block index
     const CBlockIndex *pCurrentBlockIndex;
 
@@ -103,8 +100,9 @@ private:
     object_m_t mapObjects;
 
     count_m_t mapSeenGovernanceObjects;
-    count_m_t mapSeenVotes;
-    vote_m_t mapOrphanVotes;
+
+    vote_cache_t mapInvalidVotes;
+    vote_cache_t mapOrphanVotes;
 
     // todo: one of these should point to the other
     //   -- must be carefully managed while adding/removing/updating
@@ -123,12 +121,13 @@ public:
     {
         LOCK(cs);
         mapSeenGovernanceObjects.clear();
-        mapSeenVotes.clear();
     }
 
     int CountProposalInventoryItems()
     {
-        return mapSeenGovernanceObjects.size() + mapSeenVotes.size();
+        // TODO What is this for ?
+        return mapSeenGovernanceObjects.size();
+        //return mapSeenGovernanceObjects.size() + mapSeenVotes.size();
     }
 
     void Sync(CNode* node, uint256 nProp);
@@ -162,8 +161,8 @@ public:
         LogPrint("gobject", "Governance object manager was cleared\n");
         mapObjects.clear();
         mapSeenGovernanceObjects.clear();
-        mapSeenVotes.clear();
-        mapOrphanVotes.clear();
+        mapInvalidVotes.Clear();
+        mapOrphanVotes.Clear();
         mapVotesByType.clear();
         mapVotesByHash.clear();
         mapLastMasternodeTrigger.clear();
@@ -177,7 +176,7 @@ public:
     inline void SerializationOp(Stream& s, Operation ser_action, int nType, int nVersion) {
         LOCK(cs);
         READWRITE(mapSeenGovernanceObjects);
-        READWRITE(mapSeenVotes);
+        READWRITE(mapInvalidVotes);
         READWRITE(mapOrphanVotes);
         READWRITE(mapObjects);
         READWRITE(mapVotesByHash);

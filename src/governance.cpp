@@ -27,14 +27,13 @@ std::map<uint256, int64_t> mapAskedForGovernanceObject;
 int nSubmittedFinalBudget;
 
 CGovernanceManager::CGovernanceManager()
-    : mapCollateral(),
-      pCurrentBlockIndex(NULL),
+    : pCurrentBlockIndex(NULL),
       nTimeLastDiff(0),
       nCachedBlockHeight(0),
       mapObjects(),
       mapSeenGovernanceObjects(),
-      mapSeenVotes(),
-      mapOrphanVotes(),
+      mapInvalidVotes(MAX_CACHE_SIZE),
+      mapOrphanVotes(MAX_CACHE_SIZE),
       mapLastMasternodeTrigger(),
       cs()
 {}
@@ -78,8 +77,8 @@ void CGovernanceManager::AddSeenGovernanceObject(uint256 nHash, int status)
 
 void CGovernanceManager::AddSeenVote(uint256 nHash, int status)
 {
-    LOCK(cs);
-    mapSeenVotes[nHash] = status;
+//    LOCK(cs);
+//    mapSeenVotes[nHash] = status;
 }
 
 void CGovernanceManager::ProcessMessage(CNode* pfrom, std::string& strCommand, CDataStream& vRecv)
@@ -192,10 +191,10 @@ void CGovernanceManager::ProcessMessage(CNode* pfrom, std::string& strCommand, C
 
         // IF WE'VE SEEN THIS OBJECT THEN SKIP
 
-        if(mapSeenVotes.count(vote.GetHash())){
-            masternodeSync.AddedBudgetItem(vote.GetHash());
-            return;
-        }
+//        if(mapSeenVotes.count(vote.GetHash())){
+//            masternodeSync.AddedBudgetItem(vote.GetHash());
+//            return;
+//        }
 
         // FIND THE MASTERNODE OF THE VOTER
 
@@ -213,10 +212,10 @@ void CGovernanceManager::ProcessMessage(CNode* pfrom, std::string& strCommand, C
             if(masternodeSync.IsSynced()) Misbehaving(pfrom->GetId(), 20);
             // it could just be a non-synced masternode
             mnodeman.AskForMN(pfrom, vote.GetVinMasternode());
-            mapSeenVotes.insert(std::make_pair(vote.GetHash(), SEEN_OBJECT_ERROR_INVALID));
+            //mapSeenVotes.insert(std::make_pair(vote.GetHash(), SEEN_OBJECT_ERROR_INVALID));
             return;
         } else {
-            mapSeenVotes.insert(std::make_pair(vote.GetHash(), SEEN_OBJECT_IS_VALID));
+            //mapSeenVotes.insert(std::make_pair(vote.GetHash(), SEEN_OBJECT_IS_VALID));
         }
 
         // IF EVERYTHING CHECKS OUT, UPDATE THE GOVERNANCE MANAGER
@@ -235,18 +234,18 @@ void CGovernanceManager::ProcessMessage(CNode* pfrom, std::string& strCommand, C
 
 void CGovernanceManager::CheckOrphanVotes()
 {
-    LOCK(cs);
-
-    std::string strError = "";
-    vote_m_it it1 = mapOrphanVotes.begin();
-    while(it1 != mapOrphanVotes.end()){
-        if(AddOrUpdateVote(((*it1).second), NULL, strError)){
-            LogPrintf("CGovernanceManager::CheckOrphanVotes - Governance object is known, activating and removing orphan vote\n");
-            mapOrphanVotes.erase(it1++);
-        } else {
-            ++it1;
-        }
-    }
+//    LOCK(cs);
+//
+//    std::string strError = "";
+//    vote_m_it it1 = mapOrphanVotes.begin();
+//    while(it1 != mapOrphanVotes.end()){
+//        if(AddOrUpdateVote(((*it1).second), NULL, strError)){
+//            LogPrintf("CGovernanceManager::CheckOrphanVotes - Governance object is known, activating and removing orphan vote\n");
+//            mapOrphanVotes.erase(it1++);
+//        } else {
+//            ++it1;
+//        }
+//    }
 }
 
 bool CGovernanceManager::AddGovernanceObject(CGovernanceObject& govobj)
@@ -515,7 +514,9 @@ bool CGovernanceManager::AddOrUpdateVote(const CGovernanceVote& vote, CNode* pfr
                     // ADD THE VOTE AS AN ORPHAN, TO BE USED UPON RECEIVAL OF THE PARENT OBJECT
 
                     LogPrintf("CGovernanceManager::AddOrUpdateVote - Unknown object %d, asking for source\n", vote.GetParentHash().ToString());
-                    mapOrphanVotes[vote.GetParentHash()] = vote;
+
+                    // TODO: Fix this
+                    mapOrphanVotes.Insert(vote.GetParentHash(), vote);
 
                     // ASK FOR THIS VOTES PARENT SPECIFICALLY FROM THIS USER (THEY SHOULD HAVE IT, NO?)
 
@@ -1085,7 +1086,6 @@ std::string CGovernanceManager::ToString() const
 
     info << "Governance Objects: " << (int)mapObjects.size() <<
             ", Seen Budgets: " << (int)mapSeenGovernanceObjects.size() <<
-            ", Seen Budget Votes: " << (int)mapSeenVotes.size() <<
             ", VoteByHash Count: " << (int)mapVotesByHash.size() <<
             ", VoteByType Count: " << (int)mapVotesByType.size();
 
