@@ -7,6 +7,8 @@
 #include <list>
 #include <cstddef>
 
+#include "serialize.h"
+
 /**
  * Map like container that keeps the N most recently added items
  */
@@ -36,12 +38,19 @@ private:
     map_t mapItems;
 
 public:
-    CacheMap(std::size_t nMaxSizeIn) :
-            nMaxSize(nMaxSizeIn),
+    CacheMap(std::size_t nMaxSizeIn = 0)
+          : nMaxSize(nMaxSizeIn),
             nCurrentSize(0),
             listKeys(),
             mapItems()
     {}
+
+    void Clear()
+    {
+        mapItems.clear();
+        listKeys.clear();
+        nCurrentSize = 0;
+    }
 
     void SetMaxSize(std::size_t nMaxSizeIn)
     {
@@ -85,6 +94,17 @@ public:
         }
         value = it->second;
         return true;
+    }
+
+    ADD_SERIALIZE_METHODS;
+
+    template <typename Stream, typename Operation>
+    inline void SerializationOp(Stream& s, Operation ser_action, int nType, int nVersion)
+    {
+        READWRITE(nMaxSize);
+        READWRITE(nCurrentSize);
+        READWRITE(listKeys);
+        READWRITE(mapItems);
     }
 
 private:
