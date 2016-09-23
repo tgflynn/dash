@@ -89,6 +89,8 @@ public:
 
 class CGovernanceVote
 {
+    friend bool operator==(const CGovernanceVote& vote1, const CGovernanceVote& vote2);
+
 private:
     bool fValid; //if the vote is currently valid / counted
     bool fSynced; //if we've sent this to our peers
@@ -194,6 +196,8 @@ public:
 
 };
 
+
+bool operator==(const CGovernanceVote& vote1, const CGovernanceVote& vote2);
 
 /**
 * 12.1.1 - CGovernanceVoteManager

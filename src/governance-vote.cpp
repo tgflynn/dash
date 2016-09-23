@@ -303,3 +303,13 @@ bool CGovernanceVote::IsValid(bool fSignatureCheck)
 
     return true;
 }
+
+bool operator==(const CGovernanceVote& vote1, const CGovernanceVote& vote2)
+{
+    bool fResult = ((vote1.vinMasternode == vote2.vinMasternode) &&
+                    (vote1.nParentHash == vote2.nParentHash) &&
+                    (vote1.nVoteOutcome == vote2.nVoteOutcome) &&
+                    (vote1.nVoteSignal == vote2.nVoteSignal) &&
+                    (vote1.nTime == vote2.nTime));
+    return fResult;
+}
