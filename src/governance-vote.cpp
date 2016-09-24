@@ -313,3 +313,34 @@ bool operator==(const CGovernanceVote& vote1, const CGovernanceVote& vote2)
                     (vote1.nTime == vote2.nTime));
     return fResult;
 }
+
+bool operator<(const CGovernanceVote& vote1, const CGovernanceVote& vote2)
+{
+    bool fResult = (vote1.vinMasternode < vote2.vinMasternode);
+    if(fResult) {
+        return true;
+    }
+    fResult = (vote1.vinMasternode == vote2.vinMasternode);
+
+    fResult = fResult && (vote1.nParentHash < vote2.nParentHash);
+    if(fResult) {
+        return true;
+    }
+    fResult = fResult && (vote1.nParentHash == vote2.nParentHash);
+
+    fResult = fResult && (vote1.nVoteOutcome < vote2.nVoteOutcome);
+    if(fResult) {
+        return true;
+    }
+    fResult = fResult && (vote1.nVoteOutcome == vote2.nVoteOutcome);
+
+    fResult = fResult && (vote1.nVoteSignal == vote2.nVoteSignal);
+    if(fResult) {
+        return true;
+    }
+    fResult = fResult && (vote1.nVoteSignal == vote2.nVoteSignal);
+
+    fResult = fResult && (vote1.nTime < vote2.nTime);
+
+    return fResult;
+}
