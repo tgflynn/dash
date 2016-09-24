@@ -27,12 +27,6 @@ public:
 
     typedef typename list_t::const_iterator list_cit;
 
-    typedef std::list<list_it> it_list_t;
-
-    typedef typename it_list_t::iterator it_list_it;
-
-    typedef typename it_list_t::const_iterator it_list_cit;
-
     typedef std::map<V,list_it> it_map_t;
 
     typedef typename it_map_t::iterator it_map_it;
@@ -45,14 +39,6 @@ public:
 
     typedef typename map_t::const_iterator map_cit;
 
-    typedef std::pair<K, V> pair_t;
-
-    typedef std::map<list_it,map_it> cross_m_t;
-
-    typedef typename cross_m_t::iterator cross_m_it;
-
-    typedef typename cross_m_t::const_iterator cross_m_cit;
-
 private:
     std::size_t nMaxSize;
 
@@ -62,30 +48,25 @@ private:
 
     map_t mapIndex;
 
-    cross_m_t mapCrossIndex;
-
 public:
     CacheMultiMap(std::size_t nMaxSizeIn = 0)
         : nMaxSize(nMaxSizeIn),
           nCurrentSize(0),
           listItems(),
-          mapIndex(),
-          mapCrossIndex()
+          mapIndex()
     {}
 
     CacheMultiMap(const CacheMap<K,V>& other)
         : nMaxSize(other.nMaxSize),
           nCurrentSize(other.nCurrentSize),
           listItems(other.listItems),
-          mapIndex(),
-          mapCrossIndex()
+          mapIndex()
     {
         RebuildIndex();
     }
 
     void Clear()
     {
-        mapCrossIndex();
         mapIndex.clear();
         listItems.clear();
         nCurrentSize = 0;
