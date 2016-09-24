@@ -35,9 +35,20 @@ struct CompareScoreMN
     }
 };
 
-CMasternodeMan::CMasternodeMan() {
-    nDsqCount = 0;
-}
+CMasternodeMan::CMasternodeMan()
+: cs(),
+  cs_process_message(),
+  vMasternodes(),
+  mAskedUsForMasternodeList(),
+  mWeAskedForMasternodeList(),
+  mWeAskedForMasternodeListEntry(),
+  mapMNIndex(),
+  vecMNIndexUpdateReceivers(),
+  mapSeenMasternodeBroadcast(),
+  mapSeenMasternodePing(),
+  nDsqCount(0),
+  dummyScriptPubkey()
+{}
 
 bool CMasternodeMan::Add(CMasternode &mn)
 {
@@ -51,6 +62,7 @@ bool CMasternodeMan::Add(CMasternode &mn)
     {
         LogPrint("masternode", "CMasternodeMan: Adding new Masternode %s - %i now\n", mn.addr.ToString(), size() + 1);
         vMasternodes.push_back(mn);
+        mapMNIndex[mn.vin] = int(vMasternodes.size()) - 1;
         return true;
     }
 
@@ -92,6 +104,7 @@ void CMasternodeMan::CheckAndRemove(bool fForceExpiredRemoval)
     LOCK(cs);
 
     // Remove inactive and outdated masternodes
+    bool fRemoved = false;
     std::vector<CMasternode>::iterator it = vMasternodes.begin();
     while(it != vMasternodes.end()) {
         bool fRemove =  // If it's marked to be removed from the list by CMasternode::Check for whatever reason ...
@@ -111,9 +124,14 @@ void CMasternodeMan::CheckAndRemove(bool fForceExpiredRemoval)
 
             // and finally remove it from the list
             it = vMasternodes.erase(it);
+            fRemoved = true;
         } else {
             ++it;
         }
+    }
+
+    if(fRemoved) {
+        UpdateMNIndex();
     }
 
     // check who's asked for the Masternode list
@@ -290,6 +308,48 @@ bool CMasternodeMan::Get(const CTxIn& vin, CMasternode& masternode)
     }
     masternode = *pMN;
     return true;
+}
+
+/// Retrieve masternode by index
+bool CMasternodeMan::Get(int nIndex, CMasternode& masternode)
+{
+    LOCK(cs);
+    if((nIndex < 0) || (nIndex >= int(vMasternodes.size()))) {
+        return false;
+    }
+    masternode = vMasternodes[nIndex];
+    return true;
+}
+
+/// Get index of a masternode
+int CMasternodeMan::GetMasternodeIndex(const CTxIn& vin)
+{
+    int nIndex = -1;
+
+    LOCK(cs);
+    index_m_it it = mapMNIndex.find(vin);
+    if(it != mapMNIndex.end()) {
+        nIndex = it->second;
+    }
+
+    return nIndex;
+}
+
+void CMasternodeMan::RegisterIndexUpdateReceiver(IMasternodeIndexUpdateReceiver* receiver)
+{
+    LOCK(cs);
+    vecMNIndexUpdateReceivers.push_back(receiver);
+}
+
+void CMasternodeMan::UnregisterIndexUpdateReceiver(IMasternodeIndexUpdateReceiver* receiver)
+{
+    LOCK(cs);
+    for(receiver_v_it it = vecMNIndexUpdateReceivers.begin(); it != vecMNIndexUpdateReceivers.end(); ++it) {
+        if(*it == receiver) {
+            vecMNIndexUpdateReceivers.erase(it);
+            break;
+        }
+    }
 }
 
 // 
@@ -761,4 +821,24 @@ void CMasternodeMan::UpdateLastPaid(const CBlockIndex *pindex) {
 
     // every time is like the first time if winners list is not synced
     IsFirstRun = !masternodeSync.IsWinnersListSynced();
+}
+
+void CMasternodeMan::UpdateMNIndex()
+{
+    LOCK(cs);
+
+    for(receiver_v_it it = vecMNIndexUpdateReceivers.begin(); it != vecMNIndexUpdateReceivers.end(); ++it) {
+        IMasternodeIndexUpdateReceiver* receiver = *it;
+        receiver->MasternodeIndexUpdateBegin();
+    }
+
+    mapMNIndex.clear();
+    for(size_t i = 0; i < vMasternodes.size(); ++i) {
+        mapMNIndex[vMasternodes[i].vin] = int(i);
+    }
+
+    for(receiver_v_it it = vecMNIndexUpdateReceivers.begin(); it != vecMNIndexUpdateReceivers.end(); ++it) {
+        IMasternodeIndexUpdateReceiver* receiver = *it;
+        receiver->MasternodeIndexUpdateEnd();
+    }
 }

@@ -21,8 +21,36 @@ using namespace std;
 class CMasternodeMan;
 extern CMasternodeMan mnodeman;
 
+/**
+ * Interface (abstract base class) for receiving masternode index
+ * update notifications
+ */
+class IMasternodeIndexUpdateReceiver
+{
+public:
+    /// Should lock any index dependent data structures
+    virtual void MasternodeIndexUpdateBegin() = 0;
+
+    /// Should unlock any index dependent data structures
+    virtual void MasternodeIndexUpdateEnd() = 0;
+
+};
+
 class CMasternodeMan
 {
+public:
+    typedef std::map<CTxIn,int> index_m_t;
+
+    typedef index_m_t::iterator index_m_it;
+
+    typedef index_m_t::const_iterator index_m_cit;
+
+    typedef std::vector<IMasternodeIndexUpdateReceiver*> receiver_v_t;
+
+    typedef typename receiver_v_t::iterator receiver_v_it;
+
+    typedef typename receiver_v_t::const_iterator receiver_v_cit;
+
 private:
     static const int MASTERNODES_LAST_PAID_SCAN_BLOCKS  = 100;
 
@@ -40,6 +68,12 @@ private:
     std::map<CNetAddr, int64_t> mWeAskedForMasternodeList;
     // which Masternodes we've asked for
     std::map<COutPoint, int64_t> mWeAskedForMasternodeListEntry;
+
+    /// Maps MN vin to integer index value
+    index_m_t mapMNIndex;
+
+    /// Objects to notify on index update
+    receiver_v_t vecMNIndexUpdateReceivers;
 
 public:
     // Keep track of all broadcasts I've seen
@@ -69,7 +103,6 @@ public:
     }
 
     CMasternodeMan();
-    CMasternodeMan(CMasternodeMan& other);
 
     /// Add an entry
     bool Add(CMasternode &mn);
@@ -101,6 +134,18 @@ public:
     /// Versions of Find that are safe to use from outside the class
     bool Get(const CPubKey& pubKeyMasternode, CMasternode& masternode);
     bool Get(const CTxIn& vin, CMasternode& masternode);
+
+    /// Retrieve masternode by index (safe to call only from IMasternodeIndexUpdateReceiver)
+    bool Get(int nIndex, CMasternode& masternode);
+
+    /// Get index of a masternode (safe to call only from IMasternodeIndexUpdateReceiver)
+    int GetMasternodeIndex(const CTxIn& vin);
+
+    /// Register an object to receive masternode index updates
+    void RegisterIndexUpdateReceiver(IMasternodeIndexUpdateReceiver* receiver);
+
+    /// Unregister an object from receiving masternode index updates
+    void UnregisterIndexUpdateReceiver(IMasternodeIndexUpdateReceiver* receiver);
 
     /// Find an entry in the masternode list that is next to be paid
     CMasternode* GetNextMasternodeInQueueForPayment(int nBlockHeight, bool fFilterSigTime, int& nCount);
@@ -135,6 +180,10 @@ public:
     bool CheckMnbAndUpdateMasternodeList(CMasternodeBroadcast mnb, int& nDos);
 
     void UpdateLastPaid(const CBlockIndex *pindex);
+
+private:
+    void UpdateMNIndex();
+
 };
 
 #endif
