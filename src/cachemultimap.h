@@ -33,7 +33,13 @@ public:
 
     typedef typename it_list_t::const_iterator it_list_cit;
 
-    typedef std::map<K, it_list_t> map_t;
+    typedef std::map<V,list_it> it_map_t;
+
+    typedef typename it_map_t::iterator it_map_it;
+
+    typedef typename it_map_t::const_iterator it_map_cit;
+
+    typedef std::map<K, it_map_t> map_t;
 
     typedef typename map_t::iterator map_it;
 
@@ -107,11 +113,10 @@ public:
         list_it lit = listItems.begin();
         map_it mit = mapIndex.find(key);
         if(mit == mapIndex.end()) {
-            std::pair<map_it,bool> ret = mapIndex.insert(std::pair<K,it_list_t>(key, it_list_t()));
-            mit = ret.first;
+            mit = mapIndex.insert(std::pair<K,it_map_t>(key, it_map_t())).first;
         }
-        it_list_t& listIt = mit->second;
-        listIt.push_front(lit);
+        it_map_t& mapIt = mit->second;
+        mapIt[value] = lit;
         ++nCurrentSize;
     }
 
@@ -127,8 +132,8 @@ public:
         if(it == mapIndex.end()) {
             return false;
         }
-        const it_list_t& listIt = it->second;
-        const item_t& item = *(listIt.front());
+        const it_map_t& mapIt = it->second;
+        const item_t& item = *(mapIt.begin()->second);
         value = item.value;
         return true;
     }
@@ -139,10 +144,10 @@ public:
         if(mit == mapIndex.end()) {
             return false;
         }
-        it_list_t& listIt = mit->second;
+        const it_map_t& mapIt = mit->second;
 
-        for(it_list_it it = listIt.begin(); it != listIt.end(); ++it) {
-            item_t& item = *it;
+        for(it_map_cit it = mapIt.begin(); it != mapIt.end(); ++it) {
+            const item_t& item = *(it->second);
             vecValues.push_back(item.value);
         }
         return true;
@@ -154,10 +159,10 @@ public:
         if(mit == mapIndex.end()) {
             return;
         }
-        it_list_t& listIt = mit->second;
+        it_map_t& mapIt = mit->second;
 
-        for(it_list_it it = listIt.begin(); it != listIt.end(); ++it) {
-            listItems.erase(*it);
+        for(it_map_it it = mapIt.begin(); it != mapIt.end(); ++it) {
+            listItems.erase(it->second);
             --nCurrentSize;
         }
 
@@ -201,24 +206,11 @@ private:
         item_t& item = *lit;
 
         map_it mit = mapIndex.find(item.key);
-        it_list_t& listIt = mit->second;
+        it_map_t& mapIt = mit->second;
 
-        for(it_list_it it = listIt.begin(); it != listIt.end(); ++it) {
-            if(*it == lit) {
-                listIt.erase(it);
-                break;
-            }
-        }
+        mapIt.erase(item.value);
 
-        int nCount = 0;
-        for(it_list_it it = listIt.begin(); it != listIt.end(); ++it) {
-            if(nCount > 0) {
-                break;
-            }
-            ++nCount;
-        }
-
-        if(nCount == 0) {
+        if(mapIt.size() < 1) {
             mapIndex.erase(item.key);
         }
 
@@ -233,9 +225,10 @@ private:
             item_t& item = *lit;
             map_it mit = mapIndex.find(item.key);
             if(mit == mapIndex.end()) {
-                mit = mapIndex.insert(std::pair<K,it_list_t>(item.key, it_list_t())).first;
+                mit = mapIndex.insert(std::pair<K,it_map_t>(item.key, it_map_t())).first;
             }
-            mit->second.push_front(lit);
+            it_map_t& mapIt = mit->second;
+            mapIt[item.value] = lit;
         }
     }
 };
