@@ -38,6 +38,16 @@ CGovernanceManager::CGovernanceManager()
       cs()
 {}
 
+void CGovernanceManager::MasternodeIndexUpdateBegin()
+{
+    ENTER_CRITICAL_SECTION(cs);
+}
+
+void CGovernanceManager::MasternodeIndexUpdateEnd()
+{
+    LEAVE_CRITICAL_SECTION(cs);
+}
+
 // Accessors for thread-safe access to maps
 bool CGovernanceManager::HaveObjectForHash(uint256 nHash) {
     LOCK(cs);
