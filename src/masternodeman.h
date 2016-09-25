@@ -36,6 +36,70 @@ public:
 
 };
 
+/**
+ * Provides a forward and reverse index between MN vin's and integers.
+ *
+ * This mapping is normally add-only and is expected to be permanent
+ * It is only rebuilt if the size of the index exceeds the expected maximum number
+ * of MN's and the current number of known MN's.
+ *
+ * The external interface to this index is provided via delegation by CMasternodeMan
+ */
+class CMasternodeIndex
+{
+public: // Types
+    typedef std::map<CTxIn,int> index_m_t;
+
+    typedef index_m_t::iterator index_m_it;
+
+    typedef index_m_t::const_iterator index_m_cit;
+
+    typedef std::map<int,CTxIn> rindex_m_t;
+
+    typedef rindex_m_t::iterator rindex_m_it;
+
+    typedef rindex_m_t::const_iterator rindex_m_cit;
+
+private:
+    int                  nSize;
+
+    index_m_t            mapIndex;
+
+    rindex_m_t           mapReverseIndex;
+
+public:
+    CMasternodeIndex();
+
+    int GetSize() const {
+        return nSize;
+    }
+
+    /// Retrieve masternode vin by index
+    bool Get(int nIndex, CTxIn& vinMasternode) const;
+
+    /// Get index of a masternode vin
+    int GetMasternodeIndex(const CTxIn& vinMasternode) const;
+
+    void AddMasternodeVIN(const CTxIn& vinMasternode);
+
+    void Clear();
+
+    ADD_SERIALIZE_METHODS;
+
+    template <typename Stream, typename Operation>
+    inline void SerializationOp(Stream& s, Operation ser_action, int nType, int nVersion)
+    {
+        READWRITE(mapIndex);
+        if(ser_action.ForRead()) {
+            RebuildIndex();
+        }
+    }
+
+private:
+    void RebuildIndex();
+
+};
+
 class CMasternodeMan
 {
 public:
@@ -52,6 +116,8 @@ public:
     typedef typename receiver_v_t::const_iterator receiver_v_cit;
 
 private:
+    static const int MAX_EXPECTED_INDEX_SIZE = 30000;
+
     static const int MASTERNODES_LAST_PAID_SCAN_BLOCKS  = 100;
 
     // critical section to protect the inner data structures
@@ -69,8 +135,7 @@ private:
     // which Masternodes we've asked for
     std::map<COutPoint, int64_t> mWeAskedForMasternodeListEntry;
 
-    /// Maps MN vin to integer index value
-    index_m_t mapMNIndex;
+    CMasternodeIndex indexMasternodes;
 
     /// Objects to notify on index update
     receiver_v_t vecMNIndexUpdateReceivers;
@@ -100,6 +165,7 @@ public:
 
         READWRITE(mapSeenMasternodeBroadcast);
         READWRITE(mapSeenMasternodePing);
+        READWRITE(indexMasternodes);
     }
 
     CMasternodeMan();
@@ -135,11 +201,17 @@ public:
     bool Get(const CPubKey& pubKeyMasternode, CMasternode& masternode);
     bool Get(const CTxIn& vin, CMasternode& masternode);
 
-    /// Retrieve masternode by index (safe to call only from IMasternodeIndexUpdateReceiver)
-    bool Get(int nIndex, CMasternode& masternode);
+    /// Retrieve masternode vin by index
+    bool Get(int nIndex, CTxIn& vinMasternode) const {
+        LOCK(cs);
+        return indexMasternodes.Get(nIndex, vinMasternode);
+    }
 
-    /// Get index of a masternode (safe to call only from IMasternodeIndexUpdateReceiver)
-    int GetMasternodeIndex(const CTxIn& vin);
+    /// Get index of a masternode vin
+    int GetMasternodeIndex(const CTxIn& vinMasternode) const {
+        LOCK(cs);
+        return indexMasternodes.GetMasternodeIndex(vinMasternode);
+    }
 
     /// Register an object to receive masternode index updates
     void RegisterIndexUpdateReceiver(IMasternodeIndexUpdateReceiver* receiver);
@@ -181,8 +253,7 @@ public:
 
     void UpdateLastPaid(const CBlockIndex *pindex);
 
-private:
-    void UpdateMNIndex();
+    void CheckAndRebuildMasternodeIndex();
 
 };
 

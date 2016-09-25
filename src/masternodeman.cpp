@@ -35,6 +35,58 @@ struct CompareScoreMN
     }
 };
 
+CMasternodeIndex::CMasternodeIndex()
+    : nSize(0),
+      mapIndex(),
+      mapReverseIndex()
+{}
+
+bool CMasternodeIndex::Get(int nIndex, CTxIn& vinMasternode) const
+{
+    rindex_m_cit it = mapReverseIndex.find(nIndex);
+    if(it == mapReverseIndex.end()) {
+        return false;
+    }
+    vinMasternode = it->second;
+    return true;
+}
+
+int CMasternodeIndex::GetMasternodeIndex(const CTxIn& vinMasternode) const
+{
+    index_m_cit it = mapIndex.find(vinMasternode);
+    if(it == mapIndex.end()) {
+        return -1;
+    }
+    return it->second;
+}
+
+void CMasternodeIndex::AddMasternodeVIN(const CTxIn& vinMasternode)
+{
+    index_m_it it = mapIndex.find(vinMasternode);
+    if(it != mapIndex.end()) {
+        return;
+    }
+    int nNextIndex = nSize;
+    mapIndex[vinMasternode] = nNextIndex;
+    mapReverseIndex[nNextIndex] = vinMasternode;
+    ++nSize;
+}
+
+void CMasternodeIndex::Clear()
+{
+    mapIndex.clear();
+    mapReverseIndex.clear();
+    nSize = 0;
+}
+
+void CMasternodeIndex::RebuildIndex()
+{
+    nSize = mapIndex.size();
+    for(index_m_it it = mapIndex.begin(); it != mapIndex.end(); ++it) {
+        mapReverseIndex[it->second] = it->first;
+    }
+}
+
 CMasternodeMan::CMasternodeMan()
 : cs(),
   cs_process_message(),
@@ -42,7 +94,7 @@ CMasternodeMan::CMasternodeMan()
   mAskedUsForMasternodeList(),
   mWeAskedForMasternodeList(),
   mWeAskedForMasternodeListEntry(),
-  mapMNIndex(),
+  indexMasternodes(),
   vecMNIndexUpdateReceivers(),
   mapSeenMasternodeBroadcast(),
   mapSeenMasternodePing(),
@@ -62,7 +114,7 @@ bool CMasternodeMan::Add(CMasternode &mn)
     {
         LogPrint("masternode", "CMasternodeMan: Adding new Masternode %s - %i now\n", mn.addr.ToString(), size() + 1);
         vMasternodes.push_back(mn);
-        mapMNIndex[mn.vin] = int(vMasternodes.size()) - 1;
+        indexMasternodes.AddMasternodeVIN(mn.vin);
         return true;
     }
 
@@ -104,7 +156,6 @@ void CMasternodeMan::CheckAndRemove(bool fForceExpiredRemoval)
     LOCK(cs);
 
     // Remove inactive and outdated masternodes
-    bool fRemoved = false;
     std::vector<CMasternode>::iterator it = vMasternodes.begin();
     while(it != vMasternodes.end()) {
         bool fRemove =  // If it's marked to be removed from the list by CMasternode::Check for whatever reason ...
@@ -124,14 +175,9 @@ void CMasternodeMan::CheckAndRemove(bool fForceExpiredRemoval)
 
             // and finally remove it from the list
             it = vMasternodes.erase(it);
-            fRemoved = true;
         } else {
             ++it;
         }
-    }
-
-    if(fRemoved) {
-        UpdateMNIndex();
     }
 
     // check who's asked for the Masternode list
@@ -310,30 +356,6 @@ bool CMasternodeMan::Get(const CTxIn& vin, CMasternode& masternode)
     return true;
 }
 
-/// Retrieve masternode by index
-bool CMasternodeMan::Get(int nIndex, CMasternode& masternode)
-{
-    LOCK(cs);
-    if((nIndex < 0) || (nIndex >= int(vMasternodes.size()))) {
-        return false;
-    }
-    masternode = vMasternodes[nIndex];
-    return true;
-}
-
-/// Get index of a masternode
-int CMasternodeMan::GetMasternodeIndex(const CTxIn& vin)
-{
-    int nIndex = -1;
-
-    LOCK(cs);
-    index_m_it it = mapMNIndex.find(vin);
-    if(it != mapMNIndex.end()) {
-        nIndex = it->second;
-    }
-
-    return nIndex;
-}
 
 void CMasternodeMan::RegisterIndexUpdateReceiver(IMasternodeIndexUpdateReceiver* receiver)
 {
@@ -823,18 +845,26 @@ void CMasternodeMan::UpdateLastPaid(const CBlockIndex *pindex) {
     IsFirstRun = !masternodeSync.IsWinnersListSynced();
 }
 
-void CMasternodeMan::UpdateMNIndex()
+void CMasternodeMan::CheckAndRebuildMasternodeIndex()
 {
+    if(indexMasternodes.GetSize() <= MAX_EXPECTED_INDEX_SIZE) {
+        return;
+    }
+
     LOCK(cs);
+
+    if(indexMasternodes.GetSize() <= int(vMasternodes.size())) {
+        return;
+    }
 
     for(receiver_v_it it = vecMNIndexUpdateReceivers.begin(); it != vecMNIndexUpdateReceivers.end(); ++it) {
         IMasternodeIndexUpdateReceiver* receiver = *it;
         receiver->MasternodeIndexUpdateBegin();
     }
 
-    mapMNIndex.clear();
+    indexMasternodes.Clear();
     for(size_t i = 0; i < vMasternodes.size(); ++i) {
-        mapMNIndex[vMasternodes[i].vin] = int(i);
+        indexMasternodes.AddMasternodeVIN(vMasternodes[i].vin);
     }
 
     for(receiver_v_it it = vecMNIndexUpdateReceivers.begin(); it != vecMNIndexUpdateReceivers.end(); ++it) {
