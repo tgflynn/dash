@@ -27,6 +27,7 @@
 #include <string.h>
 
 class CGovernanceManager;
+class CGovernanceTriggerManager;
 class CGovernanceObject;
 class CGovernanceVote;
 
@@ -215,6 +216,26 @@ public:
 
     bool MasternodeRateCheck(const CTxIn& vin);
 
+    bool ProcessVote(const CGovernanceVote& vote, std::string& strError);
+
+};
+
+struct vote_instance_t {
+
+    vote_instance_t()
+        : eOutcome(VOTE_OUTCOME_NONE),
+          nTime(0)
+    {}
+
+    vote_outcome_enum_t eOutcome;
+    int64_t nTime;
+};
+
+struct vote_rec_t {
+    vote_instance_t instanceFunding;
+    vote_instance_t instanceValid;
+    vote_instance_t instanceDelete;
+    vote_instance_t instanceEndorsed;
 };
 
 /**
@@ -224,40 +245,120 @@ public:
 
 class CGovernanceObject
 {
+    friend class CGovernanceManager;
+
+    friend class CGovernanceTriggerManager;
+
+public: // Types
+    typedef std::map<int, vote_rec_t> vote_m_t;
+
+    typedef vote_m_t::iterator vote_m_it;
+
+    typedef vote_m_t::iterator vote_m_cit;
+
 private:
-    // critical section to protect the inner data structures
+    /// critical section to protect the inner data structures
     mutable CCriticalSection cs;
 
-public:
-
-    uint256 nHashParent; //parent object, 0 is root
-    int nRevision; //object revision in the system
-    int64_t nTime; //time this object was created
-    uint256 nCollateralHash; //fee-tx
-    std::string strData; // Data field - can be used for anything
+    /// Object typecode
     int nObjectType;
 
-    // Masternode info for signed objects
+    /// parent object, 0 is root
+    uint256 nHashParent;
+
+    /// object revision in the system
+    int nRevision;
+
+    /// time this object was created
+    int64_t nTime;
+
+    /// fee-tx
+    uint256 nCollateralHash;
+
+    /// Data field - can be used for anything
+    std::string strData;
+
+    /// Masternode info for signed objects
     CTxIn vinMasternode;
     std::vector<unsigned char> vchSig;
 
-    bool fCachedLocalValidity; // is valid by blockchain
+    /// is valid by blockchain
+    bool fCachedLocalValidity;
     std::string strLocalValidityError;
 
     // VARIOUS FLAGS FOR OBJECT / SET VIA MASTERNODE VOTING
 
-    bool fCachedFunding; // true == minimum network support has been reached for this object to be funded (doesn't mean it will for sure though)
-    bool fCachedValid; // true == minimum network has been reached flagging this object as a valid and understood goverance object (e.g, the serialized data is correct format, etc)
-    bool fCachedDelete; // true == minimum network support has been reached saying this object should be deleted from the system entirely
-    bool fCachedEndorsed; // true == minimum network support has been reached flagging this object as endorsed by an elected representative body (e.g. business review board / technecial review board /etc)
-    bool fDirtyCache; // object was updated and cached values should be updated soon
-    bool fUnparsable; // data field was unparsible, object will be rejected
-    bool fExpired; // Object is no longer of interest
+    /// true == minimum network support has been reached for this object to be funded (doesn't mean it will for sure though)
+    bool fCachedFunding;
 
+    /// true == minimum network has been reached flagging this object as a valid and understood goverance object (e.g, the serialized data is correct format, etc)
+    bool fCachedValid;
+
+    /// true == minimum network support has been reached saying this object should be deleted from the system entirely
+    bool fCachedDelete;
+
+    /** true == minimum network support has been reached flagging this object as endorsed by an elected representative body
+     * (e.g. business review board / technecial review board /etc)
+     */
+    bool fCachedEndorsed;
+
+    /// object was updated and cached values should be updated soon
+    bool fDirtyCache;
+
+    /// Object is no longer of interest
+    bool fExpired;
+
+public:
     CGovernanceObject();
     CGovernanceObject(uint256 nHashParentIn, int nRevisionIn, int64_t nTime, uint256 nCollateralHashIn, std::string strDataIn);
     CGovernanceObject(const CGovernanceObject& other);
     void swap(CGovernanceObject& first, CGovernanceObject& second); // nothrow
+
+    // Public Getter methods
+
+    int64_t GetCreationTime() const {
+        return nTime;
+    }
+
+    int GetObjectType() const {
+        return nObjectType;
+    }
+
+    const uint256& GetCollateralHash() const {
+        return nCollateralHash;
+    }
+
+    const CTxIn& GetMasternodeVin() const {
+        return vinMasternode;
+    }
+
+    bool IsSetCachedFunding() const {
+        return fCachedFunding;
+    }
+
+    bool IsSetCachedValid() const {
+        return fCachedValid;
+    }
+
+    bool IsSetCachedDelete() const {
+        return fCachedDelete;
+    }
+
+    bool IsSetCachedEndorsed() const {
+        return fCachedEndorsed;
+    }
+
+    bool IsSetDirtyCache() const {
+        return fDirtyCache;
+    }
+
+    bool IsSetExpired() const {
+        return fExpired;
+    }
+
+    void InvalidateVoteCache() {
+        fDirtyCache = true;
+    }
 
     // Signature related functions
 

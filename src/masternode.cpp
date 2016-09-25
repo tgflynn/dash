@@ -792,7 +792,7 @@ void CMasternode::FlagGovernanceItemsAsDirty()
     while(it != mapGovernaceObjectsVotedOn.end()){
         CGovernanceObject *pObj = governance.FindGovernanceObject((*it).first);
 
-        if(pObj) pObj->fDirtyCache = true;
+        if(pObj) pObj->InvalidateVoteCache();
         ++it;
     }
 }

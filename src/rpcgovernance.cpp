@@ -564,13 +564,13 @@ UniValue gobject(const UniValue& params, bool fHelp)
         BOOST_FOREACH(CGovernanceObject* pGovObj, objs)
         {
             // IF WE HAVE A SPECIFIC NODE REQUESTED TO VOTE, DO THAT
-            if(strShow == "valid" && !pGovObj->fCachedValid) continue;
+            if(strShow == "valid" && !pGovObj->IsSetCachedValid()) continue;
 
             UniValue bObj(UniValue::VOBJ);
             bObj.push_back(Pair("DataHex",  pGovObj->GetDataAsHex()));
             bObj.push_back(Pair("DataString",  pGovObj->GetDataAsString()));
             bObj.push_back(Pair("Hash",  pGovObj->GetHash().ToString()));
-            bObj.push_back(Pair("CollateralHash",  pGovObj->nCollateralHash.ToString()));
+            bObj.push_back(Pair("CollateralHash",  pGovObj->GetCollateralHash().ToString()));
 
             // REPORT STATUS FOR FUNDING VOTES SPECIFICALLY
             bObj.push_back(Pair("AbsoluteYesCount",  (int64_t)pGovObj->GetYesCount(VOTE_SIGNAL_FUNDING)-(int64_t)pGovObj->GetNoCount(VOTE_SIGNAL_FUNDING)));
@@ -582,10 +582,10 @@ UniValue gobject(const UniValue& params, bool fHelp)
             std::string strError = "";
             bObj.push_back(Pair("fBlockchainValidity",  pGovObj->IsValidLocally(pindex , strError, false)));
             bObj.push_back(Pair("IsValidReason",  strError.c_str()));
-            bObj.push_back(Pair("fCachedValid",  pGovObj->fCachedValid));
-            bObj.push_back(Pair("fCachedFunding",  pGovObj->fCachedFunding));
-            bObj.push_back(Pair("fCachedDelete",  pGovObj->fCachedDelete));
-            bObj.push_back(Pair("fCachedEndorsed",  pGovObj->fCachedEndorsed));
+            bObj.push_back(Pair("fCachedValid",  pGovObj->IsSetCachedValid()));
+            bObj.push_back(Pair("fCachedFunding",  pGovObj->IsSetCachedFunding()));
+            bObj.push_back(Pair("fCachedDelete",  pGovObj->IsSetCachedDelete()));
+            bObj.push_back(Pair("fCachedEndorsed",  pGovObj->IsSetCachedEndorsed()));
 
             objResult.push_back(Pair(pGovObj->GetHash().ToString(), bObj));
         }
@@ -614,7 +614,7 @@ UniValue gobject(const UniValue& params, bool fHelp)
 
         UniValue objResult(UniValue::VOBJ);
         objResult.push_back(Pair("Hash",  pGovObj->GetHash().ToString()));
-        objResult.push_back(Pair("CollateralHash",  pGovObj->nCollateralHash.ToString()));
+        objResult.push_back(Pair("CollateralHash",  pGovObj->GetCollateralHash().ToString()));
 
         // SHOW (MUCH MORE) INFORMATION ABOUT VOTES FOR GOVERNANCE OBJECT (THAN LIST/DIFF ABOVE)
         // -- FUNDING VOTING RESULTS
@@ -653,7 +653,7 @@ UniValue gobject(const UniValue& params, bool fHelp)
         // --
         std::string strError = "";
         objResult.push_back(Pair("fLocalValidity",  pGovObj->IsValidLocally(chainActive.Tip(), strError, false)));
-        objResult.push_back(Pair("fCachedValid",  pGovObj->fCachedValid));
+        objResult.push_back(Pair("fCachedValid",  pGovObj->IsSetCachedValid()));
 
         return objResult;
     }
