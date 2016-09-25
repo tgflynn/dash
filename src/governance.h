@@ -308,6 +308,8 @@ private:
     /// Object is no longer of interest
     bool fExpired;
 
+    vote_m_t mapCurrentMNVotes;
+
 public:
     CGovernanceObject();
     CGovernanceObject(uint256 nHashParentIn, int nRevisionIn, int64_t nTime, uint256 nCollateralHashIn, std::string strDataIn);
@@ -359,6 +361,8 @@ public:
     void InvalidateVoteCache() {
         fDirtyCache = true;
     }
+
+    void UpdateVote(const CGovernanceVote& vote);
 
     // Signature related functions
 

@@ -640,7 +640,8 @@ CGovernanceObject::CGovernanceObject()
   fCachedDelete(false),
   fCachedEndorsed(false),
   fDirtyCache(true),
-  fExpired(false)
+  fExpired(false),
+  mapCurrentMNVotes()
 {
     // PARSE JSON DATA STORAGE (STRDATA)
     LoadData();
@@ -663,7 +664,8 @@ CGovernanceObject::CGovernanceObject(uint256 nHashParentIn, int nRevisionIn, int
   fCachedDelete(false),
   fCachedEndorsed(false),
   fDirtyCache(true),
-  fExpired(false)
+  fExpired(false),
+  mapCurrentMNVotes()
 {
     // PARSE JSON DATA STORAGE (STRDATA)
     LoadData();
@@ -686,8 +688,51 @@ CGovernanceObject::CGovernanceObject(const CGovernanceObject& other)
   fCachedDelete(other.fCachedDelete),
   fCachedEndorsed(other.fCachedEndorsed),
   fDirtyCache(other.fDirtyCache),
-  fExpired(other.fExpired)
+  fExpired(other.fExpired),
+  mapCurrentMNVotes(other.mapCurrentMNVotes)
 {}
+
+void CGovernanceObject::UpdateVote(const CGovernanceVote& vote)
+{
+    int nMNIndex = mnodeman.GetMasternodeIndex(vote.GetVinMasternode());
+    if(nMNIndex < 0) {
+        // Should never happen
+        std::ostringstream ostr;
+        ostr << "CGovernanceObject::UpdateVote -- Masternode index not found\n";
+        LogPrintf(ostr.str().c_str());
+        return;
+    }
+
+    vote_m_it it = mapCurrentMNVotes.find(nMNIndex);
+    if(it == mapCurrentMNVotes.end()) {
+        it = mapCurrentMNVotes.insert(vote_m_t::value_type(nMNIndex,vote_rec_t())).first;
+    }
+    vote_rec_t& recVote = it->second;
+    switch(vote.GetSignal()) {
+    case VOTE_SIGNAL_FUNDING:
+        recVote.instanceFunding.eOutcome = vote.GetOutcome();
+        recVote.instanceFunding.nTime = vote.GetTimestamp();
+        break;
+    case VOTE_SIGNAL_VALID:
+        recVote.instanceValid.eOutcome = vote.GetOutcome();
+        recVote.instanceValid.nTime = vote.GetTimestamp();
+        break;
+    case VOTE_SIGNAL_DELETE:
+        recVote.instanceDelete.eOutcome = vote.GetOutcome();
+        recVote.instanceDelete.nTime = vote.GetTimestamp();
+        break;
+    case VOTE_SIGNAL_ENDORSED:
+        recVote.instanceEndorsed.eOutcome = vote.GetOutcome();
+        recVote.instanceEndorsed.nTime = vote.GetTimestamp();
+        break;
+    default:
+    {
+        std::ostringstream ostr;
+        ostr << "CGovernanceObject::UpdateVote -- Unsupported vote signal:" << CGovernanceVoting::ConvertSignalToString(vote.GetSignal()) << "\n";
+        LogPrintf(ostr.str().c_str());
+    }
+    }
+}
 
 void CGovernanceObject::SetMasternodeInfo(const CTxIn& vin)
 {
