@@ -126,7 +126,7 @@ public:
     void SetSignature(const std::vector<unsigned char>& vchSigIn) { vchSig = vchSigIn; }
 
     bool Sign(CKey& keyMasternode, CPubKey& pubKeyMasternode);
-    bool IsValid(bool fSignatureCheck);
+    bool IsValid(bool fSignatureCheck) const;
     void Relay();
 
     std::string GetVoteString() const {

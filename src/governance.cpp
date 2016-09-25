@@ -608,19 +608,42 @@ bool CGovernanceManager::MasternodeRateCheck(const CTxIn& vin)
     return false;
 }
 
-bool CGovernanceManager::ProcessVote(const CGovernanceVote& vote, std::string& strError)
+bool CGovernanceManager::ProcessVote(const CGovernanceVote& vote, CGovernanceException& exception)
 {
-    strError = "";
-
+    LOCK(cs);
     uint256 nHashVote = vote.GetHash();
     if(mapInvalidVotes.HasKey(nHashVote)) {
-        strError = "Invalid vote";
+        std::ostringstream ostr;
+        ostr << "CGovernanceManager::ProcessVote -- Old invalid vote "
+                << ", MN outpoint = " << vote.GetVinMasternode().prevout.ToStringShort()
+                << ", governance object hash = " << vote.GetParentHash().ToString() << "\n";
+        LogPrintf(ostr.str().c_str());
+        exception = CGovernanceException(ostr.str(), GOVERNANCE_EXCEPTION_PERMANENT_ERROR);
         return false;
     }
 
+    uint256 nHashGovobj = vote.GetParentHash();
+    object_m_it it = mapObjects.find(nHashGovobj);
+    if(it == mapObjects.end()) {
+        mapOrphanVotes.Insert(vote.GetHash(), vote);
+        RequestGovernanceObject(nHashGovobj);
+        std::ostringstream ostr;
+        ostr << "CGovernanceManager::ProcessVote -- Unknown parent object "
+                << ", MN outpoint = " << vote.GetVinMasternode().prevout.ToStringShort()
+                << ", governance object hash = " << vote.GetParentHash().ToString() << "\n";
+        LogPrintf(ostr.str().c_str());
+        exception = CGovernanceException(ostr.str(), GOVERNANCE_EXCEPTION_WARNING);
+        return false;
+    }
 
+    CGovernanceObject& govobj = it->second;
+    return govobj.ProcessVote(vote, mapInvalidVotes, exception);
+}
 
-    return true;
+void CGovernanceManager::RequestGovernanceObject(const uint256& nHash)
+{
+    //TODO: Implement
+
 }
 
 CGovernanceObject::CGovernanceObject()
@@ -692,7 +715,9 @@ CGovernanceObject::CGovernanceObject(const CGovernanceObject& other)
   mapCurrentMNVotes(other.mapCurrentMNVotes)
 {}
 
-void CGovernanceObject::UpdateVote(const CGovernanceVote& vote)
+bool CGovernanceObject::ProcessVote(const CGovernanceVote& vote,
+                                    CGovernanceManager::vote_cache_t& mapInvalidVotes,
+                                    CGovernanceException& exception)
 {
     int nMNIndex = mnodeman.GetMasternodeIndex(vote.GetVinMasternode());
     if(nMNIndex < 0) {
@@ -700,7 +725,8 @@ void CGovernanceObject::UpdateVote(const CGovernanceVote& vote)
         std::ostringstream ostr;
         ostr << "CGovernanceObject::UpdateVote -- Masternode index not found\n";
         LogPrintf(ostr.str().c_str());
-        return;
+        exception = CGovernanceException(ostr.str(), GOVERNANCE_EXCEPTION_INTERNAL_ERROR);
+        return false;
     }
 
     vote_m_it it = mapCurrentMNVotes.find(nMNIndex);
@@ -713,15 +739,47 @@ void CGovernanceObject::UpdateVote(const CGovernanceVote& vote)
         std::ostringstream ostr;
         ostr << "CGovernanceObject::UpdateVote -- Vote signal: none" << "\n";
         LogPrint("gobject", ostr.str().c_str());
-        return;
+        exception = CGovernanceException(ostr.str(), GOVERNANCE_EXCEPTION_WARNING);
+        return false;
     }
     if(eSignal > MAX_SUPPORTED_VOTE_SIGNAL) {
         std::ostringstream ostr;
         ostr << "CGovernanceObject::UpdateVote -- Unsupported vote signal:" << CGovernanceVoting::ConvertSignalToString(vote.GetSignal()) << "\n";
         LogPrintf(ostr.str().c_str());
-        return;
+        exception = CGovernanceException(ostr.str(), GOVERNANCE_EXCEPTION_PERMANENT_ERROR);
+        return false;
     }
-    recVote.mapInstances[eSignal] = vote_instance_t(vote.GetOutcome(), vote.GetTimestamp());
+    vote_instance_m_it it2 = recVote.mapInstances.find(int(eSignal));
+    if(it2 == recVote.mapInstances.end()) {
+        it2 = recVote.mapInstances.insert(vote_instance_m_t::value_type(int(eSignal), vote_instance_t())).first;
+    }
+    vote_instance_t& voteInstance = it2->second;
+    //TODO: Check if we should use GetTime instead of the vote's timestamp here
+    int64_t nTimeDelta = vote.GetTimestamp() - voteInstance.nTime;
+    if(nTimeDelta < GOVERNANCE_UPDATE_MIN) {
+        std::ostringstream ostr;
+        ostr << "CGovernanceObject::UpdateVote -- Masternode voting too often "
+                << ", MN outpoint = " << vote.GetVinMasternode().prevout.ToStringShort()
+                << ", governance object hash = " << GetHash().ToString()
+                << ", time delta = " << nTimeDelta << "\n";
+        LogPrint("gobject", ostr.str().c_str());
+        exception = CGovernanceException(ostr.str(), GOVERNANCE_EXCEPTION_TEMPORARY_ERROR);
+        return false;
+    }
+    // Finally check that the vote is actually valid (done last because of cost of signature verification
+    if(!vote.IsValid(true)) {
+        std::ostringstream ostr;
+        ostr << "CGovernanceObject::UpdateVote -- Invalid vote "
+                << ", MN outpoint = " << vote.GetVinMasternode().prevout.ToStringShort()
+                << ", governance object hash = " << GetHash().ToString()
+                << ", vote hash = " << vote.GetHash().ToString() << "\n";
+        LogPrintf(ostr.str().c_str());
+        exception = CGovernanceException(ostr.str(), GOVERNANCE_EXCEPTION_TEMPORARY_ERROR);
+        mapInvalidVotes.Insert(vote.GetHash(), vote);
+        return false;
+    }
+    recVote.mapInstances[int(eSignal)] = vote_instance_t(vote.GetOutcome(), vote.GetTimestamp());
+    return true;
 }
 
 void CGovernanceObject::SetMasternodeInfo(const CTxIn& vin)

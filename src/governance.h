@@ -15,6 +15,7 @@
 #include "util.h"
 #include "base58.h"
 #include "masternode.h"
+#include "governance-exceptions.h"
 #include "governance-vote.h"
 #include "masternodeman.h"
 #include <boost/lexical_cast.hpp>
@@ -88,7 +89,6 @@ public: // Types
     typedef txout_m_t::const_iterator txout_m_cit;
 
 private:
-
     static const int MAX_CACHE_SIZE = 1000;
 
     // Keep track of current block index
@@ -216,22 +216,38 @@ public:
 
     bool MasternodeRateCheck(const CTxIn& vin);
 
-    bool ProcessVote(const CGovernanceVote& vote, std::string& strError);
+    bool ProcessVote(const CGovernanceVote& vote, CGovernanceException& exception);
+
+private:
+    void RequestGovernanceObject(const uint256& nHash);
 
 };
 
 struct vote_instance_t {
+
+    vote_outcome_enum_t eOutcome;
+    int64_t nTime;
 
     vote_instance_t(vote_outcome_enum_t eOutcomeIn = VOTE_OUTCOME_NONE, int64_t nTimeIn = 0)
         : eOutcome(eOutcomeIn),
           nTime(nTimeIn)
     {}
 
-    vote_outcome_enum_t eOutcome;
-    int64_t nTime;
+    ADD_SERIALIZE_METHODS;
+
+    template <typename Stream, typename Operation>
+    inline void SerializationOp(Stream& s, Operation ser_action, int nType, int nVersion)
+    {
+        int nOutcome = int(eOutcome);
+        READWRITE(nOutcome);
+        READWRITE(nTime);
+        if(ser_action.ForRead()) {
+            eOutcome = vote_outcome_enum_t(nOutcome);
+        }
+    }
 };
 
-typedef std::map<vote_signal_enum_t,vote_instance_t> vote_instance_m_t;
+typedef std::map<int,vote_instance_t> vote_instance_m_t;
 
 typedef vote_instance_m_t::iterator vote_instance_m_it;
 
@@ -239,6 +255,14 @@ typedef vote_instance_m_t::const_iterator vote_instance_m_cit;
 
 struct vote_rec_t {
     vote_instance_m_t mapInstances;
+
+    ADD_SERIALIZE_METHODS;
+
+     template <typename Stream, typename Operation>
+     inline void SerializationOp(Stream& s, Operation ser_action, int nType, int nVersion)
+     {
+         READWRITE(mapInstances);
+     }
 };
 
 /**
@@ -365,8 +389,6 @@ public:
         fDirtyCache = true;
     }
 
-    void UpdateVote(const CGovernanceVote& vote);
-
     // Signature related functions
 
     void SetMasternodeInfo(const CTxIn& vin);
@@ -424,15 +446,19 @@ public:
         READWRITE(nObjectType);
         READWRITE(vinMasternode);
         READWRITE(vchSig);
+        READWRITE(mapCurrentMNVotes);
 
         // AFTER DESERIALIZATION OCCURS, CACHED VARIABLES MUST BE CALCULATED MANUALLY
     }
 
 private:
     // FUNCTIONS FOR DEALING WITH DATA STRING
-
     void LoadData();
     void GetData(UniValue& objResult);
+
+    bool ProcessVote(const CGovernanceVote& vote,
+                     CGovernanceManager::vote_cache_t& mapInvalidVotes,
+                     CGovernanceException& exception);
 
 };
 
