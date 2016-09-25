@@ -708,30 +708,20 @@ void CGovernanceObject::UpdateVote(const CGovernanceVote& vote)
         it = mapCurrentMNVotes.insert(vote_m_t::value_type(nMNIndex,vote_rec_t())).first;
     }
     vote_rec_t& recVote = it->second;
-    switch(vote.GetSignal()) {
-    case VOTE_SIGNAL_FUNDING:
-        recVote.instanceFunding.eOutcome = vote.GetOutcome();
-        recVote.instanceFunding.nTime = vote.GetTimestamp();
-        break;
-    case VOTE_SIGNAL_VALID:
-        recVote.instanceValid.eOutcome = vote.GetOutcome();
-        recVote.instanceValid.nTime = vote.GetTimestamp();
-        break;
-    case VOTE_SIGNAL_DELETE:
-        recVote.instanceDelete.eOutcome = vote.GetOutcome();
-        recVote.instanceDelete.nTime = vote.GetTimestamp();
-        break;
-    case VOTE_SIGNAL_ENDORSED:
-        recVote.instanceEndorsed.eOutcome = vote.GetOutcome();
-        recVote.instanceEndorsed.nTime = vote.GetTimestamp();
-        break;
-    default:
-    {
+    vote_signal_enum_t eSignal = vote.GetSignal();
+    if(eSignal == VOTE_SIGNAL_NONE) {
+        std::ostringstream ostr;
+        ostr << "CGovernanceObject::UpdateVote -- Vote signal: none" << "\n";
+        LogPrint("gobject", ostr.str().c_str());
+        return;
+    }
+    if(eSignal > MAX_SUPPORTED_VOTE_SIGNAL) {
         std::ostringstream ostr;
         ostr << "CGovernanceObject::UpdateVote -- Unsupported vote signal:" << CGovernanceVoting::ConvertSignalToString(vote.GetSignal()) << "\n";
         LogPrintf(ostr.str().c_str());
+        return;
     }
-    }
+    recVote.mapInstances[eSignal] = vote_instance_t(vote.GetOutcome(), vote.GetTimestamp());
 }
 
 void CGovernanceObject::SetMasternodeInfo(const CTxIn& vin)
@@ -1106,33 +1096,50 @@ bool CGovernanceObject::IsCollateralValid(std::string& strError)
     return true;
 }
 
+int CGovernanceObject::CountMatchingVotes(vote_signal_enum_t eVoteSignalIn, vote_outcome_enum_t eVoteOutcomeIn) const
+{
+    int nCount = 0;
+    for(vote_m_cit it = mapCurrentMNVotes.begin(); it != mapCurrentMNVotes.end(); ++it) {
+        const vote_rec_t& recVote = it->second;
+        vote_instance_m_cit it2 = recVote.mapInstances.find(eVoteSignalIn);
+        if(it2 == recVote.mapInstances.end()) {
+            continue;
+        }
+        const vote_instance_t& voteInstance = it2->second;
+        if(voteInstance.eOutcome == eVoteOutcomeIn) {
+            ++nCount;
+        }
+    }
+    return nCount;
+}
+
 /**
 *   Get specific vote counts for each outcome (funding, validity, etc)
 */
 
-int CGovernanceObject::GetAbsoluteYesCount(vote_signal_enum_t eVoteSignalIn)
+int CGovernanceObject::GetAbsoluteYesCount(vote_signal_enum_t eVoteSignalIn) const
 {
     return GetYesCount(eVoteSignalIn) - GetNoCount(eVoteSignalIn);
 }
 
-int CGovernanceObject::GetAbsoluteNoCount(vote_signal_enum_t eVoteSignalIn)
+int CGovernanceObject::GetAbsoluteNoCount(vote_signal_enum_t eVoteSignalIn) const
 {
     return GetNoCount(eVoteSignalIn) - GetYesCount(eVoteSignalIn);
 }
 
-int CGovernanceObject::GetYesCount(vote_signal_enum_t eVoteSignalIn)
+int CGovernanceObject::GetYesCount(vote_signal_enum_t eVoteSignalIn) const
 {
-    return governance.CountMatchingVotes((*this), eVoteSignalIn, VOTE_OUTCOME_YES);
+    return CountMatchingVotes(eVoteSignalIn, VOTE_OUTCOME_YES);
 }
 
-int CGovernanceObject::GetNoCount(vote_signal_enum_t eVoteSignalIn)
+int CGovernanceObject::GetNoCount(vote_signal_enum_t eVoteSignalIn) const
 {
-    return governance.CountMatchingVotes((*this), eVoteSignalIn, VOTE_OUTCOME_NO);
+    return CountMatchingVotes(eVoteSignalIn, VOTE_OUTCOME_NO);
 }
 
-int CGovernanceObject::GetAbstainCount(vote_signal_enum_t eVoteSignalIn)
+int CGovernanceObject::GetAbstainCount(vote_signal_enum_t eVoteSignalIn) const
 {
-    return governance.CountMatchingVotes((*this), eVoteSignalIn, VOTE_OUTCOME_ABSTAIN);
+    return CountMatchingVotes(eVoteSignalIn, VOTE_OUTCOME_ABSTAIN);
 }
 
 void CGovernanceObject::Relay()

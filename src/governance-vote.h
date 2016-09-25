@@ -68,6 +68,8 @@ enum vote_signal_enum_t  {
     VOTE_SIGNAL_CUSTOM20   = 35
 };
 
+static const int MAX_SUPPORTED_VOTE_SIGNAL = 4;
+
 /**
 * Governance Voting
 *

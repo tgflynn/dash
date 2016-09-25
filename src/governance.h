@@ -222,20 +222,23 @@ public:
 
 struct vote_instance_t {
 
-    vote_instance_t()
-        : eOutcome(VOTE_OUTCOME_NONE),
-          nTime(0)
+    vote_instance_t(vote_outcome_enum_t eOutcomeIn = VOTE_OUTCOME_NONE, int64_t nTimeIn = 0)
+        : eOutcome(eOutcomeIn),
+          nTime(nTimeIn)
     {}
 
     vote_outcome_enum_t eOutcome;
     int64_t nTime;
 };
 
+typedef std::map<vote_signal_enum_t,vote_instance_t> vote_instance_m_t;
+
+typedef vote_instance_m_t::iterator vote_instance_m_it;
+
+typedef vote_instance_m_t::const_iterator vote_instance_m_cit;
+
 struct vote_rec_t {
-    vote_instance_t instanceFunding;
-    vote_instance_t instanceValid;
-    vote_instance_t instanceDelete;
-    vote_instance_t instanceEndorsed;
+    vote_instance_m_t mapInstances;
 };
 
 /**
@@ -254,7 +257,7 @@ public: // Types
 
     typedef vote_m_t::iterator vote_m_it;
 
-    typedef vote_m_t::iterator vote_m_cit;
+    typedef vote_m_t::const_iterator vote_m_cit;
 
 private:
     /// critical section to protect the inner data structures
@@ -391,11 +394,13 @@ public:
 
     // GET VOTE COUNT FOR SIGNAL
 
-    int GetAbsoluteYesCount(vote_signal_enum_t eVoteSignalIn);
-    int GetAbsoluteNoCount(vote_signal_enum_t eVoteSignalIn);
-    int GetYesCount(vote_signal_enum_t eVoteSignalIn);
-    int GetNoCount(vote_signal_enum_t eVoteSignalIn);
-    int GetAbstainCount(vote_signal_enum_t eVoteSignalIn);
+    int CountMatchingVotes(vote_signal_enum_t eVoteSignalIn, vote_outcome_enum_t eVoteOutcomeIn) const;
+
+    int GetAbsoluteYesCount(vote_signal_enum_t eVoteSignalIn) const;
+    int GetAbsoluteNoCount(vote_signal_enum_t eVoteSignalIn) const;
+    int GetYesCount(vote_signal_enum_t eVoteSignalIn) const;
+    int GetNoCount(vote_signal_enum_t eVoteSignalIn) const;
+    int GetAbstainCount(vote_signal_enum_t eVoteSignalIn) const;
 
     // FUNCTIONS FOR DEALING WITH DATA STRING
 
