@@ -200,47 +200,40 @@ void CGovernanceManager::ProcessMessage(CNode* pfrom, std::string& strCommand, C
 
         CGovernanceVote vote;
         vRecv >> vote;
-        //vote.fValid = true;
 
         AcceptVoteMessage(vote.GetHash());
 
-        // IF WE'VE SEEN THIS OBJECT THEN SKIP
-
-//        if(mapSeenVotes.count(vote.GetHash())){
-//            masternodeSync.AddedBudgetItem(vote.GetHash());
-//            return;
-//        }
-
-        // FIND THE MASTERNODE OF THE VOTER
-
-        CMasternode* pmn = mnodeman.Find(vote.GetVinMasternode());
-        if(pmn == NULL) {
-            LogPrint("gobject", "gobject - unknown masternode - vin: %s\n", vote.GetVinMasternode().ToString());
-            mnodeman.AskForMN(pfrom, vote.GetVinMasternode());
-            return;
+        CGovernanceException exception;
+        if(ProcessVote(pfrom,vote, exception)) {
+            vote.Relay();
+        }
+        else {
+            if(exception.GetNodePenalty() != 0) {
+                Misbehaving(pfrom->GetId(), exception.GetNodePenalty());
+            }
         }
 
         // CHECK LOCAL VALIDITY AGAINST BLOCKCHAIN, TIME DATA, ETC
 
-        if(!vote.IsValid(true)){
-            LogPrintf("gobject - signature invalid\n");
-            if(masternodeSync.IsSynced()) Misbehaving(pfrom->GetId(), 20);
-            // it could just be a non-synced masternode
-            mnodeman.AskForMN(pfrom, vote.GetVinMasternode());
-            //mapSeenVotes.insert(std::make_pair(vote.GetHash(), SEEN_OBJECT_ERROR_INVALID));
-            return;
-        } else {
-            //mapSeenVotes.insert(std::make_pair(vote.GetHash(), SEEN_OBJECT_IS_VALID));
-        }
-
-        // IF EVERYTHING CHECKS OUT, UPDATE THE GOVERNANCE MANAGER
-
-        std::string strError = "";
-        if(AddOrUpdateVote(vote, pfrom, strError)) {
-            vote.Relay();
-            masternodeSync.AddedBudgetItem(vote.GetHash());
-            pmn->AddGovernanceVote(vote.GetParentHash());
-        }
+//        if(!vote.IsValid(true)){
+//            LogPrintf("gobject - signature invalid\n");
+//            if(masternodeSync.IsSynced()) Misbehaving(pfrom->GetId(), 20);
+//            // it could just be a non-synced masternode
+//            mnodeman.AskForMN(pfrom, vote.GetVinMasternode());
+//            //mapSeenVotes.insert(std::make_pair(vote.GetHash(), SEEN_OBJECT_ERROR_INVALID));
+//            return;
+//        } else {
+//            //mapSeenVotes.insert(std::make_pair(vote.GetHash(), SEEN_OBJECT_IS_VALID));
+//        }
+//
+//        // IF EVERYTHING CHECKS OUT, UPDATE THE GOVERNANCE MANAGER
+//
+//        std::string strError = "";
+//        if(AddOrUpdateVote(vote, pfrom, strError)) {
+//            vote.Relay();
+//            masternodeSync.AddedBudgetItem(vote.GetHash());
+//            pmn->AddGovernanceVote(vote.GetParentHash());
+//        }
 
         LogPrint("gobject", "NEW governance vote: %s\n", vote.GetHash().ToString());
     }
@@ -777,7 +770,9 @@ bool CGovernanceObject::ProcessVote(CNode* pfrom,
     int nMNIndex = mnodeman.GetMasternodeIndex(vote.GetVinMasternode());
     if(nMNIndex < 0) {
         governance.AddOrphanVote(vote);
-        mnodeman.AskForMN(pfrom, vote.GetVinMasternode());
+        if(pfrom) {
+            mnodeman.AskForMN(pfrom, vote.GetVinMasternode());
+        }
         std::ostringstream ostr;
         ostr << "CGovernanceObject::UpdateVote -- Masternode index not found\n";
         LogPrintf(ostr.str().c_str());

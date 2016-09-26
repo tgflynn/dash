@@ -235,7 +235,9 @@ public:
 
     bool MasternodeRateCheck(const CTxIn& vin);
 
-    bool ProcessVote(CNode* pfrom, const CGovernanceVote& vote, CGovernanceException& exception);
+    bool ProcessVote(const CGovernanceVote& vote, CGovernanceException& exception) {
+        return ProcessVote(NULL, vote, exception);
+    }
 
 private:
     void RequestGovernanceObject(const uint256& nHash);
@@ -249,6 +251,8 @@ private:
     {
         mapOrphanVotes.Insert(vote.GetHash(), vote);
     }
+
+    bool ProcessVote(CNode* pfrom, const CGovernanceVote& vote, CGovernanceException& exception);
 
     /// Called to indicate a requested object has been received
     bool AcceptObjectMessage(const uint256& nHash);

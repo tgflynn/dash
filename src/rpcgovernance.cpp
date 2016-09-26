@@ -274,16 +274,15 @@ UniValue gobject(const UniValue& params, bool fHelp)
             return returnObj;
         }
 
-        std::string strError = "";
-        if(governance.AddOrUpdateVote(vote, NULL, strError)) {
-            governance.AddSeenVote(vote.GetHash(), SEEN_OBJECT_IS_VALID);
-            vote.Relay();
+        CGovernanceException exception;
+        if(governance.ProcessVote(vote, exception)) {
             success++;
             statusObj.push_back(Pair("result", "success"));
-        } else {
+        }
+        else {
             failed++;
             statusObj.push_back(Pair("result", "failed"));
-            statusObj.push_back(Pair("errorMessage", strError.c_str()));
+            statusObj.push_back(Pair("errorMessage", exception.GetMessage()));
         }
 
         resultsObj.push_back(Pair("dash.conf", statusObj));
@@ -377,15 +376,15 @@ UniValue gobject(const UniValue& params, bool fHelp)
                 continue;
             }
 
-            if(governance.AddOrUpdateVote(vote, NULL, strError)) {
-                governance.AddSeenVote(vote.GetHash(), SEEN_OBJECT_IS_VALID);
-                vote.Relay();
+            CGovernanceException exception;
+            if(governance.ProcessVote(vote, exception)) {
                 success++;
                 statusObj.push_back(Pair("result", "success"));
-            } else {
+            }
+            else {
                 failed++;
                 statusObj.push_back(Pair("result", "failed"));
-                statusObj.push_back(Pair("errorMessage", strError.c_str()));
+                statusObj.push_back(Pair("errorMessage", exception.GetMessage()));
             }
 
             resultsObj.push_back(Pair(mne.getAlias(), statusObj));
@@ -502,15 +501,15 @@ UniValue gobject(const UniValue& params, bool fHelp)
 
             // UPDATE LOCAL DATABASE WITH NEW OBJECT SETTINGS
 
-            if(governance.AddOrUpdateVote(vote, NULL, strError)) {
-                governance.AddSeenVote(vote.GetHash(), SEEN_OBJECT_IS_VALID);
-                vote.Relay();
+            CGovernanceException exception;
+            if(governance.ProcessVote(vote, exception)) {
                 success++;
                 statusObj.push_back(Pair("result", "success"));
-            } else {
+            }
+            else {
                 failed++;
                 statusObj.push_back(Pair("result", "failed"));
-                statusObj.push_back(Pair("errorMessage", strError.c_str()));
+                statusObj.push_back(Pair("errorMessage", exception.GetMessage()));
             }
 
             resultsObj.push_back(Pair(mne.getAlias(), statusObj));
@@ -749,13 +748,12 @@ UniValue voteraw(const UniValue& params, bool fHelp)
         throw JSONRPCError(RPC_INTERNAL_ERROR, "Failure to verify vote.");
     }
 
-    std::string strError = "";
-    if(governance.AddOrUpdateVote(vote, NULL, strError)) {
-        governance.AddSeenVote(vote.GetHash(), SEEN_OBJECT_IS_VALID);
-        vote.Relay();
+    CGovernanceException exception;
+    if(governance.ProcessVote(vote, exception)) {
         return "Voted successfully";
-    } else {
-        throw JSONRPCError(RPC_INTERNAL_ERROR, "Error voting : " + strError);
+    }
+    else {
+        throw JSONRPCError(RPC_INTERNAL_ERROR, "Error voting : " + exception.GetMessage());
     }
 }
 
