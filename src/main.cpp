@@ -4955,10 +4955,8 @@ bool static AlreadyHave(const CInv& inv) EXCLUSIVE_LOCKS_REQUIRED(cs_main)
         return mapDarksendBroadcastTxes.count(inv.hash);
 
     case MSG_GOVERNANCE_OBJECT:
-        return governance.HaveObjectForHash(inv.hash);
-
     case MSG_GOVERNANCE_OBJECT_VOTE:
-        return governance.HaveVoteForHash(inv.hash);
+        return ! governance.ConfirmInventoryRequest(inv);
     }
 
     // Don't know what it is, just say we already got one

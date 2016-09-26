@@ -35,6 +35,7 @@ CGovernanceManager::CGovernanceManager()
       mapInvalidVotes(MAX_CACHE_SIZE),
       mapOrphanVotes(MAX_CACHE_SIZE),
       mapLastMasternodeTrigger(),
+      setRequestedObjects(),
       cs()
 {}
 
@@ -150,6 +151,8 @@ void CGovernanceManager::ProcessMessage(CNode* pfrom, std::string& strCommand, C
         CGovernanceObject govobj;
         vRecv >> govobj;
 
+        AcceptObjectMessage(govobj.GetHash());
+
         if(mapSeenGovernanceObjects.count(govobj.GetHash())){
             // TODO - print error code? what if it's GOVOBJ_ERROR_IMMATURE?
             masternodeSync.AddedBudgetItem(govobj.GetHash());
@@ -198,6 +201,8 @@ void CGovernanceManager::ProcessMessage(CNode* pfrom, std::string& strCommand, C
         CGovernanceVote vote;
         vRecv >> vote;
         //vote.fValid = true;
+
+        AcceptVoteMessage(vote.GetHash());
 
         // IF WE'VE SEEN THIS OBJECT THEN SKIP
 
@@ -459,6 +464,32 @@ void CGovernanceManager::NewBlock()
     UpdateCachesAndClean();
 }
 
+bool CGovernanceManager::ConfirmInventoryRequest(const CInv& inv)
+{
+    LOCK(cs);
+
+    hash_s_t* setHash = NULL;
+    switch(inv.type) {
+    case MSG_GOVERNANCE_OBJECT:
+        setHash = &setRequestedObjects;
+        break;
+    case MSG_GOVERNANCE_OBJECT_VOTE:
+        setHash = &setRequestedVotes;
+        break;
+    default:
+        return false;
+    }
+
+    hash_s_cit it = setHash->find(inv.hash);
+    if(it == setHash->end()) {
+        // Only retrieve the item once
+        setHash->insert(inv.hash);
+        return true;
+    }
+
+    return false;
+}
+
 void CGovernanceManager::Sync(CNode* pfrom, uint256 nProp)
 {
 
@@ -608,7 +639,7 @@ bool CGovernanceManager::MasternodeRateCheck(const CTxIn& vin)
     return false;
 }
 
-bool CGovernanceManager::ProcessVote(const CGovernanceVote& vote, CGovernanceException& exception)
+bool CGovernanceManager::ProcessVote(CNode* pfrom, const CGovernanceVote& vote, CGovernanceException& exception)
 {
     LOCK(cs);
     uint256 nHashVote = vote.GetHash();
@@ -618,7 +649,7 @@ bool CGovernanceManager::ProcessVote(const CGovernanceVote& vote, CGovernanceExc
                 << ", MN outpoint = " << vote.GetVinMasternode().prevout.ToStringShort()
                 << ", governance object hash = " << vote.GetParentHash().ToString() << "\n";
         LogPrintf(ostr.str().c_str());
-        exception = CGovernanceException(ostr.str(), GOVERNANCE_EXCEPTION_PERMANENT_ERROR);
+        exception = CGovernanceException(ostr.str(), GOVERNANCE_EXCEPTION_PERMANENT_ERROR, 20);
         return false;
     }
 
@@ -637,13 +668,37 @@ bool CGovernanceManager::ProcessVote(const CGovernanceVote& vote, CGovernanceExc
     }
 
     CGovernanceObject& govobj = it->second;
-    return govobj.ProcessVote(vote, mapInvalidVotes, exception);
+    return govobj.ProcessVote(pfrom, vote, exception);
 }
 
 void CGovernanceManager::RequestGovernanceObject(const uint256& nHash)
 {
     //TODO: Implement
 
+}
+
+bool CGovernanceManager::AcceptObjectMessage(const uint256& nHash)
+{
+    LOCK(cs);
+    return AcceptMessage(nHash, setRequestedObjects);
+}
+
+bool CGovernanceManager::AcceptVoteMessage(const uint256& nHash)
+{
+    LOCK(cs);
+    return AcceptMessage(nHash, setRequestedVotes);
+}
+
+bool CGovernanceManager::AcceptMessage(const uint256& nHash, hash_s_t& setHash)
+{
+    hash_s_it it = setHash.find(nHash);
+    if(it == setHash.end()) {
+        // We never requested this
+        return false;
+    }
+    // Only accept one response
+    setHash.erase(it);
+    return true;
 }
 
 CGovernanceObject::CGovernanceObject()
@@ -715,17 +770,18 @@ CGovernanceObject::CGovernanceObject(const CGovernanceObject& other)
   mapCurrentMNVotes(other.mapCurrentMNVotes)
 {}
 
-bool CGovernanceObject::ProcessVote(const CGovernanceVote& vote,
-                                    CGovernanceManager::vote_cache_t& mapInvalidVotes,
+bool CGovernanceObject::ProcessVote(CNode* pfrom,
+                                    const CGovernanceVote& vote,
                                     CGovernanceException& exception)
 {
     int nMNIndex = mnodeman.GetMasternodeIndex(vote.GetVinMasternode());
     if(nMNIndex < 0) {
-        // Should never happen
+        governance.AddOrphanVote(vote);
+        mnodeman.AskForMN(pfrom, vote.GetVinMasternode());
         std::ostringstream ostr;
         ostr << "CGovernanceObject::UpdateVote -- Masternode index not found\n";
         LogPrintf(ostr.str().c_str());
-        exception = CGovernanceException(ostr.str(), GOVERNANCE_EXCEPTION_INTERNAL_ERROR);
+        exception = CGovernanceException(ostr.str(), GOVERNANCE_EXCEPTION_WARNING);
         return false;
     }
 
@@ -746,7 +802,7 @@ bool CGovernanceObject::ProcessVote(const CGovernanceVote& vote,
         std::ostringstream ostr;
         ostr << "CGovernanceObject::UpdateVote -- Unsupported vote signal:" << CGovernanceVoting::ConvertSignalToString(vote.GetSignal()) << "\n";
         LogPrintf(ostr.str().c_str());
-        exception = CGovernanceException(ostr.str(), GOVERNANCE_EXCEPTION_PERMANENT_ERROR);
+        exception = CGovernanceException(ostr.str(), GOVERNANCE_EXCEPTION_PERMANENT_ERROR, 20);
         return false;
     }
     vote_instance_m_it it2 = recVote.mapInstances.find(int(eSignal));
@@ -774,8 +830,8 @@ bool CGovernanceObject::ProcessVote(const CGovernanceVote& vote,
                 << ", governance object hash = " << GetHash().ToString()
                 << ", vote hash = " << vote.GetHash().ToString() << "\n";
         LogPrintf(ostr.str().c_str());
-        exception = CGovernanceException(ostr.str(), GOVERNANCE_EXCEPTION_TEMPORARY_ERROR);
-        mapInvalidVotes.Insert(vote.GetHash(), vote);
+        exception = CGovernanceException(ostr.str(), GOVERNANCE_EXCEPTION_PERMANENT_ERROR, 20);
+        governance.AddInvalidVote(vote);
         return false;
     }
     recVote.mapInstances[int(eSignal)] = vote_instance_t(vote.GetOutcome(), vote.GetTimestamp());

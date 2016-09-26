@@ -58,6 +58,8 @@ extern CGovernanceManager governance;
 //
 class CGovernanceManager : public IMasternodeIndexUpdateReceiver
 {
+    friend class CGovernanceObject;
+
 public: // Types
 
     typedef std::map<uint256, CGovernanceObject> object_m_t;
@@ -88,6 +90,12 @@ public: // Types
 
     typedef txout_m_t::const_iterator txout_m_cit;
 
+    typedef std::set<uint256> hash_s_t;
+
+    typedef hash_s_t::iterator hash_s_it;
+
+    typedef hash_s_t::const_iterator hash_s_cit;
+
 private:
     static const int MAX_CACHE_SIZE = 1000;
 
@@ -111,6 +119,10 @@ private:
     vote_m_t mapVotesByType;
 
     txout_m_t mapLastMasternodeTrigger;
+
+    hash_s_t setRequestedObjects;
+
+    hash_s_t setRequestedVotes;
 
 public:
     // critical section to protect the inner data structures
@@ -140,6 +152,13 @@ public:
         return mapSeenGovernanceObjects.size();
         //return mapSeenGovernanceObjects.size() + mapSeenVotes.size();
     }
+
+    /**
+     * This is called by AlreadyHave in main.cpp as part of the inventory
+     * retrieval process.  Returns true if we want to retrieve the object, otherwise
+     * false. (Note logic is inverted in AlreadyHave).
+     */
+    bool ConfirmInventoryRequest(const CInv& inv);
 
     void Sync(CNode* node, uint256 nProp);
     void SyncParentObjectByVote(CNode* pfrom, const CGovernanceVote& vote);
@@ -216,10 +235,28 @@ public:
 
     bool MasternodeRateCheck(const CTxIn& vin);
 
-    bool ProcessVote(const CGovernanceVote& vote, CGovernanceException& exception);
+    bool ProcessVote(CNode* pfrom, const CGovernanceVote& vote, CGovernanceException& exception);
 
 private:
     void RequestGovernanceObject(const uint256& nHash);
+
+    void AddInvalidVote(const CGovernanceVote& vote)
+    {
+        mapInvalidVotes.Insert(vote.GetHash(), vote);
+    }
+
+    void AddOrphanVote(const CGovernanceVote& vote)
+    {
+        mapOrphanVotes.Insert(vote.GetHash(), vote);
+    }
+
+    /// Called to indicate a requested object has been received
+    bool AcceptObjectMessage(const uint256& nHash);
+
+    /// Called to indicate a requested vote has been received
+    bool AcceptVoteMessage(const uint256& nHash);
+
+    static bool AcceptMessage(const uint256& nHash, hash_s_t& setHash);
 
 };
 
@@ -456,8 +493,8 @@ private:
     void LoadData();
     void GetData(UniValue& objResult);
 
-    bool ProcessVote(const CGovernanceVote& vote,
-                     CGovernanceManager::vote_cache_t& mapInvalidVotes,
+    bool ProcessVote(CNode* pfrom,
+                     const CGovernanceVote& vote,
                      CGovernanceException& exception);
 
 };
