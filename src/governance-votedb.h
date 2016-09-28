@@ -64,6 +64,8 @@ public:
      */
     bool GetVote(uint256 nHash, CGovernanceVote& vote) const;
 
+    std::vector<CGovernanceVote> GetVotes() const;
+
     CGovernanceObjectVoteFile& operator=(const CGovernanceObjectVoteFile& other);
 
     ADD_SERIALIZE_METHODS;

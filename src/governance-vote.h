@@ -127,7 +127,7 @@ public:
 
     bool Sign(CKey& keyMasternode, CPubKey& pubKeyMasternode);
     bool IsValid(bool fSignatureCheck) const;
-    void Relay();
+    void Relay() const;
 
     std::string GetVoteString() const {
         return CGovernanceVoting::ConvertOutcomeToString(GetOutcome());

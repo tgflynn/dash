@@ -685,9 +685,9 @@ UniValue gobject(const UniValue& params, bool fHelp)
 
         // GET MATCHING VOTES BY HASH, THEN SHOW USERS VOTE INFORMATION
 
-        std::vector<CGovernanceVote*> vecVotes = governance.GetMatchingVotes(hash);
-        BOOST_FOREACH(CGovernanceVote* pVote, vecVotes) {
-            bResult.push_back(Pair(pVote->GetHash().ToString(),  pVote->ToString()));
+        std::vector<CGovernanceVote> vecVotes = governance.GetMatchingVotes(hash);
+        BOOST_FOREACH(CGovernanceVote vote, vecVotes) {
+            bResult.push_back(Pair(vote.GetHash().ToString(),  vote.ToString()));
         }
 
         return bResult;

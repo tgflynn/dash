@@ -69,6 +69,12 @@ public: // Types
 
     typedef object_m_t::const_iterator object_m_cit;
 
+    typedef std::map<uint256, CGovernanceObject*> object_ref_m_t;
+
+    typedef object_ref_m_t::iterator object_ref_m_it;
+
+    typedef object_ref_m_t::const_iterator object_ref_m_cit;
+
     typedef std::map<uint256, int> count_m_t;
 
     typedef count_m_t::iterator count_m_it;
@@ -111,13 +117,11 @@ private:
 
     count_m_t mapSeenGovernanceObjects;
 
-    vote_cache_t mapInvalidVotes;
-    vote_cache_t mapOrphanVotes;
+    object_ref_m_t mapVoteToObject;
 
-    // todo: one of these should point to the other
-    //   -- must be carefully managed while adding/removing/updating
-    vote_m_t mapVotesByHash;
-    vote_m_t mapVotesByType;
+    vote_cache_t mapInvalidVotes;
+
+    vote_cache_t mapOrphanVotes;
 
     txout_m_t mapLastMasternodeTrigger;
 
@@ -169,10 +173,8 @@ public:
 
     CGovernanceObject *FindGovernanceObject(const uint256& nHash);
 
-    std::vector<CGovernanceVote*> GetMatchingVotes(const uint256& nParentHash);
+    std::vector<CGovernanceVote> GetMatchingVotes(const uint256& nParentHash);
     std::vector<CGovernanceObject*> GetAllNewerThan(int64_t nMoreThanTime);
-
-    int CountMatchingVotes(CGovernanceObject& govobj, vote_signal_enum_t nVoteSignalIn, vote_outcome_enum_t nVoteOutcomeIn);
 
     bool IsBudgetPaymentBlock(int nBlockHeight);
     bool AddGovernanceObject (CGovernanceObject& govobj);
@@ -192,10 +194,9 @@ public:
         LogPrint("gobject", "Governance object manager was cleared\n");
         mapObjects.clear();
         mapSeenGovernanceObjects.clear();
+        mapVoteToObject.clear();
         mapInvalidVotes.Clear();
         mapOrphanVotes.Clear();
-        mapVotesByType.clear();
-        mapVotesByHash.clear();
         mapLastMasternodeTrigger.clear();
     }
 
@@ -210,9 +211,10 @@ public:
         READWRITE(mapInvalidVotes);
         READWRITE(mapOrphanVotes);
         READWRITE(mapObjects);
-        READWRITE(mapVotesByHash);
-        READWRITE(mapVotesByType);
         READWRITE(mapLastMasternodeTrigger);
+        if(ser_action.ForRead()) {
+            RebuildIndexes();
+        }
     }
 
     void UpdatedBlockTip(const CBlockIndex *pindex);
@@ -262,6 +264,8 @@ private:
     bool AcceptVoteMessage(const uint256& nHash);
 
     static bool AcceptMessage(const uint256& nHash, hash_s_t& setHash);
+
+    void RebuildIndexes();
 
 };
 

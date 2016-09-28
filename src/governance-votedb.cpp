@@ -44,6 +44,15 @@ bool CGovernanceObjectVoteFile::GetVote(uint256 nHash, CGovernanceVote& vote) co
     return true;
 }
 
+std::vector<CGovernanceVote> CGovernanceObjectVoteFile::GetVotes() const
+{
+    std::vector<CGovernanceVote> vecResult;
+    for(vote_l_cit it = listVotes.begin(); it != listVotes.end(); ++it) {
+        vecResult.push_back(*it);
+    }
+    return vecResult;
+}
+
 CGovernanceObjectVoteFile& CGovernanceObjectVoteFile::operator=(const CGovernanceObjectVoteFile& other)
 {
     nMemoryVotes = other.nMemoryVotes;
