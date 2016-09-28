@@ -217,7 +217,7 @@ void CGovernanceManager::ProcessMessage(CNode* pfrom, std::string& strCommand, C
         AcceptVoteMessage(vote.GetHash());
 
         CGovernanceException exception;
-        if(ProcessVote(pfrom,vote, exception)) {
+        if(ProcessVote(pfrom, vote, exception)) {
             vote.Relay();
         }
         else {

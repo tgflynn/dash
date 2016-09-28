@@ -270,7 +270,7 @@ bool CGovernanceVote::IsValid(bool fSignatureCheck) const
     }
 
     // support up to 50 actions (implemented in sentinel)
-    if(nVoteSignal > 50)
+    if(nVoteSignal > MAX_SUPPORTED_VOTE_SIGNAL)
     {
         LogPrint("gobject", "CGovernanceVote::IsValid -- Client attempted to vote on invalid signal(%d) - %s\n", nVoteSignal, GetHash().ToString());
         return false;
@@ -284,10 +284,13 @@ bool CGovernanceVote::IsValid(bool fSignatureCheck) const
     }
 
     // TODO: This is an unsafe function call: fix
-    CMasternode* pmn = mnodeman.Find(vinMasternode);
-    if(pmn == NULL)
-    {
+    CMasternode mn;
+    if(!mnodeman.Get(vinMasternode, mn)) {
         LogPrint("gobject", "CGovernanceVote::IsValid -- Unknown Masternode - %s\n", vinMasternode.prevout.ToStringShort());
+        return false;
+    }
+    if(!mn.IsEnabled()) {
+        LogPrint("gobject", "CGovernanceVote::IsValid -- Masternode - %s not enabled\n", vinMasternode.prevout.ToStringShort());
         return false;
     }
 
@@ -297,7 +300,7 @@ bool CGovernanceVote::IsValid(bool fSignatureCheck) const
     std::string strMessage = vinMasternode.prevout.ToStringShort() + "|" + nParentHash.ToString() + "|" +
         boost::lexical_cast<std::string>(nVoteSignal) + "|" + boost::lexical_cast<std::string>(nVoteOutcome) + "|" + boost::lexical_cast<std::string>(nTime);
 
-    if(!darkSendSigner.VerifyMessage(pmn->pubKeyMasternode, vchSig, strMessage, strError)) {
+    if(!darkSendSigner.VerifyMessage(mn.pubKeyMasternode, vchSig, strMessage, strError)) {
         LogPrintf("CGovernanceVote::IsValid -- VerifyMessage() failed, error: %s\n", strError);
         return false;
     }
