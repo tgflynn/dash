@@ -1,0 +1,46 @@
+// Copyright (c) 2014-2016 The Dash Core developers
+// Distributed under the MIT/X11 software license, see the accompanying
+// file COPYING or http://www.opensource.org/licenses/mit-license.php.
+
+#include "governance-votedb.h"
+
+CGovernanceObjectVoteFile::CGovernanceObjectVoteFile()
+    : nMemoryVotes(0),
+      listVotes(),
+      mapVoteIndex()
+{}
+
+void CGovernanceObjectVoteFile::AddVote(const CGovernanceVote& vote)
+{
+    listVotes.push_front(vote);
+    mapVoteIndex[vote.GetHash()] = listVotes.begin();
+    ++nMemoryVotes;
+}
+
+bool CGovernanceObjectVoteFile::HasVote(uint256 nHash) const
+{
+    vote_m_cit it = mapVoteIndex.find(nHash);
+    if(it == mapVoteIndex.end()) {
+        return false;
+    }
+    return true;
+}
+
+bool CGovernanceObjectVoteFile::GetVote(uint256 nHash, CGovernanceVote& vote) const
+{
+    vote_m_cit it = mapVoteIndex.find(nHash);
+    if(it == mapVoteIndex.end()) {
+        return false;
+    }
+    vote = *(it->second);
+    return true;
+}
+
+void CGovernanceObjectVoteFile::RebuildIndex()
+{
+    mapVoteIndex.clear();
+    for(vote_l_it it = listVotes.begin(); it != listVotes.end(); ++it) {
+        CGovernanceVote& vote = *it;
+        mapVoteIndex[vote.GetHash()] = it;
+    }
+}
