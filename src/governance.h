@@ -17,6 +17,7 @@
 #include "masternode.h"
 #include "governance-exceptions.h"
 #include "governance-vote.h"
+#include "governance-votedb.h"
 #include "masternodeman.h"
 #include <boost/lexical_cast.hpp>
 #include "init.h"
@@ -378,6 +379,8 @@ private:
 
     vote_m_t mapCurrentMNVotes;
 
+    CGovernanceObjectVoteFile fileVotes;
+
 public:
     CGovernanceObject();
     CGovernanceObject(uint256 nHashParentIn, int nRevisionIn, int64_t nTime, uint256 nCollateralHashIn, std::string strDataIn);
@@ -428,6 +431,10 @@ public:
 
     void InvalidateVoteCache() {
         fDirtyCache = true;
+    }
+
+    CGovernanceObjectVoteFile& GetVoteFile() {
+        return fileVotes;
     }
 
     // Signature related functions
@@ -488,6 +495,7 @@ public:
         READWRITE(vinMasternode);
         READWRITE(vchSig);
         READWRITE(mapCurrentMNVotes);
+        READWRITE(fileVotes);
 
         // AFTER DESERIALIZATION OCCURS, CACHED VARIABLES MUST BE CALCULATED MANUALLY
     }

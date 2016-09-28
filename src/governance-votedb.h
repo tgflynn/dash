@@ -47,6 +47,8 @@ private:
 public:
     CGovernanceObjectVoteFile();
 
+    CGovernanceObjectVoteFile(const CGovernanceObjectVoteFile& other);
+
     /**
      * Add a vote to the file
      */
@@ -61,6 +63,8 @@ public:
      * Retrieve a vote cached in memory
      */
     bool GetVote(uint256 nHash, CGovernanceVote& vote) const;
+
+    CGovernanceObjectVoteFile& operator=(const CGovernanceObjectVoteFile& other);
 
     ADD_SERIALIZE_METHODS;
 

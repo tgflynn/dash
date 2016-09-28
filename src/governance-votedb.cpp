@@ -10,6 +10,14 @@ CGovernanceObjectVoteFile::CGovernanceObjectVoteFile()
       mapVoteIndex()
 {}
 
+CGovernanceObjectVoteFile::CGovernanceObjectVoteFile(const CGovernanceObjectVoteFile& other)
+    : nMemoryVotes(other.nMemoryVotes),
+      listVotes(other.listVotes),
+      mapVoteIndex()
+{
+    RebuildIndex();
+}
+
 void CGovernanceObjectVoteFile::AddVote(const CGovernanceVote& vote)
 {
     listVotes.push_front(vote);
@@ -34,6 +42,14 @@ bool CGovernanceObjectVoteFile::GetVote(uint256 nHash, CGovernanceVote& vote) co
     }
     vote = *(it->second);
     return true;
+}
+
+CGovernanceObjectVoteFile& CGovernanceObjectVoteFile::operator=(const CGovernanceObjectVoteFile& other)
+{
+    nMemoryVotes = other.nMemoryVotes;
+    listVotes = other.listVotes;
+    RebuildIndex();
+    return *this;
 }
 
 void CGovernanceObjectVoteFile::RebuildIndex()

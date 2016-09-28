@@ -709,7 +709,8 @@ CGovernanceObject::CGovernanceObject()
   fCachedEndorsed(false),
   fDirtyCache(true),
   fExpired(false),
-  mapCurrentMNVotes()
+  mapCurrentMNVotes(),
+  fileVotes()
 {
     // PARSE JSON DATA STORAGE (STRDATA)
     LoadData();
@@ -733,7 +734,8 @@ CGovernanceObject::CGovernanceObject(uint256 nHashParentIn, int nRevisionIn, int
   fCachedEndorsed(false),
   fDirtyCache(true),
   fExpired(false),
-  mapCurrentMNVotes()
+  mapCurrentMNVotes(),
+  fileVotes()
 {
     // PARSE JSON DATA STORAGE (STRDATA)
     LoadData();
@@ -757,7 +759,8 @@ CGovernanceObject::CGovernanceObject(const CGovernanceObject& other)
   fCachedEndorsed(other.fCachedEndorsed),
   fDirtyCache(other.fDirtyCache),
   fExpired(other.fExpired),
-  mapCurrentMNVotes(other.mapCurrentMNVotes)
+  mapCurrentMNVotes(other.mapCurrentMNVotes),
+  fileVotes(other.fileVotes)
 {}
 
 bool CGovernanceObject::ProcessVote(CNode* pfrom,
@@ -814,7 +817,7 @@ bool CGovernanceObject::ProcessVote(CNode* pfrom,
         exception = CGovernanceException(ostr.str(), GOVERNANCE_EXCEPTION_TEMPORARY_ERROR);
         return false;
     }
-    // Finally check that the vote is actually valid (done last because of cost of signature verification
+    // Finally check that the vote is actually valid (done last because of cost of signature verification)
     if(!vote.IsValid(true)) {
         std::ostringstream ostr;
         ostr << "CGovernanceObject::UpdateVote -- Invalid vote "
@@ -826,7 +829,8 @@ bool CGovernanceObject::ProcessVote(CNode* pfrom,
         governance.AddInvalidVote(vote);
         return false;
     }
-    recVote.mapInstances[int(eSignal)] = vote_instance_t(vote.GetOutcome(), vote.GetTimestamp());
+    voteInstance = vote_instance_t(vote.GetOutcome(), vote.GetTimestamp());
+    fileVotes.AddVote(vote);
     return true;
 }
 
