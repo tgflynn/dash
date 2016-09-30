@@ -655,7 +655,11 @@ UniValue gobject(const UniValue& params, bool fHelp)
         // --
         std::string strError = "";
         objResult.push_back(Pair("fLocalValidity",  pGovObj->IsValidLocally(chainActive.Tip(), strError, false)));
+        objResult.push_back(Pair("IsValidReason",  strError.c_str()));
         objResult.push_back(Pair("fCachedValid",  pGovObj->fCachedValid));
+        objResult.push_back(Pair("fCachedFunding",  pGovObj->fCachedFunding));
+        objResult.push_back(Pair("fCachedDelete",  pGovObj->fCachedDelete));
+        objResult.push_back(Pair("fCachedEndorsed",  pGovObj->fCachedEndorsed));
 
         return objResult;
     }
