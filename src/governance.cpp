@@ -132,8 +132,13 @@ void CGovernanceManager::ProcessMessage(CNode* pfrom, std::string& strCommand, C
         CGovernanceObject govobj;
         vRecv >> govobj;
 
+        std::string strHash = govobj.GetHash().ToString();
+
+        LogPrint("gobject", "CGovernanceObject::ProcessMessage -- received govobj: %s", strHash);
+
         if(mapSeenGovernanceObjects.count(govobj.GetHash())){
             // TODO - print error code? what if it's GOVOBJ_ERROR_IMMATURE?
+            LogPrint("gobject", "CGovernanceObject::ProcessMessage -- govobj already seen: %s", strHash);
             return;
         }
 
@@ -144,7 +149,7 @@ void CGovernanceManager::ProcessMessage(CNode* pfrom, std::string& strCommand, C
 
         if(!govobj.IsValidLocally(pCurrentBlockIndex, strError, true)) {
             mapSeenGovernanceObjects.insert(std::make_pair(govobj.GetHash(), SEEN_OBJECT_ERROR_INVALID));
-            LogPrintf("Governance object is invalid - %s\n", strError);
+            LogPrintf("Governance object: %s is invalid - %s\n", strHash, strError);
             return;
         }
 
@@ -163,7 +168,7 @@ void CGovernanceManager::ProcessMessage(CNode* pfrom, std::string& strCommand, C
         mapSeenGovernanceObjects.insert(make_pair(govobj.GetHash(), SEEN_OBJECT_IS_VALID));
         masternodeSync.AddedBudgetItem(govobj.GetHash());
 
-        LogPrintf("MNGOVERNANCEOBJECT -- %s new\n", govobj.GetHash().ToString());
+        LogPrintf("MNGOVERNANCEOBJECT -- %s new\n", strHash);
         
         // WE MIGHT HAVE PENDING/ORPHAN VOTES FOR THIS OBJECT
 
