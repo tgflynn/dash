@@ -1587,7 +1587,7 @@ bool CDarksendPool::DoAutomaticDenominating(bool fDryRun)
 
     // otherwise, try one randomly
     while(nTries < 10) {
-        CMasternode* pmn = mnodeman.FindRandomNotInVec(setMasternodesUsed, MIN_PRIVATESEND_PEER_PROTO_VERSION);
+        CMasternode* pmn = mnodeman.FindRandomNotInSet(setMasternodesUsed, MIN_PRIVATESEND_PEER_PROTO_VERSION);
         if(pmn == NULL) {
             LogPrintf("CDarksendPool::DoAutomaticDenominating -- Can't find random masternode!\n");
             strAutoDenomResult = _("Can't find random Masternode.");

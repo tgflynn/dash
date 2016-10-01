@@ -354,7 +354,7 @@ CMasternode* CMasternodeMan::GetNextMasternodeInQueueForPayment(int nBlockHeight
     return pBestMasternode;
 }
 
-CMasternode *CMasternodeMan::FindRandomNotInVec(std::set<CTxIn> &setToExclude, int nProtocolVersion)
+CMasternode *CMasternodeMan::FindRandomNotInSet(std::set<CTxIn> &setToExclude, int nProtocolVersion)
 {
     LOCK(cs);
 
