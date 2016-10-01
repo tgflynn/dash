@@ -388,7 +388,7 @@ void CDarksendPool::ResetPool()
 {
     nCachedLastSuccessBlock = 0;
     txMyCollateral = CMutableTransaction();
-    vecMasternodesUsed.clear();
+    listMasternodesUsed.clear();
     setMasternodesUsed.clear();
     UnlockCoins();
     SetNull();
@@ -1506,12 +1506,14 @@ bool CDarksendPool::DoAutomaticDenominating(bool fDryRun)
     }
 
     //if we've used 90% of the Masternode list then drop all the oldest first
-    int nThreshold = (int)(mnodeman.CountEnabled(MIN_PRIVATESEND_PEER_PROTO_VERSION) * 0.9);
-    LogPrint("privatesend", "Checking vecMasternodesUsed: size: %d, threshold: %d\n", (int)vecMasternodesUsed.size(), nThreshold);
-    while((int)vecMasternodesUsed.size() > nThreshold) {
-        setMasternodesUsed.erase(vecMasternodesUsed.front());
-        vecMasternodesUsed.erase(vecMasternodesUsed.begin());
-        LogPrint("privatesend", "  vecMasternodesUsed: size: %d, threshold: %d\n", (int)vecMasternodesUsed.size(), nThreshold);
+    int nSizeLimit = (int)(mnodeman.CountEnabled(MIN_PRIVATESEND_PEER_PROTO_VERSION) * 0.9);
+    int nListSize = (int)listMasternodesUsed.size();
+    LogPrint("privatesend", "Checking listMasternodesUsed: size: %d, limit: %d\n", nListSize, nSizeLimit);
+    while(nListSize > nSizeLimit) {
+        setMasternodesUsed.erase(listMasternodesUsed.front());
+        listMasternodesUsed.pop_front();
+        --nListSize;
+        LogPrint("privatesend", "  listMasternodesUsed: size: %d, limit: %d\n", nListSize, nSizeLimit);
     }
 
     bool fUseQueue = insecure_rand()%100 > 33;
@@ -1553,7 +1555,7 @@ bool CDarksendPool::DoAutomaticDenominating(bool fDryRun)
                 LogPrintf("CDarksendPool::DoAutomaticDenominating -- dsq masternode is not in masternode list! vin=%s\n", dsq.vin.ToString());
                 continue;
             }
-            vecMasternodesUsed.push_back(dsq.vin);
+            listMasternodesUsed.push_back(dsq.vin);
             setMasternodesUsed.insert(dsq.vin);
 
             LogPrintf("CDarksendPool::DoAutomaticDenominating -- attempt to connect to masternode from queue, addr=%s\n", pmn->addr.ToString());
@@ -1591,7 +1593,7 @@ bool CDarksendPool::DoAutomaticDenominating(bool fDryRun)
             strAutoDenomResult = _("Can't find random Masternode.");
             return false;
         }
-        vecMasternodesUsed.push_back(pmn->vin);
+        listMasternodesUsed.push_back(pmn->vin);
         setMasternodesUsed.insert(pmn->vin);
 
         if(pmn->nLastDsq != 0 && pmn->nLastDsq + mnodeman.CountEnabled(MIN_PRIVATESEND_PEER_PROTO_VERSION)/5 > mnodeman.nDsqCount) {
