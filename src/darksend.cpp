@@ -389,6 +389,7 @@ void CDarksendPool::ResetPool()
     nCachedLastSuccessBlock = 0;
     txMyCollateral = CMutableTransaction();
     vecMasternodesUsed.clear();
+    setMasternodesUsed.clear();
     UnlockCoins();
     SetNull();
 }
@@ -1508,6 +1509,7 @@ bool CDarksendPool::DoAutomaticDenominating(bool fDryRun)
     int nThreshold = (int)(mnodeman.CountEnabled(MIN_PRIVATESEND_PEER_PROTO_VERSION) * 0.9);
     LogPrint("privatesend", "Checking vecMasternodesUsed: size: %d, threshold: %d\n", (int)vecMasternodesUsed.size(), nThreshold);
     while((int)vecMasternodesUsed.size() > nThreshold) {
+        setMasternodesUsed.erase(vecMasternodesUsed.front());
         vecMasternodesUsed.erase(vecMasternodesUsed.begin());
         LogPrint("privatesend", "  vecMasternodesUsed: size: %d, threshold: %d\n", (int)vecMasternodesUsed.size(), nThreshold);
     }
@@ -1531,15 +1533,10 @@ bool CDarksendPool::DoAutomaticDenominating(bool fDryRun)
             // incompatible denom
             if(dsq.nDenom >= (1 << vecPrivateSendDenominations.size())) continue;
 
-            bool fUsed = false;
             //don't reuse Masternodes
-            BOOST_FOREACH(CTxIn txinUsed, vecMasternodesUsed) {
-                if(dsq.vin == txinUsed) {
-                    fUsed = true;
-                    break;
-                }
+            if(setMasternodesUsed.find(dsq.vin) != setMasternodesUsed.end()) {
+                continue;
             }
-            if(fUsed) continue;
 
             LogPrint("privatesend", "CDarksendPool::DoAutomaticDenominating -- found valid queue: %s\n", dsq.ToString());
 
@@ -1557,6 +1554,7 @@ bool CDarksendPool::DoAutomaticDenominating(bool fDryRun)
                 continue;
             }
             vecMasternodesUsed.push_back(dsq.vin);
+            setMasternodesUsed.insert(dsq.vin);
 
             LogPrintf("CDarksendPool::DoAutomaticDenominating -- attempt to connect to masternode from queue, addr=%s\n", pmn->addr.ToString());
             nLastTimeChanged = GetTimeMillis();
@@ -1587,13 +1585,14 @@ bool CDarksendPool::DoAutomaticDenominating(bool fDryRun)
 
     // otherwise, try one randomly
     while(nTries < 10) {
-        CMasternode* pmn = mnodeman.FindRandomNotInVec(vecMasternodesUsed, MIN_PRIVATESEND_PEER_PROTO_VERSION);
+        CMasternode* pmn = mnodeman.FindRandomNotInVec(setMasternodesUsed, MIN_PRIVATESEND_PEER_PROTO_VERSION);
         if(pmn == NULL) {
             LogPrintf("CDarksendPool::DoAutomaticDenominating -- Can't find random masternode!\n");
             strAutoDenomResult = _("Can't find random Masternode.");
             return false;
         }
         vecMasternodesUsed.push_back(pmn->vin);
+        setMasternodesUsed.insert(pmn->vin);
 
         if(pmn->nLastDsq != 0 && pmn->nLastDsq + mnodeman.CountEnabled(MIN_PRIVATESEND_PEER_PROTO_VERSION)/5 > mnodeman.nDsqCount) {
             nTries++;

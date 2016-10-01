@@ -304,6 +304,7 @@ private:
     std::vector<CDarksendQueue> vecDarksendQueue;
     // Keep track of the used Masternodes
     std::vector<CTxIn> vecMasternodesUsed;
+    std::set<CTxIn> setMasternodesUsed;
 
     std::vector<CAmount> vecDenominationsSkipped;
     std::vector<COutPoint> vecOutPointLocked;
