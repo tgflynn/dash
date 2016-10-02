@@ -65,11 +65,11 @@ public:
     *
     * @return random value < nMax
     */
-    int operator()(int nMax)
+    int64_t operator()(int64_t nMax)
     {
         nRz = 36969 * (nRz & 65535) + (nRz >> 16);
         nRw = 18000 * (nRw & 65535) + (nRw >> 16);
-        int nTmp = (nRw << 16) + nRz;
+        int64_t nTmp = (nRw << 16) + nRz;
         return nTmp % nMax;
     }
 };
