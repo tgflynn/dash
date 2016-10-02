@@ -372,8 +372,10 @@ CMasternode *CMasternodeMan::FindRandomNotInSet(std::set<CTxIn> &setToExclude, i
         vpMasternodesShuffled.push_back(&mn);
     }
 
+    InsecureRand insecureRand;
+
     // shuffle pointers
-    std::random_shuffle(vpMasternodesShuffled.begin(), vpMasternodesShuffled.end(), GetRandInt);
+    std::random_shuffle(vpMasternodesShuffled.begin(), vpMasternodesShuffled.end(), insecureRand);
 
     // loop through
     BOOST_FOREACH(CMasternode* pmn, vpMasternodesShuffled) {
