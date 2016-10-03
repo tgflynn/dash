@@ -811,10 +811,16 @@ void CMasternode::UpdateWatchdogVoteTime()
 
 void CMasternode::FlagGovernanceItemsAsDirty()
 {
-    LOCK(cs);
-    std::map<uint256, int>::iterator it = mapGovernanceObjectsVotedOn.begin();
-    while(it != mapGovernanceObjectsVotedOn.end()) {
-        mnodeman.AddDirtyGovernanceObjectHash(it->first);
-        ++it;
+    std::vector<uint256> vecDirty;
+    {
+        LOCK(cs);
+        std::map<uint256, int>::iterator it = mapGovernanceObjectsVotedOn.begin();
+        while(it != mapGovernanceObjectsVotedOn.end()) {
+            vecDirty.push_back(it->first);
+            ++it;
+        }
+    }
+    for(size_t i = 0; i < vecDirty.size(); ++i) {
+        mnodeman.AddDirtyGovernanceObjectHash(vecDirty[i]);
     }
 }
