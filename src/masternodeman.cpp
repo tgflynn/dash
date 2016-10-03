@@ -37,6 +37,7 @@ struct CompareScoreMN
 
 CMasternodeMan::CMasternodeMan() {
     nDsqCount = 0;
+    nLastWatchdogVoteTime = 0;
 }
 
 bool CMasternodeMan::Add(CMasternode &mn)
@@ -782,6 +783,27 @@ void CMasternodeMan::UpdateLastPaid(const CBlockIndex *pindex) {
 
     // every time is like the first time if winners list is not synced
     IsFirstRun = !masternodeSync.IsWinnersListSynced();
+}
+
+void CMasternodeMan::UpdateWatchdogVoteTime(const CTxIn& vin)
+{
+    LOCK(cs);
+    CMasternode* pMN = Find(vin);
+    if(!pMN)  {
+        return;
+    }
+    pMN->UpdateWatchdogVoteTime();
+    nLastWatchdogVoteTime = GetTime();
+}
+
+bool CMasternodeMan::IsWatchdogActive()
+{
+    LOCK(cs);
+    // Check if any masternodes have voted recently, otherwise return false
+    if((GetTime() - nLastWatchdogVoteTime) > MASTERNODE_WATCHDOG_MAX_SECONDS) {
+        return false;
+    }
+    return true;
 }
 
 void CMasternodeMan::AddGovernanceVote(const CTxIn& vin, uint256 nGovernanceObjectHash)

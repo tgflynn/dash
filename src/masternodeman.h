@@ -44,6 +44,8 @@ private:
 
     std::vector<uint256> vecDirtyGovernanceObjectHashes;
 
+    int64_t nLastWatchdogVoteTime;
+
 public:
     // Keep track of all broadcasts I've seen
     map<uint256, CMasternodeBroadcast> mapSeenMasternodeBroadcast;
@@ -154,6 +156,10 @@ public:
         vecDirtyGovernanceObjectHashes.clear();
         return vecTmp;;
     }
+
+    bool IsWatchdogActive();
+
+    void UpdateWatchdogVoteTime(const CTxIn& vin);
 
     void AddGovernanceVote(const CTxIn& vin, uint256 nGovernanceObjectHash);
 

@@ -20,6 +20,7 @@ static const int MASTERNODE_MIN_DSEG_SECONDS      = 10 * 60;
 static const int MASTERNODE_EXPIRATION_SECONDS    = 65 * 60;
 static const int MASTERNODE_REMOVAL_SECONDS       = 75 * 60;
 static const int MASTERNODE_CHECK_SECONDS         = 5;
+static const int MASTERNODE_WATCHDOG_MAX_SECONDS  = 2 * 60 * 60;
 
 //
 // The Masternode Ping Class : Contains a different serialize method for sending pings from masternodes throughout the network
@@ -125,6 +126,7 @@ public:
     int64_t nLastDsq; //the dsq count from the last dsq broadcast of this node
     int64_t nTimeLastChecked;
     int64_t nTimeLastPaid;
+    int64_t nTimeLastWatchdogVote;
     int nActiveState;
     int nCacheCollateralBlock;
     int nBlockLastPaid;
@@ -226,6 +228,8 @@ public:
     void FlagGovernanceItemsAsDirty();
 
     void RemoveGovernanceObject(uint256 nGovernanceObjectHash);
+
+    void UpdateWatchdogVoteTime();
 
     CMasternode& operator=(CMasternode from)
     {
