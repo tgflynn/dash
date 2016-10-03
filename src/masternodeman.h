@@ -41,6 +41,8 @@ private:
     // which Masternodes we've asked for
     std::map<COutPoint, int64_t> mWeAskedForMasternodeListEntry;
 
+    int64_t nLastWatchdogVoteTime;
+
 public:
     // Keep track of all broadcasts I've seen
     map<uint256, CMasternodeBroadcast> mapSeenMasternodeBroadcast;
@@ -135,6 +137,11 @@ public:
     bool CheckMnbAndUpdateMasternodeList(CMasternodeBroadcast mnb, int& nDos);
 
     void UpdateLastPaid(const CBlockIndex *pindex);
+
+    bool IsWatchdogActive();
+
+    void UpdateWatchdogVoteTime(const CTxIn& vin);
+
 };
 
 #endif

@@ -27,6 +27,7 @@ CMasternode::CMasternode() :
     nLastDsq(0),
     nTimeLastChecked(0),
     nTimeLastPaid(0),
+    nTimeLastWatchdogVote(0),
     nActiveState(MASTERNODE_ENABLED),
     nCacheCollateralBlock(0),
     nBlockLastPaid(0),
@@ -46,6 +47,7 @@ CMasternode::CMasternode(CService addrNew, CTxIn vinNew, CPubKey pubKeyCollatera
     nLastDsq(0),
     nTimeLastChecked(0),
     nTimeLastPaid(0),
+    nTimeLastWatchdogVote(0),
     nActiveState(MASTERNODE_ENABLED),
     nCacheCollateralBlock(0),
     nBlockLastPaid(0),
@@ -65,6 +67,7 @@ CMasternode::CMasternode(const CMasternode& other) :
     nLastDsq(other.nLastDsq),
     nTimeLastChecked(other.nTimeLastChecked),
     nTimeLastPaid(other.nTimeLastPaid),
+    nTimeLastWatchdogVote(other.nTimeLastWatchdogVote),
     nActiveState(other.nActiveState),
     nCacheCollateralBlock(other.nCacheCollateralBlock),
     nBlockLastPaid(other.nBlockLastPaid),
@@ -145,6 +148,7 @@ uint256 CMasternode::CalculateScore(int nBlockHeight)
 
 void CMasternode::Check(bool fForce)
 {
+    LOCK(cs);
     //once spent, stop doing the checks
     if(nActiveState == MASTERNODE_OUTPOINT_SPENT) return;
 
@@ -158,7 +162,9 @@ void CMasternode::Check(bool fForce)
                     // or masternode doesn't meet payment protocol requirements ...
                     nProtocolVersion < mnpayments.GetMinMasternodePaymentsProto() ||
                     // or it's our own node and we just updated it to the new protocol but we are still waiting for activation ...
-                    (pubKeyMasternode == activeMasternode.pubKeyMasternode && nProtocolVersion < PROTOCOL_VERSION);
+                    (pubKeyMasternode == activeMasternode.pubKeyMasternode && nProtocolVersion < PROTOCOL_VERSION) ||
+                    // or watchdog is active and the max vote time has expired
+                    (mnodeman.IsWatchdogActive() && (GetTime() - nTimeLastWatchdogVote) > MASTERNODE_WATCHDOG_MAX_SECONDS);
 
     if(fRemove) {
         // it should be removed from the list
@@ -777,6 +783,12 @@ void CMasternode::AddGovernanceVote(uint256 nGovernanceObjectHash)
     } else {
         mapGovernaceObjectsVotedOn.insert(std::make_pair(nGovernanceObjectHash, 1));
     }
+}
+
+void CMasternode::UpdateWatchdogVoteTime()
+{
+    LOCK(cs);
+    nTimeLastWatchdogVote = GetTime();
 }
 
 /**

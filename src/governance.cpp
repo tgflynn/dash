@@ -267,11 +267,15 @@ bool CGovernanceManager::AddGovernanceObject(CGovernanceObject& govobj)
               << ", nObjectType = " << govobj.nObjectType
               << endl; );
 
-    if(govobj.nObjectType == GOVERNANCE_OBJECT_TRIGGER) {
+    switch(govobj.nObjectType) {
+    case GOVERNANCE_OBJECT_TRIGGER:
         mapLastMasternodeTrigger[govobj.vinMasternode.prevout] = nCachedBlockHeight;
         DBG( cout << "CGovernanceManager::AddGovernanceObject Before AddNewTrigger" << endl; );
         triggerman.AddNewTrigger(govobj.GetHash());
         DBG( cout << "CGovernanceManager::AddGovernanceObject After AddNewTrigger" << endl; );
+        break;
+    default:
+        break;
     }
 
     DBG( cout << "CGovernanceManager::AddGovernanceObject END" << endl; );
@@ -559,6 +563,9 @@ bool CGovernanceManager::AddOrUpdateVote(const CGovernanceVote& vote, CNode* pfr
     {
         pGovObj->fDirtyCache = true;
         UpdateCachesAndClean();
+        if(pGovObj->GetObjectType() == GOVERNANCE_OBJECT_WATCHDOG) {
+            mnodeman.UpdateWatchdogVoteTime(vote.GetVinMasternode());
+        }
     } else {
         LogPrintf("Governance object not found! Can't update fDirtyCache - %s\n", vote.GetParentHash().ToString());
     }
@@ -861,6 +868,7 @@ bool CGovernanceObject::IsValidLocally(const CBlockIndex* pindex, std::string& s
     switch(nObjectType) {
         case GOVERNANCE_OBJECT_PROPOSAL:
         case GOVERNANCE_OBJECT_TRIGGER:
+        case GOVERNANCE_OBJECT_WATCHDOG:
             break;
         default:
             strError = strprintf("Invalid object type %d", nObjectType);
@@ -876,8 +884,8 @@ bool CGovernanceObject::IsValidLocally(const CBlockIndex* pindex, std::string& s
 
     // CHECK COLLATERAL IF REQUIRED (HIGH CPU USAGE)
 
-    if(fCheckCollateral) {
-        if(nObjectType == GOVERNANCE_OBJECT_TRIGGER) {
+    if(fCheckCollateral) { 
+        if((nObjectType == GOVERNANCE_OBJECT_TRIGGER) || (nObjectType == GOVERNANCE_OBJECT_WATCHDOG)) {
             std::string strVin = vinMasternode.prevout.ToStringShort();
             CMasternode mn;
             if(!mnodeman.Get(vinMasternode, mn)) {
@@ -936,6 +944,7 @@ CAmount CGovernanceObject::GetMinCollateralFee()
     switch(nObjectType) {
         case GOVERNANCE_OBJECT_PROPOSAL:    return GOVERNANCE_PROPOSAL_FEE_TX;
         case GOVERNANCE_OBJECT_TRIGGER:     return 0;
+        case GOVERNANCE_OBJECT_WATCHDOG:    return 0;
         default:                            return MAX_MONEY;
     }
 }

@@ -35,6 +35,7 @@ static const int MIN_GOVERNANCE_PEER_PROTO_VERSION = 70202;
 static const int GOVERNANCE_OBJECT_UNKNOWN = 0;
 static const int GOVERNANCE_OBJECT_PROPOSAL = 1;
 static const int GOVERNANCE_OBJECT_TRIGGER = 2;
+static const int GOVERNANCE_OBJECT_WATCHDOG = 3;
 
 static const CAmount GOVERNANCE_PROPOSAL_FEE_TX = (0.33*COIN);
 
