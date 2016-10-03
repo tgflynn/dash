@@ -645,7 +645,7 @@ CGovernanceObject::CGovernanceObject(const CGovernanceObject& other)
     strData = other.strData;
     nObjectType = other.nObjectType;
 
-    fUnparsable = true;
+    fUnparsable = other.fUnparsable;
 
     vinMasternode = other.vinMasternode;
     vchSig = other.vchSig;
@@ -787,6 +787,7 @@ void CGovernanceObject::LoadData()
         nObjectType = obj["type"].get_int();
     }
     catch(std::exception& e) {
+        fUnparsable = true;
         std::ostringstream ostr;
         ostr << "CGovernanceObject::LoadData Error parsing JSON"
              << ", e.what() = " << e.what();
@@ -795,6 +796,7 @@ void CGovernanceObject::LoadData()
         return;
     }
     catch(...) {
+        fUnparsable = true;
         std::ostringstream ostr;
         ostr << "CGovernanceObject::LoadData Unknown Error parsing JSON";
         DBG( cout << ostr.str() << endl; );
@@ -850,6 +852,10 @@ bool CGovernanceObject::IsValidLocally(const CBlockIndex* pindex, std::string& s
     if(!pindex) {
         strError = "Tip is NULL";
         return true;
+    }
+
+    if(fUnparsable) {
+        return false;
     }
 
     switch(nObjectType) {
