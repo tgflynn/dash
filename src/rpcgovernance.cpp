@@ -107,8 +107,9 @@ UniValue gobject(const UniValue& params, bool fHelp)
 
         CGovernanceObject govobj(hashParent, nRevision, nTime, uint256(), strData);
 
-        if(govobj.GetObjectType() == GOVERNANCE_OBJECT_TRIGGER) {
-            throw JSONRPCError(RPC_INVALID_PARAMETER, "Trigger objects need not be prepared (however only masternodes can create them)");
+        if((govobj.GetObjectType() == GOVERNANCE_OBJECT_TRIGGER) ||
+           (govobj.GetObjectType() == GOVERNANCE_OBJECT_WATCHDOG)) {
+            throw JSONRPCError(RPC_INVALID_PARAMETER, "Trigger and watchdog objects need not be prepared (however only masternodes can create them)");
         }
 
         std::string strError = "";
@@ -187,7 +188,8 @@ UniValue gobject(const UniValue& params, bool fHelp)
              << endl; );
 
         // Attempt to sign triggers if we are a MN
-        if(govobj.GetObjectType() == GOVERNANCE_OBJECT_TRIGGER) {
+        if((govobj.GetObjectType() == GOVERNANCE_OBJECT_TRIGGER) ||
+           (govobj.GetObjectType() == GOVERNANCE_OBJECT_WATCHDOG)) {
             if(mnFound) {
                 govobj.SetMasternodeInfo(mn.vin);
                 govobj.Sign(activeMasternode.keyMasternode, activeMasternode.pubKeyMasternode);
