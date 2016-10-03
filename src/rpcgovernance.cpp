@@ -12,6 +12,7 @@
 #include "darksend.h"
 #include "governance.h"
 #include "darksend.h"
+#include "masternode.h"
 #include "masternode-payments.h"
 #include "masternode-sync.h"
 #include "masternodeconfig.h"
@@ -815,6 +816,7 @@ UniValue getgovernanceinfo(const UniValue& params, bool fHelp)
 
     UniValue obj(UniValue::VOBJ);
     obj.push_back(Pair("governanceminquorum", Params().GetConsensus().nGovernanceMinQuorum));
+    obj.push_back(Pair("masternodewatchdogmaxseconds", MASTERNODE_WATCHDOG_MAX_SECONDS));
     obj.push_back(Pair("proposalfee", ValueFromAmount(GOVERNANCE_PROPOSAL_FEE_TX)));
     obj.push_back(Pair("superblockcycle", Params().GetConsensus().nSuperblockCycle));
     obj.push_back(Pair("lastsuperblock", nLastSuperblock));
