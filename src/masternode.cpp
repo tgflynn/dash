@@ -149,6 +149,7 @@ uint256 CMasternode::CalculateScore(int nBlockHeight)
 void CMasternode::Check(bool fForce)
 {
     LOCK(cs);
+
     //once spent, stop doing the checks
     if(nActiveState == MASTERNODE_OUTPOINT_SPENT) return;
 
@@ -157,14 +158,10 @@ void CMasternode::Check(bool fForce)
     if(!fForce && (GetTime() - nTimeLastChecked < MASTERNODE_CHECK_SECONDS)) return;
     nTimeLastChecked = GetTime();
 
-    bool fRemove =  // If there were no pings for quite a long time ...
-                    !IsPingedWithin(MASTERNODE_REMOVAL_SECONDS) ||
-                    // or masternode doesn't meet payment protocol requirements ...
-                    nProtocolVersion < mnpayments.GetMinMasternodePaymentsProto() ||
-                    // or it's our own node and we just updated it to the new protocol but we are still waiting for activation ...
-                    (pubKeyMasternode == activeMasternode.pubKeyMasternode && nProtocolVersion < PROTOCOL_VERSION) ||
-                    // or watchdog is active and the max vote time has expired
-                    (mnodeman.IsWatchdogActive() && (GetTime() - nTimeLastWatchdogVote) > MASTERNODE_WATCHDOG_MAX_SECONDS);
+                   // masternode doesn't meet payment protocol requirements ...
+    bool fRemove = nProtocolVersion < mnpayments.GetMinMasternodePaymentsProto() ||
+                   // or it's our own node and we just updated it to the new protocol but we are still waiting for activation ...
+                   (pubKeyMasternode == activeMasternode.pubKeyMasternode && nProtocolVersion < PROTOCOL_VERSION);
 
     if(fRemove) {
         // it should be removed from the list
@@ -206,6 +203,12 @@ void CMasternode::Check(bool fForce)
         }
     }
 
+    bool fWatchdogExpired = (mnodeman.IsWatchdogActive() && ((GetTime() - nTimeLastWatchdogVote) > MASTERNODE_WATCHDOG_MAX_SECONDS));
+    if(fWatchdogExpired) {
+        nActiveState = MASTERNODE_WATCHDOG_EXPIRED;
+        return;
+    }
+
     nActiveState = MASTERNODE_ENABLED; // OK
 }
 
@@ -217,6 +220,7 @@ std::string CMasternode::GetStatus()
         case CMasternode::MASTERNODE_EXPIRED:           return "EXPIRED";
         case CMasternode::MASTERNODE_OUTPOINT_SPENT:    return "OUTPOINT_SPENT";
         case CMasternode::MASTERNODE_REMOVE:            return "REMOVE";
+        case CMasternode::MASTERNODE_WATCHDOG_EXPIRED:  return "WATCHDOG_EXPIRED";
         default:                                        return "UNKNOWN";
     }
 }
@@ -456,7 +460,7 @@ bool CMasternodeBroadcast::CheckInputsAndAdd(int& nDos)
 
     if(pmn != NULL) {
         // nothing to do here if we already know about this masternode and it's (pre)enabled
-        if(pmn->IsEnabled() || pmn->IsPreEnabled()) return true;
+        if(pmn->IsEnabled() || pmn->IsPreEnabled() || pmn->IsWatchdogExpired()) return true;
         // if it's not (pre)enabled, remove old MN first and continue
         mnodeman.Remove(pmn->vin);
     }

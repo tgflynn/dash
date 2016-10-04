@@ -113,7 +113,8 @@ public:
         MASTERNODE_ENABLED,
         MASTERNODE_EXPIRED,
         MASTERNODE_OUTPOINT_SPENT,
-        MASTERNODE_REMOVE
+        MASTERNODE_REMOVE,
+        MASTERNODE_WATCHDOG_EXPIRED
     };
 
     CTxIn vin;
@@ -213,6 +214,8 @@ public:
 
     bool IsEnabled() { return nActiveState == MASTERNODE_ENABLED; }
     bool IsPreEnabled() { return nActiveState == MASTERNODE_PRE_ENABLED; }
+
+    bool IsWatchdogExpired() { return nActiveState == MASTERNODE_PRE_ENABLED; }
 
     std::string GetStatus();
 
