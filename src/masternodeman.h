@@ -64,6 +64,7 @@ public:
         READWRITE(mAskedUsForMasternodeList);
         READWRITE(mWeAskedForMasternodeList);
         READWRITE(mWeAskedForMasternodeListEntry);
+        READWRITE(nLastWatchdogVoteTime);
         READWRITE(nDsqCount);
 
         READWRITE(mapSeenMasternodeBroadcast);

@@ -158,6 +158,7 @@ public:
         READWRITE(nLastDsq);
         READWRITE(nTimeLastChecked);
         READWRITE(nTimeLastPaid);
+        READWRITE(nTimeLastWatchdogVote);
         READWRITE(nActiveState);
         READWRITE(nCacheCollateralBlock);
         READWRITE(nBlockLastPaid);
@@ -184,6 +185,7 @@ public:
         swap(first.nLastDsq, second.nLastDsq);
         swap(first.nTimeLastChecked, second.nTimeLastChecked);
         swap(first.nTimeLastPaid, second.nTimeLastPaid);
+        swap(first.nTimeLastWatchdogVote, second.nTimeLastWatchdogVote);
         swap(first.nActiveState, second.nActiveState);
         swap(first.nCacheCollateralBlock, second.nCacheCollateralBlock);
         swap(first.nBlockLastPaid, second.nBlockLastPaid);
