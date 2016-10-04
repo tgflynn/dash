@@ -77,6 +77,7 @@ void CMasternodeMan::AskForMN(CNode* pnode, CTxIn &vin)
 
 void CMasternodeMan::Check()
 {
+    LogPrint("masternode", "CMasternodeMan::Check -- watchdog active: %d\n", IsWatchdogActive());
     bool fHaveDirtyGovernanceObjects = false;
     {
         LOCK(cs);
@@ -787,13 +788,16 @@ void CMasternodeMan::UpdateLastPaid(const CBlockIndex *pindex) {
 
 void CMasternodeMan::UpdateWatchdogVoteTime(const CTxIn& vin)
 {
+    LogPrint("masternode", "CMasternodeMan::UpdateWatchdogVoteTime - Called vin = %s\n", vin.prevout.ToStringShort());
     LOCK(cs);
     CMasternode* pMN = Find(vin);
     if(!pMN)  {
+        LogPrint("masternode", "CMasternodeMan::UpdateWatchdogVoteTime - MN not found, returning\n");
         return;
     }
     pMN->UpdateWatchdogVoteTime();
     nLastWatchdogVoteTime = GetTime();
+    LogPrint("masternode", "CMasternodeMan::UpdateWatchdogVoteTime nLastWatchdogVoteTime = %d\n", nLastWatchdogVoteTime);
 }
 
 bool CMasternodeMan::IsWatchdogActive()

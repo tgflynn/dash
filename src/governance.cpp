@@ -579,6 +579,7 @@ bool CGovernanceManager::AddOrUpdateVote(const CGovernanceVote& vote, CNode* pfr
         pGovObj->fDirtyCache = true;
         UpdateCachesAndClean();
         if(pGovObj->GetObjectType() == GOVERNANCE_OBJECT_WATCHDOG) {
+            LogPrint("gobject", "CGovernanceManager::AddOrUpdateVote updating watchdog\n");
             mnodeman.UpdateWatchdogVoteTime(vote.GetVinMasternode());
         }
     } else {

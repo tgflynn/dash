@@ -162,9 +162,7 @@ void CMasternode::Check(bool fForce)
                     // or masternode doesn't meet payment protocol requirements ...
                     nProtocolVersion < mnpayments.GetMinMasternodePaymentsProto() ||
                     // or it's our own node and we just updated it to the new protocol but we are still waiting for activation ...
-                    (pubKeyMasternode == activeMasternode.pubKeyMasternode && nProtocolVersion < PROTOCOL_VERSION) ||
-                    // or watchdog is active and the max vote time has expired
-                    (mnodeman.IsWatchdogActive() && (GetTime() - nTimeLastWatchdogVote) > MASTERNODE_WATCHDOG_MAX_SECONDS);
+                                       (pubKeyMasternode == activeMasternode.pubKeyMasternode && nProtocolVersion < PROTOCOL_VERSION);
 
     if(fRemove) {
         // it should be removed from the list
@@ -175,7 +173,12 @@ void CMasternode::Check(bool fForce)
         return;
     }
 
-    if(!IsPingedWithin(MASTERNODE_EXPIRATION_SECONDS)) {
+    bool fWatchdogExpired = (mnodeman.IsWatchdogActive() && (GetTime() - nTimeLastWatchdogVote) > MASTERNODE_WATCHDOG_MAX_SECONDS);
+    if(fWatchdogExpired) {
+        LogPrint("masternode", "CMasternode::Check -- expired watchdog for MN: %s\n", vin.prevout.ToStringShort());
+    }
+
+    if(fWatchdogExpired || !IsPingedWithin(MASTERNODE_EXPIRATION_SECONDS)) {
         nActiveState = MASTERNODE_EXPIRED;
 
         // RESCAN AFFECTED VOTES
