@@ -104,6 +104,8 @@ public:
     /// Clear Masternode vector
     void Clear();
 
+    int CountMasternodes(int protocolVersion = -1);
+
     int CountEnabled(int protocolVersion = -1);
 
     /// Count Masternodes by network type - NET_IPV4, NET_IPV6, NET_TOR

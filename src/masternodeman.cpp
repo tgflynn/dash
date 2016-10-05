@@ -188,6 +188,21 @@ void CMasternodeMan::Clear()
     nLastWatchdogVoteTime = 0;
 }
 
+int CMasternodeMan::CountMasternodes(int protocolVersion)
+{
+    LOCK(cs);
+    int i = 0;
+    protocolVersion = protocolVersion == -1 ? mnpayments.GetMinMasternodePaymentsProto() : protocolVersion;
+
+    BOOST_FOREACH(CMasternode& mn, vMasternodes) {
+        mn.Check();
+        if(mn.nProtocolVersion < protocolVersion) continue;
+        i++;
+    }
+
+    return i;
+}
+
 int CMasternodeMan::CountEnabled(int protocolVersion)
 {
     LOCK(cs);
