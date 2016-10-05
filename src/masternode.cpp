@@ -177,7 +177,9 @@ void CMasternode::Check(bool fForce)
     }
 
     if(!IsPingedWithin(MASTERNODE_EXPIRATION_SECONDS)) {
-        nActiveState = MASTERNODE_EXPIRED;
+        if(nActiveState != MASTERNODE_WATCHDOG_EXPIRED) {
+            nActiveState = MASTERNODE_EXPIRED;
+        }
 
         // RESCAN AFFECTED VOTES
         FlagGovernanceItemsAsDirty();
@@ -185,7 +187,10 @@ void CMasternode::Check(bool fForce)
     }
 
     if(lastPing.sigTime - sigTime < MASTERNODE_MIN_MNP_SECONDS) {
-        nActiveState = MASTERNODE_PRE_ENABLED;
+        if(nActiveState != MASTERNODE_WATCHDOG_EXPIRED) {
+            nActiveState = MASTERNODE_PRE_ENABLED;
+        }
+
         return;
     }
 
