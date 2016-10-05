@@ -892,7 +892,7 @@ bool CGovernanceObject::IsValidLocally(const CBlockIndex* pindex, std::string& s
                 strError = "Masternode not found vin: " + strVin;
                 return false;
             }
-            if((!mn.IsEnabled()) || (!mn.IsWatchdogExpired())) {
+            if((!mn.IsEnabled()) && (!mn.IsWatchdogExpired())) {
                 strError = "Masternode not enabled vin: " + strVin;
                 return false;
             }
