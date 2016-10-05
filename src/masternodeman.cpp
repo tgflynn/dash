@@ -35,6 +35,8 @@ struct CompareScoreMN
     }
 };
 
+const std::string CMasternodeMan::SERIALIZATION_VERSION_STRING = "CMasternodeMan-Version-1";
+
 CMasternodeMan::CMasternodeMan() {
     nDsqCount = 0;
     nLastWatchdogVoteTime = 0;
@@ -78,6 +80,8 @@ void CMasternodeMan::AskForMN(CNode* pnode, CTxIn &vin)
 void CMasternodeMan::Check()
 {
     LOCK(cs);
+
+    LogPrint("masternode", "CMasternodeMan::Check nLastWatchdogVoteTime = %d, IsWatchdogActive() = %d\n", nLastWatchdogVoteTime, IsWatchdogActive());
 
     BOOST_FOREACH(CMasternode& mn, vMasternodes) {
         mn.Check();
@@ -181,10 +185,12 @@ void CMasternodeMan::Clear()
     mapSeenMasternodeBroadcast.clear();
     mapSeenMasternodePing.clear();
     nDsqCount = 0;
+    nLastWatchdogVoteTime = 0;
 }
 
 int CMasternodeMan::CountEnabled(int protocolVersion)
 {
+    LOCK(cs);
     int i = 0;
     protocolVersion = protocolVersion == -1 ? mnpayments.GetMinMasternodePaymentsProto() : protocolVersion;
 
@@ -199,6 +205,7 @@ int CMasternodeMan::CountEnabled(int protocolVersion)
 
 int CMasternodeMan::CountByIP(int nNetworkType)
 {
+    LOCK(cs);
     int nNodeCount = 0;
 
     BOOST_FOREACH(CMasternode& mn, vMasternodes)
@@ -700,6 +707,7 @@ int CMasternodeMan::GetEstimatedMasternodes(int nBlock)
 }
 
 void CMasternodeMan::UpdateMasternodeList(CMasternodeBroadcast mnb) {
+    LOCK(cs);
     mapSeenMasternodePing.insert(make_pair(mnb.lastPing.GetHash(), mnb.lastPing));
     mapSeenMasternodeBroadcast.insert(make_pair(mnb.GetHash(), mnb));
 
@@ -718,6 +726,7 @@ void CMasternodeMan::UpdateMasternodeList(CMasternodeBroadcast mnb) {
 }
 
 bool CMasternodeMan::CheckMnbAndUpdateMasternodeList(CMasternodeBroadcast mnb, int& nDos) {
+    LOCK(cs);
     nDos = 0;
     LogPrint("masternode", "CMasternodeMan::CheckMnbAndUpdateMasternodeList - Masternode broadcast, vin: %s\n", mnb.vin.ToString());
 
@@ -746,6 +755,7 @@ bool CMasternodeMan::CheckMnbAndUpdateMasternodeList(CMasternodeBroadcast mnb, i
 }
 
 void CMasternodeMan::UpdateLastPaid(const CBlockIndex *pindex) {
+    LOCK(cs);
     if(fLiteMode) return;
 
     static bool IsFirstRun = true;

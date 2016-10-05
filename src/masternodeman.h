@@ -24,6 +24,8 @@ extern CMasternodeMan mnodeman;
 class CMasternodeMan
 {
 private:
+    static const std::string SERIALIZATION_VERSION_STRING;
+
     static const int MASTERNODES_LAST_PAID_SCAN_BLOCKS  = 100;
 
     // critical section to protect the inner data structures
@@ -60,6 +62,15 @@ public:
     template <typename Stream, typename Operation>
     inline void SerializationOp(Stream& s, Operation ser_action, int nType, int nVersion) {
         LOCK(cs);
+        std::string strVersion;
+        if(ser_action.ForRead()) {
+            READWRITE(strVersion);
+        }
+        else {
+            strVersion = SERIALIZATION_VERSION_STRING; 
+            READWRITE(strVersion);
+        }
+
         READWRITE(vMasternodes);
         READWRITE(mAskedUsForMasternodeList);
         READWRITE(mWeAskedForMasternodeList);
@@ -69,6 +80,10 @@ public:
 
         READWRITE(mapSeenMasternodeBroadcast);
         READWRITE(mapSeenMasternodePing);
+        if(ser_action.ForRead() && (strVersion != SERIALIZATION_VERSION_STRING)) {
+            LogPrintf("CMasternodeMan::SerializationOp - Incompatible format detected, resetting data\n");
+            Clear();
+        }
     }
 
     CMasternodeMan();
