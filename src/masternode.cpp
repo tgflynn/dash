@@ -87,6 +87,7 @@ CMasternode::CMasternode(const CMasternodeBroadcast& mnb) :
     nLastDsq(mnb.nLastDsq),
     nTimeLastChecked(0),
     nTimeLastPaid(0),
+    nTimeLastWatchdogVote(0),
     nActiveState(MASTERNODE_ENABLED),
     nCacheCollateralBlock(0),
     nBlockLastPaid(0),
@@ -150,6 +151,9 @@ void CMasternode::Check(bool fForce)
 {
     LOCK(cs);
 
+    LogPrint("masternode", "CMasternode::Check start -- vin = %s\n", 
+             vin.prevout.ToStringShort());
+
     //once spent, stop doing the checks
     if(nActiveState == MASTERNODE_OUTPOINT_SPENT) return;
 
@@ -204,6 +208,8 @@ void CMasternode::Check(bool fForce)
     }
 
     bool fWatchdogExpired = (mnodeman.IsWatchdogActive() && ((GetTime() - nTimeLastWatchdogVote) > MASTERNODE_WATCHDOG_MAX_SECONDS));
+    LogPrint("masternode", "CMasternode::Check -- vin = %s,  nTimeLastWatchdogVote = %d, GetTime() = %d, fWatchdogExpired = %d\n", 
+             vin.prevout.ToStringShort(), nTimeLastWatchdogVote, GetTime(), fWatchdogExpired);
     if(fWatchdogExpired) {
         nActiveState = MASTERNODE_WATCHDOG_EXPIRED;
         return;
