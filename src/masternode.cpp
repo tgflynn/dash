@@ -151,6 +151,8 @@ void CMasternode::Check(bool fForce)
 {
     LOCK(cs);
 
+    bool fWatchdogActive = mnodeman.IsWatchdogActive();
+
     LogPrint("masternode", "CMasternode::Check start -- vin = %s\n", 
              vin.prevout.ToStringShort());
 
@@ -161,6 +163,11 @@ void CMasternode::Check(bool fForce)
 
     if(!fForce && (GetTime() - nTimeLastChecked < MASTERNODE_CHECK_SECONDS)) return;
     nTimeLastChecked = GetTime();
+
+    if((nActiveState == MASTERNODE_WATCHDOG_EXPIRED) && !fWatchdogActive) {
+        // Redo the checks
+        nActiveState = MASTERNODE_ENABLED;
+    }
 
                    // masternode doesn't meet payment protocol requirements ...
     bool fRemove = nProtocolVersion < mnpayments.GetMinMasternodePaymentsProto() ||
@@ -212,7 +219,7 @@ void CMasternode::Check(bool fForce)
         }
     }
 
-    bool fWatchdogExpired = (mnodeman.IsWatchdogActive() && ((GetTime() - nTimeLastWatchdogVote) > MASTERNODE_WATCHDOG_MAX_SECONDS));
+    bool fWatchdogExpired = (fWatchdogActive && ((GetTime() - nTimeLastWatchdogVote) > MASTERNODE_WATCHDOG_MAX_SECONDS));
     LogPrint("masternode", "CMasternode::Check -- vin = %s,  nTimeLastWatchdogVote = %d, GetTime() = %d, fWatchdogExpired = %d\n", 
              vin.prevout.ToStringShort(), nTimeLastWatchdogVote, GetTime(), fWatchdogExpired);
     if(fWatchdogExpired) {
