@@ -573,15 +573,27 @@ bool CGovernanceManager::AddOrUpdateVote(const CGovernanceVote& vote, CNode* pfr
     return true;
 }
 
-bool CGovernanceManager::MasternodeRateCheck(const CTxIn& vin)
+bool CGovernanceManager::MasternodeRateCheck(const CTxIn& vin, int nObjectType)
 {
     LOCK(cs);
+
+    int mindiff = 0;
+    switch(nObjectType) {
+    case GOVERNANCE_OBJECT_TRIGGER:
+        mindiff = Params().GetConsensus().nSuperblockCycle - Params().GetConsensus().nSuperblockCycle / 10;
+        break;
+    case GOVERNANCE_OBJECT_WATCHDOG:
+        mindiff = max(0, (24*MASTERNODE_WATCHDOG_MAX_SECONDS/3600)/2 - 1);
+        break;
+    default:
+        break;
+    }
+
     txout_m_it it  = mapLastMasternodeTrigger.find(vin.prevout);
     if(it == mapLastMasternodeTrigger.end()) {
         return true;
     }
     // Allow 1 trigger per mn per cycle, with a small fudge factor
-    int mindiff = Params().GetConsensus().nSuperblockCycle - Params().GetConsensus().nSuperblockCycle / 10;
     if((nCachedBlockHeight - it->second) > mindiff) {
         return true;
     }
@@ -892,10 +904,6 @@ bool CGovernanceObject::IsValidLocally(const CBlockIndex* pindex, std::string& s
                 strError = "Masternode not found vin: " + strVin;
                 return false;
             }
-            if((!mn.IsEnabled()) && (!mn.IsWatchdogExpired())) {
-                strError = "Masternode not enabled vin: " + strVin;
-                return false;
-            }
 
             // Check that we have a valid MN signature
             if(!CheckSignature(mn.pubKeyMasternode)) {
@@ -906,7 +914,7 @@ bool CGovernanceObject::IsValidLocally(const CBlockIndex* pindex, std::string& s
             // Only perform rate check if we are synced because during syncing it is expected
             // that objects will be seen in rapid succession
             if(masternodeSync.IsSynced()) {
-                if(!governance.MasternodeRateCheck(vinMasternode)) {
+                if(!governance.MasternodeRateCheck(vinMasternode, nObjectType)) {
                     strError = "Masternode attempting to create too many objects vin: " + strVin;
                     return false;
                 }

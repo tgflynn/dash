@@ -206,7 +206,7 @@ public:
 
     void AddSeenVote(uint256 nHash, int status);
 
-    bool MasternodeRateCheck(const CTxIn& vin);
+    bool MasternodeRateCheck(const CTxIn& vin, int nObjectType);
 
 };
 
