@@ -186,8 +186,7 @@ void CGovernanceManager::ProcessMessage(CNode* pfrom, std::string& strCommand, C
 
         // FIND THE MASTERNODE OF THE VOTER
 
-        CMasternode* pmn = mnodeman.Find(vote.GetVinMasternode());
-        if(pmn == NULL) {
+        if(!mnodeman.Has(vote.GetVinMasternode())) {
             LogPrint("gobject", "gobject - unknown masternode - vin: %s\n", vote.GetVinMasternode().ToString());
             mnodeman.AskForMN(pfrom, vote.GetVinMasternode());
             return;
@@ -212,7 +211,7 @@ void CGovernanceManager::ProcessMessage(CNode* pfrom, std::string& strCommand, C
         if(AddOrUpdateVote(vote, pfrom, strError)) {
             vote.Relay();
             masternodeSync.AddedBudgetItem(vote.GetHash());
-            pmn->AddGovernanceVote(vote.GetParentHash());
+            mnodeman.AddGovernanceVote(vote.GetVinMasternode(), vote.GetParentHash());
         }
 
         LogPrint("gobject", "NEW governance vote: %s\n", vote.GetHash().ToString());
@@ -287,7 +286,17 @@ void CGovernanceManager::UpdateCachesAndClean()
 {
     LogPrintf("CGovernanceManager::UpdateCachesAndClean \n");
 
+    std::vector<uint256> vecDirtyHashes = mnodeman.GetAndClearDirtyGovernanceObjectHashes();
+
     LOCK(cs);
+
+    for(size_t i = 0; i < vecDirtyHashes.size(); ++i) {
+        object_m_it it = mapObjects.find(vecDirtyHashes[i]);
+        if(it == mapObjects.end()) {
+            continue;
+        }
+        it->second.fDirtyCache = true;
+    }
 
     // DOUBLE CHECK THAT WE HAVE A VALID POINTER TO TIP
 
@@ -326,6 +335,7 @@ void CGovernanceManager::UpdateCachesAndClean()
 
         if(pObj->fCachedDelete || pObj->fExpired) {
             LogPrintf("UpdateCachesAndClean --- erase obj %s\n", (*it).first.ToString());
+            mnodeman.RemoveGovernanceObject(pObj->GetHash());
             mapObjects.erase(it++);
         } else {
             ++it;

@@ -800,11 +800,20 @@ void CMasternodePing::Relay()
 
 void CMasternode::AddGovernanceVote(uint256 nGovernanceObjectHash)
 {
-    if(mapGovernaceObjectsVotedOn.count(nGovernanceObjectHash)) {
-        mapGovernaceObjectsVotedOn[nGovernanceObjectHash]++;
+    if(mapGovernanceObjectsVotedOn.count(nGovernanceObjectHash)) {
+        mapGovernanceObjectsVotedOn[nGovernanceObjectHash]++;
     } else {
-        mapGovernaceObjectsVotedOn.insert(std::make_pair(nGovernanceObjectHash, 1));
+        mapGovernanceObjectsVotedOn.insert(std::make_pair(nGovernanceObjectHash, 1));
     }
+}
+
+void CMasternode::RemoveGovernanceObject(uint256 nGovernanceObjectHash)
+{
+    std::map<uint256, int>::iterator it = mapGovernanceObjectsVotedOn.find(nGovernanceObjectHash);
+    if(it == mapGovernanceObjectsVotedOn.end()) {
+        return;
+    }
+    mapGovernanceObjectsVotedOn.erase(it);
 }
 
 void CMasternode::UpdateWatchdogVoteTime()
@@ -819,14 +828,17 @@ void CMasternode::UpdateWatchdogVoteTime()
 *   - When masternode come and go on the network, we must flag the items they voted on to recalc it's cached flags
 *
 */
-
 void CMasternode::FlagGovernanceItemsAsDirty()
 {
-    std::map<uint256, int>::iterator it = mapGovernaceObjectsVotedOn.begin();
-    while(it != mapGovernaceObjectsVotedOn.end()){
-        CGovernanceObject *pObj = governance.FindGovernanceObject((*it).first);
-
-        if(pObj) pObj->fDirtyCache = true;
-        ++it;
+    std::vector<uint256> vecDirty;
+    {
+        std::map<uint256, int>::iterator it = mapGovernanceObjectsVotedOn.begin();
+        while(it != mapGovernanceObjectsVotedOn.end()) {
+            vecDirty.push_back(it->first);
+            ++it;
+        }
+    }
+    for(size_t i = 0; i < vecDirty.size(); ++i) {
+        mnodeman.AddDirtyGovernanceObjectHash(vecDirty[i]);
     }
 }

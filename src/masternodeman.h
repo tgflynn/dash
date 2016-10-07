@@ -43,6 +43,8 @@ private:
     // which Masternodes we've asked for
     std::map<COutPoint, int64_t> mWeAskedForMasternodeListEntry;
 
+    std::vector<uint256> vecDirtyGovernanceObjectHashes;
+
     int64_t nLastWatchdogVoteTime;
 
 public:
@@ -122,6 +124,8 @@ public:
     bool Get(const CPubKey& pubKeyMasternode, CMasternode& masternode);
     bool Get(const CTxIn& vin, CMasternode& masternode);
 
+    bool Has(const CTxIn& vin);
+
     /// Find an entry in the masternode list that is next to be paid
     CMasternode* GetNextMasternodeInQueueForPayment(int nBlockHeight, bool fFilterSigTime, int& nCount);
 
@@ -156,10 +160,27 @@ public:
 
     void UpdateLastPaid(const CBlockIndex *pindex);
 
+    void AddDirtyGovernanceObjectHash(const uint256& nHash)
+    {
+        LOCK(cs);
+        vecDirtyGovernanceObjectHashes.push_back(nHash);
+    }
+
+    std::vector<uint256> GetAndClearDirtyGovernanceObjectHashes()
+    {
+        LOCK(cs);
+        std::vector<uint256> vecTmp = vecDirtyGovernanceObjectHashes;
+        vecDirtyGovernanceObjectHashes.clear();
+        return vecTmp;;
+    }
+
     bool IsWatchdogActive();
 
     void UpdateWatchdogVoteTime(const CTxIn& vin);
 
+    void AddGovernanceVote(const CTxIn& vin, uint256 nGovernanceObjectHash);
+
+    void RemoveGovernanceObject(uint256 nGovernanceObjectHash);
 };
 
 #endif

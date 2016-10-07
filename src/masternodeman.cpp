@@ -315,6 +315,16 @@ bool CMasternodeMan::Get(const CTxIn& vin, CMasternode& masternode)
     return true;
 }
 
+bool CMasternodeMan::Has(const CTxIn& vin)
+{
+    LOCK(cs);
+    CMasternode* pMN = Find(vin);
+    if(!pMN)  {
+        return false;
+    }
+    return true;
+}
+
 // 
 // Deterministically select the oldest/best masternode to pay on the network
 //
@@ -810,3 +820,20 @@ bool CMasternodeMan::IsWatchdogActive()
     return true;
 }
 
+void CMasternodeMan::AddGovernanceVote(const CTxIn& vin, uint256 nGovernanceObjectHash)
+{
+    LOCK(cs);
+    CMasternode* pMN = Find(vin);
+    if(!pMN)  {
+        return;
+    }
+    pMN->AddGovernanceVote(nGovernanceObjectHash);
+}
+
+void CMasternodeMan::RemoveGovernanceObject(uint256 nGovernanceObjectHash)
+{
+    LOCK(cs);
+    BOOST_FOREACH(CMasternode& mn, vMasternodes) {
+        mn.RemoveGovernanceObject(nGovernanceObjectHash);
+    }
+}

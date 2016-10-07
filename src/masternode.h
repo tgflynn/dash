@@ -136,7 +136,7 @@ public:
     bool fUnitTest;
 
     // KEEP TRACK OF GOVERNANCE ITEMS EACH MASTERNODE HAS VOTE UPON FOR RECALCULATION
-    std::map<uint256, int> mapGovernaceObjectsVotedOn;
+    std::map<uint256, int> mapGovernanceObjectsVotedOn;
 
     CMasternode();
     CMasternode(const CMasternode& other);
@@ -165,7 +165,7 @@ public:
         READWRITE(nProtocolVersion);
         READWRITE(fAllowMixingTx);
         READWRITE(fUnitTest);
-        READWRITE(mapGovernaceObjectsVotedOn);
+        READWRITE(mapGovernanceObjectsVotedOn);
     }
 
     void swap(CMasternode& first, CMasternode& second) // nothrow
@@ -192,7 +192,7 @@ public:
         swap(first.nProtocolVersion, second.nProtocolVersion);
         swap(first.fAllowMixingTx, second.fAllowMixingTx);
         swap(first.fUnitTest, second.fUnitTest);
-        swap(first.mapGovernaceObjectsVotedOn, second.mapGovernaceObjectsVotedOn);
+        swap(first.mapGovernanceObjectsVotedOn, second.mapGovernanceObjectsVotedOn);
     }
 
     // CALCULATE A RANK AGAINST OF GIVEN BLOCK
@@ -231,8 +231,8 @@ public:
     void AddGovernanceVote(uint256 nGovernanceObjectHash);
     // RECALCULATE CACHED STATUS FLAGS FOR ALL AFFECTED OBJECTS
     void FlagGovernanceItemsAsDirty();
-    // TODO: There probably should be some method to clean mapGovernaceObjectsVotedOn map
-    // under some conditions. We shouldn't store everything in memory forever.
+
+    void RemoveGovernanceObject(uint256 nGovernanceObjectHash);
 
     void UpdateWatchdogVoteTime();
 
