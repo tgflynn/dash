@@ -595,7 +595,7 @@ bool CGovernanceManager::MasternodeRateCheck(const CTxIn& vin, int nObjectType)
         mindiff = Params().GetConsensus().nSuperblockCycle - Params().GetConsensus().nSuperblockCycle / 10;
         break;
     case GOVERNANCE_OBJECT_WATCHDOG:
-        mindiff = max(0, (24*MASTERNODE_WATCHDOG_MAX_SECONDS/3600)/2 - 1);
+        mindiff = 1;
         break;
     default:
         break;
