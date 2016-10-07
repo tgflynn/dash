@@ -742,7 +742,7 @@ bool CMasternodePing::CheckAndUpdate(int& nDos, bool fRequireEnabled, bool fChec
         return false;
     }
 
-    if (fRequireEnabled && !pmn->IsEnabled() && !pmn->IsPreEnabled()) return false;
+    if (fRequireEnabled && !pmn->IsEnabled() && !pmn->IsPreEnabled() && !pmn->IsWatchdogExpired()) return false;
 
     // LogPrintf("mnping - Found corresponding mn for vin: %s\n", vin.prevout.ToStringShort());
     // update only if there is no known ping for this masternode or
