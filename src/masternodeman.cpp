@@ -837,3 +837,43 @@ void CMasternodeMan::RemoveGovernanceObject(uint256 nGovernanceObjectHash)
         mn.RemoveGovernanceObject(nGovernanceObjectHash);
     }
 }
+
+void CMasternodeMan::CheckMasternode(const CTxIn& vin, bool fForce)
+{
+    LOCK(cs);
+    CMasternode* pMN = Find(vin);
+    if(!pMN)  {
+        return;
+    }
+    pMN->Check(fForce);
+}
+
+void CMasternodeMan::CheckMasternode(const CPubKey& pubKeyMasternode, bool fForce)
+{
+    LOCK(cs);
+    CMasternode* pMN = Find(pubKeyMasternode);
+    if(!pMN)  {
+        return;
+    }
+    pMN->Check(fForce);
+}
+
+int CMasternodeMan::GetMasternodeState(const CTxIn& vin)
+{
+    LOCK(cs);
+    CMasternode* pMN = Find(vin);
+    if(!pMN)  {
+        return CMasternode::MASTERNODE_REMOVE;
+    }
+    return pMN->nActiveState;
+}
+
+int CMasternodeMan::GetMasternodeState(const CPubKey& pubKeyMasternode)
+{
+    LOCK(cs);
+    CMasternode* pMN = Find(pubKeyMasternode);
+    if(!pMN)  {
+        return CMasternode::MASTERNODE_REMOVE;
+    }
+    return pMN->nActiveState;
+}

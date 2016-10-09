@@ -181,6 +181,14 @@ public:
     void AddGovernanceVote(const CTxIn& vin, uint256 nGovernanceObjectHash);
 
     void RemoveGovernanceObject(uint256 nGovernanceObjectHash);
+
+    void CheckMasternode(const CTxIn& vin, bool fForce = false);
+
+    void CheckMasternode(const CPubKey& pubKeyMasternode, bool fForce = false);
+
+    int GetMasternodeState(const CTxIn& vin);
+
+    int GetMasternodeState(const CPubKey& pubKeyMasternode);
 };
 
 #endif

@@ -32,12 +32,12 @@ void CActiveMasternode::ManageState()
     if(nState == ACTIVE_MASTERNODE_SYNC_IN_PROCESS) nState = ACTIVE_MASTERNODE_INITIAL;
 
     if(nState == ACTIVE_MASTERNODE_INITIAL) {
-        CMasternode *pmn;
-        pmn = mnodeman.Find(pubKeyMasternode);
-        if(pmn != NULL) {
-            pmn->Check();
-            if((pmn->IsEnabled() || pmn->IsPreEnabled()) && pmn->nProtocolVersion == PROTOCOL_VERSION)
-                EnableRemoteMasterNode(pmn->vin, pmn->addr);
+        mnodeman.CheckMasternode(pubKeyMasternode);
+        CMasternode mn;
+        if(mnodeman.Get(pubKeyMasternode, mn)) {
+            if((mn.IsEnabled() || mn.IsPreEnabled()) && mn.nProtocolVersion == PROTOCOL_VERSION) {
+                EnableRemoteMasterNode(mn.vin, mn.addr);
+            }
         }
     }
 
@@ -47,16 +47,19 @@ void CActiveMasternode::ManageState()
         nState = ACTIVE_MASTERNODE_NOT_CAPABLE;
         strNotCapableReason = "";
 
-        if(pwalletMain->IsLocked()) {
-            strNotCapableReason = "Wallet is locked.";
-            LogPrintf("CActiveMasternode::ManageState -- not capable: %s\n", strNotCapableReason);
-            return;
-        }
+        {
+            LOCK(pwalletMain->cs_wallet);
+            if(pwalletMain->IsLocked()) {
+                strNotCapableReason = "Wallet is locked.";
+                LogPrintf("CActiveMasternode::ManageState -- not capable: %s\n", strNotCapableReason);
+                return;
+            }
 
-        if(pwalletMain->GetBalance() == 0) {
-            nState = ACTIVE_MASTERNODE_INITIAL;
-            LogPrintf("CActiveMasternode::ManageState() -- %s\n", GetStatus());
-            return;
+            if(pwalletMain->GetBalance() == 0) {
+                nState = ACTIVE_MASTERNODE_INITIAL;
+                LogPrintf("CActiveMasternode::ManageState() -- %s\n", GetStatus());
+                return;
+            }
         }
 
         if(!GetLocal(service)) {
