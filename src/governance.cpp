@@ -36,6 +36,8 @@ CGovernanceManager::CGovernanceManager()
       mapSeenGovernanceObjects(),
       mapSeenVotes(),
       mapOrphanVotes(),
+      mapVotesByHash(),
+      mapVotesByType(),
       mapLastMasternodeTrigger(),
       cs()
 {}
@@ -616,79 +618,73 @@ bool CGovernanceManager::MasternodeRateCheck(const CTxIn& vin, int nObjectType)
 }
 
 CGovernanceObject::CGovernanceObject()
+    : cs(),
+      nHashParent(),
+      nRevision(0),
+      nTime(0),
+      nCollateralHash(),
+      strData(),
+      nObjectType(GOVERNANCE_OBJECT_UNKNOWN),
+      vinMasternode(),
+      vchSig(),
+      fCachedLocalValidity(false),
+      strLocalValidityError(),
+      fCachedFunding(false),
+      fCachedValid(true),
+      fCachedDelete(false),
+      fCachedEndorsed(false),
+      fDirtyCache(true),
+      fUnparsable(false),
+      fExpired(false)
 {
-    // MAIN OBJECT DATA
-
-    nTime = 0;
-    nObjectType = GOVERNANCE_OBJECT_UNKNOWN;
-
-    nHashParent = uint256(); //parent object, 0 is root
-    nRevision = 0; //object revision in the system
-    nCollateralHash = uint256(); //fee-tx
-
-    // CACHING FOR VARIOUS FLAGS
-
-    fCachedFunding = false;
-    fCachedValid = true;
-    fCachedDelete = false;
-    fCachedEndorsed = false;
-    fDirtyCache = true;
-    fUnparsable = false;
-    fExpired = false;
-
     // PARSE JSON DATA STORAGE (STRDATA)
     LoadData();
 }
 
 CGovernanceObject::CGovernanceObject(uint256 nHashParentIn, int nRevisionIn, int64_t nTimeIn, uint256 nCollateralHashIn, std::string strDataIn)
+    : cs(),
+      nHashParent(nHashParentIn),
+      nRevision(nRevisionIn),
+      nTime(nTimeIn),
+      nCollateralHash(nCollateralHashIn),
+      strData(strDataIn),
+      nObjectType(GOVERNANCE_OBJECT_UNKNOWN),
+      vinMasternode(),
+      vchSig(),
+      fCachedLocalValidity(false),
+      strLocalValidityError(),
+      fCachedFunding(false),
+      fCachedValid(true),
+      fCachedDelete(false),
+      fCachedEndorsed(false),
+      fDirtyCache(true),
+      fUnparsable(false),
+      fExpired(false)
 {
-    // MAIN OBJECT DATA
-
-    nHashParent = nHashParentIn; //parent object, 0 is root
-    nRevision = nRevisionIn; //object revision in the system
-    nTime = nTimeIn;
-    nCollateralHash = nCollateralHashIn; //fee-tx
-    nObjectType = GOVERNANCE_OBJECT_UNKNOWN; // Avoid having an uninitialized variable
-    strData = strDataIn;
-
-    // CACHING FOR VARIOUS FLAGS
-
-    fCachedFunding = false;
-    fCachedValid = true;
-    fCachedDelete = false;
-    fCachedEndorsed = false;
-    fDirtyCache = true;
-    fUnparsable = false;
-    fExpired = false;
-
     // PARSE JSON DATA STORAGE (STRDATA)
     LoadData();
 }
 
 CGovernanceObject::CGovernanceObject(const CGovernanceObject& other)
-{
-    // COPY OTHER OBJECT'S DATA INTO THIS OBJECT
-
-    nHashParent = other.nHashParent;
-    nRevision = other.nRevision;
-    nTime = other.nTime;
-    nCollateralHash = other.nCollateralHash;
-    strData = other.strData;
-    nObjectType = other.nObjectType;
-
-    fUnparsable = other.fUnparsable;
-
-    vinMasternode = other.vinMasternode;
-    vchSig = other.vchSig;
-
-    // caching
-    fCachedFunding = other.fCachedFunding;
-    fCachedValid = other.fCachedValid;
-    fCachedDelete = other.fCachedDelete;
-    fCachedEndorsed = other.fCachedEndorsed;
-    fDirtyCache = other.fDirtyCache;
-    fExpired = other.fExpired;
-}
+    : cs(),
+      nHashParent(other.nHashParent),
+      nRevision(other.nRevision),
+      nTime(other.nTime),
+      nCollateralHash(other.nCollateralHash),
+      strData(other.strData),
+      nObjectType(other.nObjectType),
+      vinMasternode(other.vinMasternode),
+      vchSig(other.vchSig),
+      fCachedLocalValidity(other.fCachedLocalValidity),
+      strLocalValidityError(other.strLocalValidityError),
+      fCachedFunding(other.fCachedFunding),
+      fCachedValid(other.fCachedValid),
+      fCachedDelete(other.fCachedDelete),
+      fCachedEndorsed(other.fCachedEndorsed),
+      fDirtyCache(other.fDirtyCache),
+      fUnparsable(other.fUnparsable),
+      fExpired(other.fExpired)
+{}
 
 void CGovernanceObject::SetMasternodeInfo(const CTxIn& vin)
 {
