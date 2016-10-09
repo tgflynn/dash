@@ -100,8 +100,10 @@ void CActiveMasternode::ManageState()
                 return;
             }
 
-            LOCK(pwalletMain->cs_wallet);
-            pwalletMain->LockCoin(vin.prevout);
+            {
+                LOCK(pwalletMain->cs_wallet);
+                pwalletMain->LockCoin(vin.prevout);
+            }
 
             CMasternodeBroadcast mnb;
             if(!CMasternodeBroadcast::Create(vin, service, keyCollateral, pubKeyCollateral, keyMasternode, pubKeyMasternode, strError, mnb)) {
