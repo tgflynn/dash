@@ -47,19 +47,16 @@ void CActiveMasternode::ManageState()
         nState = ACTIVE_MASTERNODE_NOT_CAPABLE;
         strNotCapableReason = "";
 
-        {
-            LOCK(pwalletMain->cs_wallet);
-            if(pwalletMain->IsLocked()) {
-                strNotCapableReason = "Wallet is locked.";
-                LogPrintf("CActiveMasternode::ManageState -- not capable: %s\n", strNotCapableReason);
-                return;
-            }
+        if(pwalletMain->IsLocked()) {
+            strNotCapableReason = "Wallet is locked.";
+            LogPrintf("CActiveMasternode::ManageState -- not capable: %s\n", strNotCapableReason);
+            return;
+        }
 
-            if(pwalletMain->GetBalance() == 0) {
-                nState = ACTIVE_MASTERNODE_INITIAL;
-                LogPrintf("CActiveMasternode::ManageState() -- %s\n", GetStatus());
-                return;
-            }
+        if(pwalletMain->GetBalance() == 0) {
+            nState = ACTIVE_MASTERNODE_INITIAL;
+            LogPrintf("CActiveMasternode::ManageState() -- %s\n", GetStatus());
+            return;
         }
 
         if(!GetLocal(service)) {
