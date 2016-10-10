@@ -35,7 +35,8 @@ void CActiveMasternode::ManageState()
         mnodeman.CheckMasternode(pubKeyMasternode);
         CMasternode mn;
         if(mnodeman.Get(pubKeyMasternode, mn)) {
-            if((mn.IsEnabled() || mn.IsPreEnabled()) && mn.nProtocolVersion == PROTOCOL_VERSION) {
+            if((mn.IsEnabled() || mn.IsPreEnabled() || mn.IsWatchdogExpired()) && 
+               mn.nProtocolVersion == PROTOCOL_VERSION) {
                 EnableRemoteMasterNode(mn.vin, mn.addr);
             }
         }
