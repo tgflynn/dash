@@ -1298,6 +1298,11 @@ bool CDarksendPool::DoAutomaticDenominating(bool fDryRun)
     if(!pwalletMain || pwalletMain->IsLocked(true)) return false;
     if(nState == POOL_STATE_ERROR || nState == POOL_STATE_SUCCESS) return false;
 
+    if(!masternodeSync.IsMasternodeListSynced()) {
+        strAutoDenomResult = _("Can't mix while sync in progress.");
+        return false;
+    }
+
     switch(nWalletBackups) {
         case 0:
             LogPrint("privatesend", "CDarksendPool::DoAutomaticDenominating -- Automatic backups disabled, no mixing available.\n");
@@ -1366,11 +1371,6 @@ bool CDarksendPool::DoAutomaticDenominating(bool fDryRun)
     TRY_LOCK(cs_darksend, lockDS);
     if(!lockDS) {
         strAutoDenomResult = _("Lock is already in place.");
-        return false;
-    }
-
-    if(!masternodeSync.IsBlockchainSynced()) {
-        strAutoDenomResult = _("Can't mix while sync in progress.");
         return false;
     }
 
@@ -1504,12 +1504,14 @@ bool CDarksendPool::DoAutomaticDenominating(bool fDryRun)
         }
     }
 
-    //if we've used 90% of the Masternode list then drop all the oldest first
-    int nThreshold = (int)(mnodeman.CountEnabled(MIN_PRIVATESEND_PEER_PROTO_VERSION) * 0.9);
-    LogPrint("privatesend", "Checking vecMasternodesUsed: size: %d, threshold: %d\n", (int)vecMasternodesUsed.size(), nThreshold);
-    while((int)vecMasternodesUsed.size() > nThreshold) {
-        vecMasternodesUsed.erase(vecMasternodesUsed.begin());
-        LogPrint("privatesend", "  vecMasternodesUsed: size: %d, threshold: %d\n", (int)vecMasternodesUsed.size(), nThreshold);
+    // If we've used 90% of the Masternode list then drop the oldest first ~30%
+    int nThreshold_high = (int)(mnodeman.CountEnabled(MIN_PRIVATESEND_PEER_PROTO_VERSION) * 0.9);
+    int nThreshold_low = nThreshold_high * 0.7;
+    LogPrint("privatesend", "Checking vecMasternodesUsed: size: %d, threshold: %d\n", (int)vecMasternodesUsed.size(), nThreshold_high);
+
+    if((int)vecMasternodesUsed.size() > nThreshold_high) {
+        vecMasternodesUsed.erase(vecMasternodesUsed.begin(), vecMasternodesUsed.begin() + vecMasternodesUsed.size() - nThreshold_low);
+        LogPrint("privatesend", "  vecMasternodesUsed: new size: %d, threshold: %d\n", (int)vecMasternodesUsed.size(), nThreshold_high);
     }
 
     bool fUseQueue = insecure_rand()%100 > 33;

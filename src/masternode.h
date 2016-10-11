@@ -219,6 +219,8 @@ public:
 
     bool IsWatchdogExpired() { return nActiveState == MASTERNODE_WATCHDOG_EXPIRED; }
 
+    bool IsValidNetAddr();
+
     std::string GetStatus();
 
     int GetCollateralAge();
