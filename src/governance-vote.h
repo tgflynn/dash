@@ -150,8 +150,12 @@ public:
 
     std::string ToString()
     {
-        std::string strRet = CGovernanceVoting::ConvertOutcomeToString(GetOutcome()) + ":" + CGovernanceVoting::ConvertSignalToString(GetSignal());
-        return strRet;
+        std::ostringstream ostr;
+        ostr << vinMasternode.ToString() << ":"
+             << nTime << ":"
+             << CGovernanceVoting::ConvertOutcomeToString(GetOutcome()) << ":"
+             << CGovernanceVoting::ConvertSignalToString(GetSignal());
+        return ostr.str();
     }
 
     /**
