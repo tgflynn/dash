@@ -29,7 +29,6 @@ void CActiveMasternode::ManageState()
 
     if(eType == MASTERNODE_UNKNOWN) {
         ManageStateInitial();
-        return;
     }
 
     if(eType == MASTERNODE_REMOTE) {
@@ -39,9 +38,11 @@ void CActiveMasternode::ManageState()
         ManageStateLocal();
     }
 
-    std::string strError;
-    if(!SendMasternodePing(strError)) {
-        LogPrintf("CActiveMasternode::ManageState -- Error on SendMasternodePing(): %s\n", strError);
+    if(fPingerEnabled) {
+        std::string strError;
+        if(!SendMasternodePing(strError)) {
+            LogPrintf("CActiveMasternode::ManageState -- Error on SendMasternodePing(): %s\n", strError);
+        }
     }
 }
 
@@ -159,7 +160,6 @@ void CActiveMasternode::ManageStateInitial()
 
     if(pwalletMain->GetMasternodeVinAndKeys(vin, pubKeyCollateral, keyCollateral)) {
         eType = MASTERNODE_LOCAL;
-        ManageStateLocal();
     }
 
     eType = MASTERNODE_REMOTE;
@@ -167,22 +167,25 @@ void CActiveMasternode::ManageStateInitial()
 
 void CActiveMasternode::ManageStateRemote()
 {
-    if(nState == ACTIVE_MASTERNODE_STARTED) {
-        return;
-    }
-
-    if(nState == ACTIVE_MASTERNODE_INITIAL) {
-        mnodeman.CheckMasternode(pubKeyMasternode);
-        CMasternode mn;
-        if(mnodeman.Get(pubKeyMasternode, mn)) {
-            vin = mn.vin;
-            service = mn.addr;
-            fPingerEnabled = true;
-            if((mn.IsEnabled() || mn.IsPreEnabled() || mn.IsWatchdogExpired()) &&
-               (mn.nProtocolVersion == PROTOCOL_VERSION)) {
-                nState = ACTIVE_MASTERNODE_STARTED;
-            }
+    mnodeman.CheckMasternode(pubKeyMasternode);
+    CMasternode mn;
+    if(mnodeman.Get(pubKeyMasternode, mn)) {
+        vin = mn.vin;
+        service = mn.addr;
+        fPingerEnabled = true;
+        if((mn.IsEnabled() || mn.IsPreEnabled() || mn.IsWatchdogExpired()) &&
+           (mn.nProtocolVersion == PROTOCOL_VERSION)) {
+            nState = ACTIVE_MASTERNODE_STARTED;
         }
+        else {
+            nState = ACTIVE_MASTERNODE_NOT_CAPABLE;
+            strNotCapableReason = "Masternode in EXPIRED state";
+        }
+    }
+    else {
+        fPingerEnabled = false;
+        strNotCapableReason = "Masternode not in masternode list";
+        nState = ACTIVE_MASTERNODE_NOT_CAPABLE;
     }
 }
 
@@ -225,5 +228,6 @@ void CActiveMasternode::ManageStateLocal()
         //send to all peers
         LogPrintf("CActiveMasternode::ManageStateLocal -- Relay broadcast, vin=%s\n", vin.ToString());
         mnb.Relay();
+        fPingerEnabled = true;
     }
 }
