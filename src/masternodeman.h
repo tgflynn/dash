@@ -189,6 +189,10 @@ public:
     int GetMasternodeState(const CTxIn& vin);
 
     int GetMasternodeState(const CPubKey& pubKeyMasternode);
+
+    bool IsMasternodePingedWithin(const CTxIn& vin, int nSeconds, int64_t nTimeToCheckAt = -1);
+
+    void SetMasternodeLastPing(const CTxIn& vin, const CMasternodePing& mnp);
 };
 
 #endif

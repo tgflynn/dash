@@ -883,3 +883,30 @@ int CMasternodeMan::GetMasternodeState(const CPubKey& pubKeyMasternode)
     }
     return pMN->nActiveState;
 }
+
+bool CMasternodeMan::IsMasternodePingedWithin(const CTxIn& vin, int nSeconds, int64_t nTimeToCheckAt)
+{
+    LOCK(cs);
+    CMasternode* pMN = Find(vin);
+    if(!pMN)  {
+        return false;
+    }
+    return pMN->IsPingedWithin(nSeconds, nTimeToCheckAt);
+}
+
+void CMasternodeMan::SetMasternodeLastPing(const CTxIn& vin, const CMasternodePing& mnp)
+{
+    LOCK(cs);
+    CMasternode* pMN = Find(vin);
+    if(!pMN)  {
+        return;
+    }
+    pMN->lastPing = mnp;
+    mapSeenMasternodePing.insert(std::make_pair(mnp.GetHash(), mnp));
+
+    CMasternodeBroadcast mnb(*pMN);
+    uint256 hash = mnb.GetHash();
+    if(mapSeenMasternodeBroadcast.count(hash)) {
+        mapSeenMasternodeBroadcast[hash].lastPing = mnp;
+    }
+}
