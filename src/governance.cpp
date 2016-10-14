@@ -907,15 +907,15 @@ bool CGovernanceObject::IsValidLocally(const CBlockIndex* pindex, std::string& s
     if(fCheckCollateral) { 
         if((nObjectType == GOVERNANCE_OBJECT_TRIGGER) || (nObjectType == GOVERNANCE_OBJECT_WATCHDOG)) {
             std::string strVin = vinMasternode.prevout.ToStringShort();
-            CMasternode mn;
-            if(!mnodeman.Get(vinMasternode, mn)) {
+            masternode_info_t infoMn = mnodeman.GetMasternodeInfo(vinMasternode);
+            if(!infoMn.fInfoValid) {
                 strError = "Masternode not found vin: " + strVin;
                 return false;
             }
 
             // Check that we have a valid MN signature
-            if(!CheckSignature(mn.pubKeyMasternode)) {
-                strError = "Invalid masternode signature for: " + strVin + ", pubkey id = " + mn.pubKeyMasternode.GetID().ToString();
+            if(!CheckSignature(infoMn.pubKeyMasternode)) {
+                strError = "Invalid masternode signature for: " + strVin + ", pubkey id = " + infoMn.pubKeyMasternode.GetID().ToString();
                 return false;
             }
 

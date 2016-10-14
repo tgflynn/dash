@@ -96,6 +96,36 @@ public:
 
 };
 
+struct masternode_info_t {
+
+    masternode_info_t()
+        : vin(),
+          addr(),
+          pubKeyCollateralAddress(),
+          pubKeyMasternode(),
+          sigTime(0),
+          nLastDsq(0),
+          nTimeLastChecked(0),
+          nTimeLastPaid(0),
+          nTimeLastWatchdogVote(0),
+          nActiveState(0),
+          nProtocolVersion(0),
+          fInfoValid(false)
+        {}
+
+    CTxIn vin;
+    CService addr;
+    CPubKey pubKeyCollateralAddress;
+    CPubKey pubKeyMasternode;
+    int64_t sigTime; //mnb message time
+    int64_t nLastDsq; //the dsq count from the last dsq broadcast of this node
+    int64_t nTimeLastChecked;
+    int64_t nTimeLastPaid;
+    int64_t nTimeLastWatchdogVote;
+    int nActiveState;
+    int nProtocolVersion;
+    bool fInfoValid;
+};
 
 //
 // The Masternode Class. For managing the Darksend process. It contains the input of the 1000DRK, signature to prove
@@ -220,6 +250,8 @@ public:
     bool IsWatchdogExpired() { return nActiveState == MASTERNODE_WATCHDOG_EXPIRED; }
 
     bool IsValidNetAddr();
+
+    masternode_info_t GetInfo();
 
     std::string GetStatus();
 

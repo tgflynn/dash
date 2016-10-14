@@ -168,13 +168,15 @@ void CActiveMasternode::ManageStateInitial()
 void CActiveMasternode::ManageStateRemote()
 {
     mnodeman.CheckMasternode(pubKeyMasternode);
-    CMasternode mn;
-    if(mnodeman.Get(pubKeyMasternode, mn)) {
-        vin = mn.vin;
-        service = mn.addr;
+    masternode_info_t infoMn = mnodeman.GetMasternodeInfo(pubKeyMasternode);
+    if(infoMn.fInfoValid) {
+        vin = infoMn.vin;
+        service = infoMn.addr;
         fPingerEnabled = true;
-        if((mn.IsEnabled() || mn.IsPreEnabled() || mn.IsWatchdogExpired()) &&
-           (mn.nProtocolVersion == PROTOCOL_VERSION)) {
+        if(((infoMn.nActiveState == CMasternode::MASTERNODE_ENABLED) ||
+            (infoMn.nActiveState == CMasternode::MASTERNODE_PRE_ENABLED) ||
+            (infoMn.nActiveState == CMasternode::MASTERNODE_WATCHDOG_EXPIRED)) &&
+           (infoMn.nProtocolVersion == PROTOCOL_VERSION)) {
             nState = ACTIVE_MASTERNODE_STARTED;
         }
         else {

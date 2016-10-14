@@ -230,6 +230,24 @@ bool CMasternode::IsValidNetAddr()
             (addr.IsIPv4() && IsReachable(addr) && addr.IsRoutable());
 }
 
+masternode_info_t CMasternode::GetInfo()
+{
+    masternode_info_t info;
+    info.vin = vin;
+    info.addr = addr;
+    info.pubKeyCollateralAddress = pubKeyCollateralAddress;
+    info.pubKeyMasternode = pubKeyMasternode;
+    info.sigTime = sigTime;
+    info.nLastDsq = nLastDsq;
+    info.nTimeLastChecked = nTimeLastChecked;
+    info.nTimeLastPaid = nTimeLastPaid;
+    info.nTimeLastWatchdogVote = nTimeLastWatchdogVote;
+    info.nActiveState = nActiveState;
+    info.nProtocolVersion = nProtocolVersion;
+    info.fInfoValid = true;
+    return info;
+}
+
 std::string CMasternode::GetStatus()
 {
     switch(nActiveState) {
