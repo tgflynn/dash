@@ -137,24 +137,7 @@ void CActiveMasternode::ManageStateInitial()
 {
     LogPrint("masternode", "CActiveMasternode::ManageStateInitial -- Start status = %s, type = %s, pinger enabled = %d\n", GetStatus(), GetType(), fPingerEnabled);
 
-    if(!pwalletMain) {
-        strNotCapableReason = "Wallet not available.";
-        LogPrintf("CActiveMasternode::ManageStateInitial -- not capable: %s\n", strNotCapableReason);
-        return;
-    }
-
-    if(pwalletMain->IsLocked()) {
-        strNotCapableReason = "Wallet is locked.";
-        LogPrintf("CActiveMasternode::ManageStateInitial -- not capable: %s\n", strNotCapableReason);
-        return;
-    }
-
-    if(pwalletMain->GetBalance() == 0) {
-        strNotCapableReason = "Wallet balance is 0.";
-        LogPrintf("CActiveMasternode::ManageStateInitial -- not capable: %s\n", strNotCapableReason);
-        return;
-    }
-
+    // Check that our local network configuration is correct
     if(!GetLocal(service)) {
         strNotCapableReason = "Can't detect external address. Please consider using the externalip configuration option if problem persists.";
         LogPrintf("CActiveMasternode::ManageStateInitial -- not capable: %s\n", strNotCapableReason);
@@ -182,15 +165,37 @@ void CActiveMasternode::ManageStateInitial()
         return;
     }
 
+    // Default to REMOTE
+    eType = MASTERNODE_REMOTE;
+
+    // Check if wallet funds are available
+    if(!pwalletMain) {
+        strNotCapableReason = "Wallet not available.";
+        LogPrintf("CActiveMasternode::ManageStateInitial -- not capable: %s\n", strNotCapableReason);
+        return;
+    }
+
+    if(pwalletMain->IsLocked()) {
+        strNotCapableReason = "Wallet is locked.";
+        LogPrintf("CActiveMasternode::ManageStateInitial -- not capable: %s\n", strNotCapableReason);
+        return;
+    }
+
+    if(pwalletMain->GetBalance() < 1000*COIN) {
+        strNotCapableReason = "Wallet balance is < 1000 DASH";
+        LogPrintf("CActiveMasternode::ManageStateInitial -- not capable: %s\n", strNotCapableReason);
+        return;
+    }
+
     // Choose coins to use
     CPubKey pubKeyCollateral;
     CKey keyCollateral;
 
+    // If collateral is found switch to LOCAL mode
     if(pwalletMain->GetMasternodeVinAndKeys(vin, pubKeyCollateral, keyCollateral)) {
         eType = MASTERNODE_LOCAL;
     }
 
-    eType = MASTERNODE_REMOTE;
     LogPrint("masternode", "CActiveMasternode::ManageStateInitial -- End status = %s, type = %s, pinger enabled = %d\n", GetStatus(), GetType(), fPingerEnabled);
 }
 
@@ -200,13 +205,17 @@ void CActiveMasternode::ManageStateRemote()
     mnodeman.CheckMasternode(pubKeyMasternode);
     masternode_info_t infoMn = mnodeman.GetMasternodeInfo(pubKeyMasternode);
     if(infoMn.fInfoValid) {
+        if(infoMn.nProtocolVersion != PROTOCOL_VERSION) {
+            nState = ACTIVE_MASTERNODE_NOT_CAPABLE;
+            strNotCapableReason = "Invalid protocol version";
+            return;
+        }
         vin = infoMn.vin;
         service = infoMn.addr;
         fPingerEnabled = true;
         if(((infoMn.nActiveState == CMasternode::MASTERNODE_ENABLED) ||
             (infoMn.nActiveState == CMasternode::MASTERNODE_PRE_ENABLED) ||
-            (infoMn.nActiveState == CMasternode::MASTERNODE_WATCHDOG_EXPIRED)) &&
-           (infoMn.nProtocolVersion == PROTOCOL_VERSION)) {
+            (infoMn.nActiveState == CMasternode::MASTERNODE_WATCHDOG_EXPIRED))) {
             nState = ACTIVE_MASTERNODE_STARTED;
         }
         else {
