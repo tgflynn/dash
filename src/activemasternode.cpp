@@ -15,7 +15,11 @@ CActiveMasternode activeMasternode;
 
 void CActiveMasternode::ManageState()
 {
-    if(!fMasterNode) return;
+    LogPrint("masternode", "CActiveMasternode::ManageState -- Start\n");
+    if(!fMasterNode) {
+        LogPrint("masternode", "CActiveMasternode::ManageState -- Not a masternode, returning\n");
+        return;
+    }
 
     if(Params().NetworkIDString() != CBaseChainParams::REGTEST && !masternodeSync.IsBlockchainSynced()) {
         nState = ACTIVE_MASTERNODE_SYNC_IN_PROCESS;
@@ -26,6 +30,8 @@ void CActiveMasternode::ManageState()
     if(nState == ACTIVE_MASTERNODE_SYNC_IN_PROCESS) {
         nState = ACTIVE_MASTERNODE_INITIAL;
     }
+
+    LogPrint("masternode", "CActiveMasternode::ManageState -- status = %s, type = %s, pinger enabled = %d\n", GetStatus(), GetType(), fPingerEnabled);
 
     if(eType == MASTERNODE_UNKNOWN) {
         ManageStateInitial();
@@ -56,6 +62,26 @@ std::string CActiveMasternode::GetStatus()
         case ACTIVE_MASTERNODE_STARTED: return "Masternode successfully started";
         default: return "unknown";
     }
+}
+
+std::string CActiveMasternode::GetType()
+{
+    std::string strType;
+    switch(eType) {
+    case MASTERNODE_UNKNOWN:
+        strType = "UNKNOWN";
+        break;
+    case MASTERNODE_REMOTE:
+        strType = "REMOTE";
+        break;
+    case MASTERNODE_LOCAL:
+        strType = "LOCAL";
+        break;
+    default:
+        strType = "UNKNOWN";
+        break;
+    }
+    return strType;
 }
 
 bool CActiveMasternode::SendMasternodePing(std::string& strErrorRet)
@@ -109,6 +135,8 @@ bool CActiveMasternode::EnableRemoteMasterNode(CTxIn& vinNew, CService& serviceN
 
 void CActiveMasternode::ManageStateInitial()
 {
+    LogPrint("masternode", "CActiveMasternode::ManageStateInitial -- Start status = %s, type = %s, pinger enabled = %d\n", GetStatus(), GetType(), fPingerEnabled);
+
     if(!pwalletMain) {
         strNotCapableReason = "Wallet not available.";
         LogPrintf("CActiveMasternode::ManageStateInitial -- not capable: %s\n", strNotCapableReason);
@@ -163,10 +191,12 @@ void CActiveMasternode::ManageStateInitial()
     }
 
     eType = MASTERNODE_REMOTE;
+    LogPrint("masternode", "CActiveMasternode::ManageStateInitial -- End status = %s, type = %s, pinger enabled = %d\n", GetStatus(), GetType(), fPingerEnabled);
 }
 
 void CActiveMasternode::ManageStateRemote()
 {
+    LogPrint("masternode", "CActiveMasternode::ManageStateRemote -- status = %s, type = %s, pinger enabled = %d\n", GetStatus(), GetType(), fPingerEnabled);
     mnodeman.CheckMasternode(pubKeyMasternode);
     masternode_info_t infoMn = mnodeman.GetMasternodeInfo(pubKeyMasternode);
     if(infoMn.fInfoValid) {
@@ -193,6 +223,7 @@ void CActiveMasternode::ManageStateRemote()
 
 void CActiveMasternode::ManageStateLocal()
 {
+    LogPrint("masternode", "CActiveMasternode::ManageStateLocal -- status = %s, type = %s, pinger enabled = %d\n", GetStatus(), GetType(), fPingerEnabled);
     if(nState == ACTIVE_MASTERNODE_STARTED) {
         return;
     }

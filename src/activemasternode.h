@@ -63,6 +63,8 @@ public:
 
     std::string GetStatus();
 
+    std::string GetType();
+
     /// Enable cold wallet mode (run a Masternode with no funds)
     bool EnableRemoteMasterNode(CTxIn& vinNew, CService& serviceNew);
 
