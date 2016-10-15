@@ -195,7 +195,6 @@ int CMasternodeMan::CountMasternodes(int protocolVersion)
     protocolVersion = protocolVersion == -1 ? mnpayments.GetMinMasternodePaymentsProto() : protocolVersion;
 
     BOOST_FOREACH(CMasternode& mn, vMasternodes) {
-        mn.Check();
         if(mn.nProtocolVersion < protocolVersion) continue;
         i++;
     }
@@ -343,10 +342,7 @@ bool CMasternodeMan::Has(const CTxIn& vin)
 {
     LOCK(cs);
     CMasternode* pMN = Find(vin);
-    if(!pMN)  {
-        return false;
-    }
-    return true;
+    return (pMN != NULL);
 }
 
 // 
@@ -852,10 +848,7 @@ bool CMasternodeMan::IsWatchdogActive()
 {
     LOCK(cs);
     // Check if any masternodes have voted recently, otherwise return false
-    if((GetTime() - nLastWatchdogVoteTime) > MASTERNODE_WATCHDOG_MAX_SECONDS) {
-        return false;
-    }
-    return true;
+    return (GetTime() - nLastWatchdogVoteTime) <= MASTERNODE_WATCHDOG_MAX_SECONDS;
 }
 
 void CMasternodeMan::AddGovernanceVote(const CTxIn& vin, uint256 nGovernanceObjectHash)
@@ -920,7 +913,7 @@ bool CMasternodeMan::IsMasternodePingedWithin(const CTxIn& vin, int nSeconds, in
 {
     LOCK(cs);
     CMasternode* pMN = Find(vin);
-    if(!pMN)  {
+    if(!pMN) {
         return false;
     }
     return pMN->IsPingedWithin(nSeconds, nTimeToCheckAt);
