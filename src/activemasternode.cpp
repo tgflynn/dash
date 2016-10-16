@@ -271,5 +271,6 @@ void CActiveMasternode::ManageStateLocal()
         LogPrintf("CActiveMasternode::ManageStateLocal -- Relay broadcast, vin=%s\n", vin.ToString());
         mnb.Relay();
         fPingerEnabled = true;
+        nState = ACTIVE_MASTERNODE_STARTED;
     }
 }
