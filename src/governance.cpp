@@ -202,7 +202,7 @@ void CGovernanceManager::ProcessMessage(CNode* pfrom, std::string& strCommand, C
         
         // WE MIGHT HAVE PENDING/ORPHAN VOTES FOR THIS OBJECT
 
-        CheckOrphanVotes();
+        CheckOrphanVotes(govobj);
     }
 
     // A NEW GOVERNANCE OBJECT VOTE HAS ARRIVED
@@ -221,39 +221,17 @@ void CGovernanceManager::ProcessMessage(CNode* pfrom, std::string& strCommand, C
             vote.Relay();
         }
         else {
-            if(exception.GetNodePenalty() != 0) {
-                Misbehaving(pfrom->GetId(), exception.GetNodePenalty());
+            if((exception.GetNodePenalty() != 0) && masternodeSync.IsSynced()) {
+                    Misbehaving(pfrom->GetId(), exception.GetNodePenalty());
             }
         }
-
-        // CHECK LOCAL VALIDITY AGAINST BLOCKCHAIN, TIME DATA, ETC
-
-//        if(!vote.IsValid(true)){
-//            LogPrintf("gobject - signature invalid\n");
-//            if(masternodeSync.IsSynced()) Misbehaving(pfrom->GetId(), 20);
-//            // it could just be a non-synced masternode
-//            mnodeman.AskForMN(pfrom, vote.GetVinMasternode());
-//            //mapSeenVotes.insert(std::make_pair(vote.GetHash(), SEEN_OBJECT_ERROR_INVALID));
-//            return;
-//        } else {
-//            //mapSeenVotes.insert(std::make_pair(vote.GetHash(), SEEN_OBJECT_IS_VALID));
-//        }
-//
-//        // IF EVERYTHING CHECKS OUT, UPDATE THE GOVERNANCE MANAGER
-//
-//        std::string strError = "";
-//        if(AddOrUpdateVote(vote, pfrom, strError)) {
-//            vote.Relay();
-//            masternodeSync.AddedBudgetItem(vote.GetHash());
-//            pmn->AddGovernanceVote(vote.GetParentHash());
-//        }
 
         LogPrint("gobject", "NEW governance vote: %s\n", vote.GetHash().ToString());
     }
 
 }
 
-void CGovernanceManager::CheckOrphanVotes()
+void CGovernanceManager::CheckOrphanVotes(CGovernanceObject& govobj)
 {
 //    LOCK(cs);
 //
@@ -717,6 +695,24 @@ void CGovernanceManager::RebuildIndexes()
     }
 }
 
+int CGovernanceManager::GetMasternodeIndex(const CTxIn& masternodeVin)
+{
+    LOCK(cs);
+    bool fIndexRebuilt = false;
+    int nMNIndex = mnodeman.GetMasternodeIndex(masternodeVin, fIndexRebuilt);
+    if(fIndexRebuilt) {
+        RebuildVoteMaps();
+    }
+    return nMNIndex;
+}
+
+void CGovernanceManager::RebuildVoteMaps()
+{
+    for(object_m_it it = mapObjects.begin(); it != mapObjects.end(); ++it) {
+        it->second.RebuildVoteMap();
+    }
+}
+
 CGovernanceObject::CGovernanceObject()
 : cs(),
   nObjectType(GOVERNANCE_OBJECT_UNKNOWN),
@@ -793,7 +789,7 @@ bool CGovernanceObject::ProcessVote(CNode* pfrom,
                                     const CGovernanceVote& vote,
                                     CGovernanceException& exception)
 {
-    int nMNIndex = mnodeman.GetMasternodeIndex(vote.GetVinMasternode());
+    int nMNIndex = governance.GetMasternodeIndex(vote.GetVinMasternode());
     if(nMNIndex < 0) {
         governance.AddOrphanVote(vote);
         if(pfrom) {
@@ -858,6 +854,21 @@ bool CGovernanceObject::ProcessVote(CNode* pfrom,
     voteInstance = vote_instance_t(vote.GetOutcome(), vote.GetTimestamp());
     fileVotes.AddVote(vote);
     return true;
+}
+
+void CGovernanceObject::RebuildVoteMap()
+{
+    vote_m_t mapMNVotesNew;
+    for(vote_m_it it = mapCurrentMNVotes.begin(); it != mapCurrentMNVotes.end(); ++it) {
+        CTxIn vinMasternode;
+        if(mnodeman.GetMasternodeVinForIndexOld(it->first, vinMasternode)) {
+            int nNewIndex = mnodeman.GetMasternodeIndex(vinMasternode);
+            if((nNewIndex >= 0)) {
+                mapMNVotesNew[nNewIndex] = it->second;
+            }
+        }
+    }
+    mapCurrentMNVotes = mapMNVotesNew;
 }
 
 void CGovernanceObject::SetMasternodeInfo(const CTxIn& vin)

@@ -2,8 +2,8 @@
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#ifndef GOVERANCE_H
-#define GOVERANCE_H
+#ifndef GOVERNANCE_H
+#define GOVERNANCE_H
 
 //#define ENABLE_DASH_DEBUG
 
@@ -24,6 +24,7 @@
 #include <univalue.h>
 #include "utilstrencodings.h"
 #include "cachemap.h"
+#include "cachemultimap.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -89,6 +90,8 @@ public: // Types
 
     typedef CacheMap<uint256, CGovernanceVote> vote_cache_t;
 
+    typedef CacheMultiMap<uint256, CGovernanceVote> vote_mcache_t;
+
     typedef object_m_t::size_type size_type;
 
     typedef std::map<COutPoint, int> txout_m_t;
@@ -121,7 +124,7 @@ private:
 
     vote_cache_t mapInvalidVotes;
 
-    vote_cache_t mapOrphanVotes;
+    vote_mcache_t mapOrphanVotes;
 
     txout_m_t mapLastMasternodeTrigger;
 
@@ -184,8 +187,6 @@ public:
     void CleanAndRemove(bool fSignatureCheck);
     void UpdateCachesAndClean();
     void CheckAndRemove() {UpdateCachesAndClean();}
-
-    void CheckOrphanVotes();
 
     void Clear()
     {
@@ -265,7 +266,14 @@ private:
 
     static bool AcceptMessage(const uint256& nHash, hash_s_t& setHash);
 
+    void CheckOrphanVotes(CGovernanceObject& govobj);
+
     void RebuildIndexes();
+
+    /// Returns MN index, handling the case of index rebuilds
+    int GetMasternodeIndex(const CTxIn& masternodeVin);
+
+    void RebuildVoteMaps();
 
 };
 
@@ -512,6 +520,8 @@ private:
     bool ProcessVote(CNode* pfrom,
                      const CGovernanceVote& vote,
                      CGovernanceException& exception);
+
+    void RebuildVoteMap();
 
 };
 

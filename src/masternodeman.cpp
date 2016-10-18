@@ -94,7 +94,10 @@ CMasternodeMan::CMasternodeMan()
   mAskedUsForMasternodeList(),
   mWeAskedForMasternodeList(),
   mWeAskedForMasternodeListEntry(),
+  nLastIndexRebuildTime(0),
   indexMasternodes(),
+  indexMasternodesOld(),
+  fIndexRebuilt(false),
   vecMNIndexUpdateReceivers(),
   mapSeenMasternodeBroadcast(),
   mapSeenMasternodePing(),
@@ -847,11 +850,15 @@ void CMasternodeMan::UpdateLastPaid(const CBlockIndex *pindex) {
 
 void CMasternodeMan::CheckAndRebuildMasternodeIndex()
 {
-    if(indexMasternodes.GetSize() <= MAX_EXPECTED_INDEX_SIZE) {
+    LOCK(cs);
+
+    if( GetTime() - nLastIndexRebuildTime < MIN_INDEX_REBUILD_TIME ) {
         return;
     }
 
-    LOCK(cs);
+    if(indexMasternodes.GetSize() <= MAX_EXPECTED_INDEX_SIZE) {
+        return;
+    }
 
     if(indexMasternodes.GetSize() <= int(vMasternodes.size())) {
         return;
@@ -862,6 +869,7 @@ void CMasternodeMan::CheckAndRebuildMasternodeIndex()
         receiver->MasternodeIndexUpdateBegin();
     }
 
+    indexMasternodesOld = indexMasternodes;
     indexMasternodes.Clear();
     for(size_t i = 0; i < vMasternodes.size(); ++i) {
         indexMasternodes.AddMasternodeVIN(vMasternodes[i].vin);
@@ -871,4 +879,6 @@ void CMasternodeMan::CheckAndRebuildMasternodeIndex()
         IMasternodeIndexUpdateReceiver* receiver = *it;
         receiver->MasternodeIndexUpdateEnd();
     }
+    fIndexRebuilt = true;
+    nLastIndexRebuildTime = GetTime();
 }

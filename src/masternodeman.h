@@ -118,6 +118,9 @@ public:
 private:
     static const int MAX_EXPECTED_INDEX_SIZE = 30000;
 
+    /// Only allow 1 index rebuild per hour
+    static const int64_t MIN_INDEX_REBUILD_TIME = 3600;
+
     static const int MASTERNODES_LAST_PAID_SCAN_BLOCKS  = 100;
 
     // critical section to protect the inner data structures
@@ -135,7 +138,14 @@ private:
     // which Masternodes we've asked for
     std::map<COutPoint, int64_t> mWeAskedForMasternodeListEntry;
 
+    int64_t nLastIndexRebuildTime;
+
     CMasternodeIndex indexMasternodes;
+
+    CMasternodeIndex indexMasternodesOld;
+
+    /// Set when index has been rebuilt, clear when read
+    bool fIndexRebuilt;
 
     /// Objects to notify on index update
     receiver_v_t vecMNIndexUpdateReceivers;
@@ -202,15 +212,46 @@ public:
     bool Get(const CTxIn& vin, CMasternode& masternode);
 
     /// Retrieve masternode vin by index
-    bool Get(int nIndex, CTxIn& vinMasternode) const {
+    bool Get(int nIndex, CTxIn& vinMasternode, bool& fIndexRebuiltOut) {
         LOCK(cs);
+        fIndexRebuiltOut = fIndexRebuilt;
         return indexMasternodes.Get(nIndex, vinMasternode);
     }
 
+    bool GetIndexRebuiltFlag() {
+        LOCK(cs);
+        return fIndexRebuilt;
+    }
+
     /// Get index of a masternode vin
-    int GetMasternodeIndex(const CTxIn& vinMasternode) const {
+    int GetMasternodeIndex(const CTxIn& vinMasternode) {
         LOCK(cs);
         return indexMasternodes.GetMasternodeIndex(vinMasternode);
+    }
+
+    /// Get old index of a masternode vin
+    int GetMasternodeIndexOld(const CTxIn& vinMasternode) {
+        LOCK(cs);
+        return indexMasternodesOld.GetMasternodeIndex(vinMasternode);
+    }
+
+    /// Get masternode VIN for an old index value
+    bool GetMasternodeVinForIndexOld(int nMasternodeIndex, CTxIn& vinMasternodeOut) {
+        LOCK(cs);
+        return indexMasternodesOld.Get(nMasternodeIndex, vinMasternodeOut);
+    }
+
+    /// Get index of a masternode vin, returning rebuild flag
+    int GetMasternodeIndex(const CTxIn& vinMasternode, bool& fIndexRebuiltOut) {
+        LOCK(cs);
+        fIndexRebuiltOut = fIndexRebuilt;
+        return indexMasternodes.GetMasternodeIndex(vinMasternode);
+    }
+
+    void ClearOldMasternodeIndex() {
+        LOCK(cs);
+        indexMasternodesOld.Clear();
+        fIndexRebuilt = false;
     }
 
     /// Register an object to receive masternode index updates
