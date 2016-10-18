@@ -46,4 +46,25 @@ static inline uint32_t insecure_rand(void)
     return (insecure_rand_Rw << 16) + insecure_rand_Rz;
 }
 
+/**
+ * PRNG initialized from secure entropy based RNG
+ */
+class InsecureRand
+{
+private:
+    uint32_t nRz;
+    uint32_t nRw;
+
+public:
+    InsecureRand();
+
+    int operator()(int nMax)
+    {
+        nRz = 36969 * (nRz & 65535) + (nRz >> 16);
+        nRw = 18000 * (nRw & 65535) + (nRw >> 16);
+        int nTmp = (nRw << 16) + nRz;
+        return nTmp % nMax;
+    }
+};
+
 #endif // BITCOIN_RANDOM_H
