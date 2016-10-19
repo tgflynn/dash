@@ -12,6 +12,7 @@
 #include "darksend.h"
 #include "governance.h"
 #include "darksend.h"
+#include "masternode.h"
 #include "masternode-payments.h"
 #include "masternode-sync.h"
 #include "masternodeconfig.h"
@@ -107,8 +108,9 @@ UniValue gobject(const UniValue& params, bool fHelp)
 
         CGovernanceObject govobj(hashParent, nRevision, nTime, uint256(), strData);
 
-        if(govobj.GetObjectType() == GOVERNANCE_OBJECT_TRIGGER) {
-            throw JSONRPCError(RPC_INVALID_PARAMETER, "Trigger objects need not be prepared (however only masternodes can create them)");
+        if((govobj.GetObjectType() == GOVERNANCE_OBJECT_TRIGGER) ||
+           (govobj.GetObjectType() == GOVERNANCE_OBJECT_WATCHDOG)) {
+            throw JSONRPCError(RPC_INVALID_PARAMETER, "Trigger and watchdog objects need not be prepared (however only masternodes can create them)");
         }
 
         std::string strError = "";
@@ -187,7 +189,8 @@ UniValue gobject(const UniValue& params, bool fHelp)
              << endl; );
 
         // Attempt to sign triggers if we are a MN
-        if(govobj.GetObjectType() == GOVERNANCE_OBJECT_TRIGGER) {
+        if((govobj.GetObjectType() == GOVERNANCE_OBJECT_TRIGGER) ||
+           (govobj.GetObjectType() == GOVERNANCE_OBJECT_WATCHDOG)) {
             if(mnFound) {
                 govobj.SetMasternodeInfo(mn.vin);
                 govobj.Sign(activeMasternode.keyMasternode, activeMasternode.pubKeyMasternode);
@@ -572,10 +575,10 @@ UniValue gobject(const UniValue& params, bool fHelp)
             bObj.push_back(Pair("CollateralHash",  pGovObj->GetCollateralHash().ToString()));
 
             // REPORT STATUS FOR FUNDING VOTES SPECIFICALLY
-            bObj.push_back(Pair("AbsoluteYesCount",  (int64_t)pGovObj->GetYesCount(VOTE_SIGNAL_FUNDING)-(int64_t)pGovObj->GetNoCount(VOTE_SIGNAL_FUNDING)));
-            bObj.push_back(Pair("YesCount",  (int64_t)pGovObj->GetYesCount(VOTE_SIGNAL_FUNDING)));
-            bObj.push_back(Pair("NoCount",  (int64_t)pGovObj->GetNoCount(VOTE_SIGNAL_FUNDING)));
-            bObj.push_back(Pair("AbstainCount",  (int64_t)pGovObj->GetAbstainCount(VOTE_SIGNAL_FUNDING)));
+            bObj.push_back(Pair("AbsoluteYesCount",  pGovObj->GetAbsoluteYesCount(VOTE_SIGNAL_FUNDING)));
+            bObj.push_back(Pair("YesCount",  pGovObj->GetYesCount(VOTE_SIGNAL_FUNDING)));
+            bObj.push_back(Pair("NoCount",  pGovObj->GetNoCount(VOTE_SIGNAL_FUNDING)));
+            bObj.push_back(Pair("AbstainCount",  pGovObj->GetAbstainCount(VOTE_SIGNAL_FUNDING)));
 
             // REPORT VALIDITY AND CACHING FLAGS FOR VARIOUS SETTINGS
             std::string strError = "";
@@ -612,6 +615,8 @@ UniValue gobject(const UniValue& params, bool fHelp)
         // REPORT BASIC OBJECT STATS
 
         UniValue objResult(UniValue::VOBJ);
+        objResult.push_back(Pair("DataHex",  pGovObj->GetDataAsHex()));
+        objResult.push_back(Pair("DataString",  pGovObj->GetDataAsString()));
         objResult.push_back(Pair("Hash",  pGovObj->GetHash().ToString()));
         objResult.push_back(Pair("CollateralHash",  pGovObj->GetCollateralHash().ToString()));
 
@@ -619,41 +624,44 @@ UniValue gobject(const UniValue& params, bool fHelp)
         // -- FUNDING VOTING RESULTS
 
         UniValue objFundingResult(UniValue::VOBJ);
-        objFundingResult.push_back(Pair("AbsoluteYesCount",  (int64_t)pGovObj->GetYesCount(VOTE_SIGNAL_FUNDING)-(int64_t)pGovObj->GetNoCount(VOTE_SIGNAL_FUNDING)));
-        objFundingResult.push_back(Pair("YesCount",  (int64_t)pGovObj->GetYesCount(VOTE_SIGNAL_FUNDING)));
-        objFundingResult.push_back(Pair("NoCount",  (int64_t)pGovObj->GetNoCount(VOTE_SIGNAL_FUNDING)));
-        objFundingResult.push_back(Pair("AbstainCount",  (int64_t)pGovObj->GetAbstainCount(VOTE_SIGNAL_FUNDING)));
+        objFundingResult.push_back(Pair("AbsoluteYesCount",  pGovObj->GetAbsoluteYesCount(VOTE_SIGNAL_FUNDING)));
+        objFundingResult.push_back(Pair("YesCount",  pGovObj->GetYesCount(VOTE_SIGNAL_FUNDING)));
+        objFundingResult.push_back(Pair("NoCount",  pGovObj->GetNoCount(VOTE_SIGNAL_FUNDING)));
+        objFundingResult.push_back(Pair("AbstainCount",  pGovObj->GetAbstainCount(VOTE_SIGNAL_FUNDING)));
         objResult.push_back(Pair("FundingResult", objFundingResult));
 
         // -- VALIDITY VOTING RESULTS
         UniValue objValid(UniValue::VOBJ);
-        objValid.push_back(Pair("AbsoluteYesCount",  (int64_t)pGovObj->GetYesCount(VOTE_SIGNAL_VALID)-(int64_t)pGovObj->GetNoCount(VOTE_SIGNAL_VALID)));
-        objValid.push_back(Pair("YesCount",  (int64_t)pGovObj->GetYesCount(VOTE_SIGNAL_VALID)));
-        objValid.push_back(Pair("NoCount",  (int64_t)pGovObj->GetNoCount(VOTE_SIGNAL_VALID)));
-        objValid.push_back(Pair("AbstainCount",  (int64_t)pGovObj->GetAbstainCount(VOTE_SIGNAL_VALID)));
+        objValid.push_back(Pair("AbsoluteYesCount",  pGovObj->GetAbsoluteYesCount(VOTE_SIGNAL_VALID)));
+        objValid.push_back(Pair("YesCount",  pGovObj->GetYesCount(VOTE_SIGNAL_VALID)));
+        objValid.push_back(Pair("NoCount",  pGovObj->GetNoCount(VOTE_SIGNAL_VALID)));
+        objValid.push_back(Pair("AbstainCount",  pGovObj->GetAbstainCount(VOTE_SIGNAL_VALID)));
         objResult.push_back(Pair("ValidResult", objValid));
 
         // -- DELETION CRITERION VOTING RESULTS
         UniValue objDelete(UniValue::VOBJ);
-        objDelete.push_back(Pair("AbsoluteYesCount",  (int64_t)pGovObj->GetYesCount(VOTE_SIGNAL_DELETE)-(int64_t)pGovObj->GetNoCount(VOTE_SIGNAL_DELETE)));
-        objDelete.push_back(Pair("YesCount",  (int64_t)pGovObj->GetYesCount(VOTE_SIGNAL_DELETE)));
-        objDelete.push_back(Pair("NoCount",  (int64_t)pGovObj->GetNoCount(VOTE_SIGNAL_DELETE)));
-        objDelete.push_back(Pair("AbstainCount",  (int64_t)pGovObj->GetAbstainCount(VOTE_SIGNAL_DELETE)));
+        objDelete.push_back(Pair("AbsoluteYesCount",  pGovObj->GetAbsoluteYesCount(VOTE_SIGNAL_DELETE)));
+        objDelete.push_back(Pair("YesCount",  pGovObj->GetYesCount(VOTE_SIGNAL_DELETE)));
+        objDelete.push_back(Pair("NoCount",  pGovObj->GetNoCount(VOTE_SIGNAL_DELETE)));
+        objDelete.push_back(Pair("AbstainCount",  pGovObj->GetAbstainCount(VOTE_SIGNAL_DELETE)));
         objResult.push_back(Pair("DeleteResult", objDelete));
 
         // -- ENDORSED VIA MASTERNODE-ELECTED BOARD
         UniValue objEndorsed(UniValue::VOBJ);
-        objEndorsed.push_back(Pair("AbsoluteYesCount",  (int64_t)pGovObj->GetYesCount(VOTE_SIGNAL_ENDORSED)-(int64_t)pGovObj->GetNoCount(VOTE_SIGNAL_ENDORSED)));
-        objEndorsed.push_back(Pair("YesCount",  (int64_t)pGovObj->GetYesCount(VOTE_SIGNAL_ENDORSED)));
-        objEndorsed.push_back(Pair("NoCount",  (int64_t)pGovObj->GetNoCount(VOTE_SIGNAL_ENDORSED)));
-        objEndorsed.push_back(Pair("AbstainCount",  (int64_t)pGovObj->GetAbstainCount(VOTE_SIGNAL_ENDORSED)));
+        objEndorsed.push_back(Pair("AbsoluteYesCount",  pGovObj->GetAbsoluteYesCount(VOTE_SIGNAL_ENDORSED)));
+        objEndorsed.push_back(Pair("YesCount",  pGovObj->GetYesCount(VOTE_SIGNAL_ENDORSED)));
+        objEndorsed.push_back(Pair("NoCount",  pGovObj->GetNoCount(VOTE_SIGNAL_ENDORSED)));
+        objEndorsed.push_back(Pair("AbstainCount",  pGovObj->GetAbstainCount(VOTE_SIGNAL_ENDORSED)));
         objResult.push_back(Pair("EndorsedResult", objEndorsed));
 
         // --
         std::string strError = "";
         objResult.push_back(Pair("fLocalValidity",  pGovObj->IsValidLocally(chainActive.Tip(), strError, false)));
+        objResult.push_back(Pair("IsValidReason",  strError.c_str()));
         objResult.push_back(Pair("fCachedValid",  pGovObj->IsSetCachedValid()));
-
+        objResult.push_back(Pair("fCachedFunding",  pGovObj->IsSetCachedFunding()));
+        objResult.push_back(Pair("fCachedDelete",  pGovObj->IsSetCachedDelete()));
+        objResult.push_back(Pair("fCachedEndorsed",  pGovObj->IsSetCachedEndorsed()));
         return objResult;
     }
 
@@ -765,11 +773,12 @@ UniValue getgovernanceinfo(const UniValue& params, bool fHelp)
             "Returns an object containing governance parameters.\n"
             "\nResult:\n"
             "{\n"
-            "  \"governanceminquorum\": xxxxx,  (numeric) the absolute minimum number of votes needed to trigger a governance action\n"
-            "  \"proposalfee\": xxx.xx,         (numeric) the collateral transaction fee which must be paid to create a proposal in " + CURRENCY_UNIT + "\n"
-            "  \"superblockcycle\": xxxxx,      (numeric) the number of blocks between superblocks\n"
-            "  \"lastsuperblock\": xxxxx,       (numeric) the block number of the last superblock\n"
-            "  \"nextsuperblock\": xxxxx,       (numeric) the block number of the next superblock\n"
+            "  \"governanceminquorum\": xxxxx,           (numeric) the absolute minimum number of votes needed to trigger a governance action\n"
+            "  \"masternodewatchdogmaxseconds\": xxxxx,  (numeric) sentinel watchdog expiration time in seconds\n"
+            "  \"proposalfee\": xxx.xx,                  (numeric) the collateral transaction fee which must be paid to create a proposal in " + CURRENCY_UNIT + "\n"
+            "  \"superblockcycle\": xxxxx,               (numeric) the number of blocks between superblocks\n"
+            "  \"lastsuperblock\": xxxxx,                (numeric) the block number of the last superblock\n"
+            "  \"nextsuperblock\": xxxxx,                (numeric) the block number of the next superblock\n"
             "}\n"
             "\nExamples:\n"
             + HelpExampleCli("getgovernanceinfo", "")
@@ -805,6 +814,7 @@ UniValue getgovernanceinfo(const UniValue& params, bool fHelp)
 
     UniValue obj(UniValue::VOBJ);
     obj.push_back(Pair("governanceminquorum", Params().GetConsensus().nGovernanceMinQuorum));
+    obj.push_back(Pair("masternodewatchdogmaxseconds", MASTERNODE_WATCHDOG_MAX_SECONDS));
     obj.push_back(Pair("proposalfee", ValueFromAmount(GOVERNANCE_PROPOSAL_FEE_TX)));
     obj.push_back(Pair("superblockcycle", Params().GetConsensus().nSuperblockCycle));
     obj.push_back(Pair("lastsuperblock", nLastSuperblock));

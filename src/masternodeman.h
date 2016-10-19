@@ -121,6 +121,8 @@ private:
     /// Only allow 1 index rebuild per hour
     static const int64_t MIN_INDEX_REBUILD_TIME = 3600;
 
+    static const std::string SERIALIZATION_VERSION_STRING;
+
     static const int MASTERNODES_LAST_PAID_SCAN_BLOCKS  = 100;
 
     // critical section to protect the inner data structures
@@ -150,6 +152,10 @@ private:
     /// Objects to notify on index update
     receiver_v_t vecMNIndexUpdateReceivers;
 
+    std::vector<uint256> vecDirtyGovernanceObjectHashes;
+
+    int64_t nLastWatchdogVoteTime;
+
 public:
     // Keep track of all broadcasts I've seen
     map<uint256, CMasternodeBroadcast> mapSeenMasternodeBroadcast;
@@ -167,15 +173,29 @@ public:
     template <typename Stream, typename Operation>
     inline void SerializationOp(Stream& s, Operation ser_action, int nType, int nVersion) {
         LOCK(cs);
+        std::string strVersion;
+        if(ser_action.ForRead()) {
+            READWRITE(strVersion);
+        }
+        else {
+            strVersion = SERIALIZATION_VERSION_STRING; 
+            READWRITE(strVersion);
+        }
+
         READWRITE(vMasternodes);
         READWRITE(mAskedUsForMasternodeList);
         READWRITE(mWeAskedForMasternodeList);
         READWRITE(mWeAskedForMasternodeListEntry);
+        READWRITE(nLastWatchdogVoteTime);
         READWRITE(nDsqCount);
 
         READWRITE(mapSeenMasternodeBroadcast);
         READWRITE(mapSeenMasternodePing);
         READWRITE(indexMasternodes);
+        if(ser_action.ForRead() && (strVersion != SERIALIZATION_VERSION_STRING)) {
+            LogPrintf("CMasternodeMan::SerializationOp - Incompatible format detected, resetting data\n");
+            Clear();
+        }
     }
 
     CMasternodeMan();
@@ -194,6 +214,8 @@ public:
 
     /// Clear Masternode vector
     void Clear();
+
+    int CountMasternodes(int protocolVersion = -1);
 
     int CountEnabled(int protocolVersion = -1);
 
@@ -260,6 +282,12 @@ public:
     /// Unregister an object from receiving masternode index updates
     void UnregisterIndexUpdateReceiver(IMasternodeIndexUpdateReceiver* receiver);
 
+    bool Has(const CTxIn& vin);
+
+    masternode_info_t GetMasternodeInfo(const CTxIn& vin);
+
+    masternode_info_t GetMasternodeInfo(const CPubKey& pubKeyMasternode);
+
     /// Find an entry in the masternode list that is next to be paid
     CMasternode* GetNextMasternodeInQueueForPayment(int nBlockHeight, bool fFilterSigTime, int& nCount);
 
@@ -296,6 +324,39 @@ public:
 
     void CheckAndRebuildMasternodeIndex();
 
+    void AddDirtyGovernanceObjectHash(const uint256& nHash)
+    {
+        LOCK(cs);
+        vecDirtyGovernanceObjectHashes.push_back(nHash);
+    }
+
+    std::vector<uint256> GetAndClearDirtyGovernanceObjectHashes()
+    {
+        LOCK(cs);
+        std::vector<uint256> vecTmp = vecDirtyGovernanceObjectHashes;
+        vecDirtyGovernanceObjectHashes.clear();
+        return vecTmp;;
+    }
+
+    bool IsWatchdogActive();
+
+    void UpdateWatchdogVoteTime(const CTxIn& vin);
+
+    void AddGovernanceVote(const CTxIn& vin, uint256 nGovernanceObjectHash);
+
+    void RemoveGovernanceObject(uint256 nGovernanceObjectHash);
+
+    void CheckMasternode(const CTxIn& vin, bool fForce = false);
+
+    void CheckMasternode(const CPubKey& pubKeyMasternode, bool fForce = false);
+
+    int GetMasternodeState(const CTxIn& vin);
+
+    int GetMasternodeState(const CPubKey& pubKeyMasternode);
+
+    bool IsMasternodePingedWithin(const CTxIn& vin, int nSeconds, int64_t nTimeToCheckAt = -1);
+
+    void SetMasternodeLastPing(const CTxIn& vin, const CMasternodePing& mnp);
 };
 
 #endif

@@ -3,6 +3,7 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include "activemasternode.h"
+#include "checkpoints.h"
 #include "governance.h"
 #include "main.h"
 #include "masternode.h"
@@ -29,15 +30,16 @@ bool CMasternodeSync::IsBlockchainSynced()
     lastProcess = GetTime();
 
     if(fBlockchainSynced) return true;
+    if(!pCurrentBlockIndex || !pindexBestHeader || fImporting || fReindex) return false;
+    if(fCheckpointsEnabled && pCurrentBlockIndex->nHeight < Checkpoints::GetTotalBlocksEstimate(Params().Checkpoints()))
+        return false;
 
-    if (fImporting || fReindex) return false;
+    // same as !IsInitialBlockDownload() but no cs_main needed here
+    int nMaxBlockTime = std::max(pCurrentBlockIndex->GetBlockTime(), pindexBestHeader->GetBlockTime());
+    fBlockchainSynced = pindexBestHeader->nHeight - pCurrentBlockIndex->nHeight < 24 * 6 &&
+                        GetTime() - nMaxBlockTime < Params().MaxTipAge();
 
-    if(!pCurrentBlockIndex) return false;
-    if(pCurrentBlockIndex->nTime + 60*60 < GetTime()) return false;
-
-    fBlockchainSynced = true;
-
-    return true;
+    return fBlockchainSynced;
 }
 
 void CMasternodeSync::Fail()
@@ -167,7 +169,9 @@ void CMasternodeSync::ProcessTick()
     if(!pCurrentBlockIndex) return;
 
     //the actual count of masternodes we have currently
-    int nMnCount = mnodeman.CountEnabled();
+    int nMnCount = mnodeman.CountMasternodes();
+
+    LogPrintf("CMasternodeSync::ProcessTick -- nTick %d nMnCount = %d\n", nTick, nMnCount);
 
     // RESET SYNCING INCASE OF FAILURE
     {
@@ -204,7 +208,9 @@ void CMasternodeSync::ProcessTick()
     TRY_LOCK(cs_vNodes, lockRecv);
     if(!lockRecv) return;
 
-    if(nRequestedMasternodeAssets == MASTERNODE_SYNC_INITIAL) {
+    if(nRequestedMasternodeAssets == MASTERNODE_SYNC_INITIAL ||
+        (nRequestedMasternodeAssets == MASTERNODE_SYNC_SPORKS && IsBlockchainSynced()))
+    {
         SwitchToNextAsset();
     }
 
@@ -218,7 +224,7 @@ void CMasternodeSync::ProcessTick()
             } else if(nRequestedMasternodeAttempt < 4) {
                 mnodeman.DsegUpdate(pnode);
             } else if(nRequestedMasternodeAttempt < 6) {
-                int nMnCount = mnodeman.CountEnabled();
+                int nMnCount = mnodeman.CountMasternodes();
                 pnode->PushMessage(NetMsgType::MASTERNODEPAYMENTSYNC, nMnCount); //sync payment votes
                 uint256 n = uint256();
                 pnode->PushMessage(NetMsgType::MNGOVERNANCESYNC, n); //sync masternode votes
@@ -246,10 +252,6 @@ void CMasternodeSync::ProcessTick()
                 netfulfilledman.AddFulfilledRequest(pnode->addr, "spork-sync");
                 // get current network sporks
                 pnode->PushMessage(NetMsgType::GETSPORKS);
-
-                // we always ask for sporks, so just skip this
-                if(nRequestedMasternodeAssets == MASTERNODE_SYNC_SPORKS) SwitchToNextAsset();
-
                 continue; // always get sporks first, switch to the next node without waiting for the next tick
             }
 
@@ -274,6 +276,8 @@ void CMasternodeSync::ProcessTick()
                 /* Note: Is this activing up? It's probably related to int CMasternodeMan::GetEstimatedMasternodes(int nBlock)
                    Surely doesn't work right for testnet currently */
                 // try to fetch data from at least two peers though
+                LogPrintf("CMasternodeSync::ProcessTick -- nTick %d nMnCount %d, Estimated masternode count required: %d\n", 
+                          nTick, nMnCount, mnodeman.GetEstimatedMasternodes(pCurrentBlockIndex->nHeight)*0.9);
                 if(nRequestedMasternodeAttempt > 1 && nMnCount > mnodeman.GetEstimatedMasternodes(pCurrentBlockIndex->nHeight)*0.9) {
                     LogPrintf("CMasternodeSync::ProcessTick -- nTick %d nRequestedMasternodeAssets %d -- found enough data\n", nTick, nRequestedMasternodeAssets);
                     SwitchToNextAsset();
@@ -365,7 +369,7 @@ void CMasternodeSync::ProcessTick()
                 if(netfulfilledman.HasFulfilledRequest(pnode->addr, "governance-sync")) continue;
                 netfulfilledman.AddFulfilledRequest(pnode->addr, "governance-sync");
 
-                if (pnode->nVersion < MSG_GOVERNANCE_PEER_PROTO_VERSION) continue;
+                if (pnode->nVersion < MIN_GOVERNANCE_PEER_PROTO_VERSION) continue;
                 nRequestedMasternodeAttempt++;
 
                 pnode->PushMessage(NetMsgType::MNGOVERNANCESYNC, uint256()); //sync masternode votes

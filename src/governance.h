@@ -35,10 +35,12 @@ class CGovernanceObject;
 class CGovernanceVote;
 
 static const int MAX_GOVERNANCE_OBJECT_DATA_SIZE = 16 * 1024;
+static const int MIN_GOVERNANCE_PEER_PROTO_VERSION = 70202;
 
 static const int GOVERNANCE_OBJECT_UNKNOWN = 0;
 static const int GOVERNANCE_OBJECT_PROPOSAL = 1;
 static const int GOVERNANCE_OBJECT_TRIGGER = 2;
+static const int GOVERNANCE_OBJECT_WATCHDOG = 3;
 
 static const CAmount GOVERNANCE_PROPOSAL_FEE_TX = (0.33*COIN);
 
@@ -181,7 +183,7 @@ public:
 
     bool IsBudgetPaymentBlock(int nBlockHeight);
     bool AddGovernanceObject (CGovernanceObject& govobj);
-    bool AddOrUpdateVote(const CGovernanceVote& vote, CNode* pfrom, std::string& strError);
+    //bool AddOrUpdateVote(const CGovernanceVote& vote, CNode* pfrom, std::string& strError);
 
     std::string GetRequiredPaymentsString(int nBlockHeight);
     void CleanAndRemove(bool fSignatureCheck);
@@ -237,7 +239,7 @@ public:
 
     void AddSeenVote(uint256 nHash, int status);
 
-    bool MasternodeRateCheck(const CTxIn& vin);
+    bool MasternodeRateCheck(const CTxIn& vin, int nObjectType);
 
     bool ProcessVote(const CGovernanceVote& vote, CGovernanceException& exception) {
         return ProcessVote(NULL, vote, exception);
@@ -388,6 +390,9 @@ private:
 
     /// Object is no longer of interest
     bool fExpired;
+
+    /// Failed to parse object data
+    bool fUnparsable;
 
     vote_m_t mapCurrentMNVotes;
 

@@ -14,6 +14,7 @@
 #include "script/sign.h"
 #include "txmempool.h"
 #include "util.h"
+#include "utilmoneystr.h"
 
 #include <boost/lexical_cast.hpp>
 
@@ -1298,6 +1299,11 @@ bool CDarksendPool::DoAutomaticDenominating(bool fDryRun)
     if(!pwalletMain || pwalletMain->IsLocked(true)) return false;
     if(nState == POOL_STATE_ERROR || nState == POOL_STATE_SUCCESS) return false;
 
+    if(!masternodeSync.IsMasternodeListSynced()) {
+        strAutoDenomResult = _("Can't mix while sync in progress.");
+        return false;
+    }
+
     switch(nWalletBackups) {
         case 0:
             LogPrint("privatesend", "CDarksendPool::DoAutomaticDenominating -- Automatic backups disabled, no mixing available.\n");
@@ -1366,11 +1372,6 @@ bool CDarksendPool::DoAutomaticDenominating(bool fDryRun)
     TRY_LOCK(cs_darksend, lockDS);
     if(!lockDS) {
         strAutoDenomResult = _("Lock is already in place.");
-        return false;
-    }
-
-    if(!masternodeSync.IsBlockchainSynced()) {
-        strAutoDenomResult = _("Can't mix while sync in progress.");
         return false;
     }
 
@@ -1504,12 +1505,14 @@ bool CDarksendPool::DoAutomaticDenominating(bool fDryRun)
         }
     }
 
-    //if we've used 90% of the Masternode list then drop all the oldest first
-    int nThreshold = (int)(mnodeman.CountEnabled(MIN_PRIVATESEND_PEER_PROTO_VERSION) * 0.9);
-    LogPrint("privatesend", "Checking vecMasternodesUsed: size: %d, threshold: %d\n", (int)vecMasternodesUsed.size(), nThreshold);
-    while((int)vecMasternodesUsed.size() > nThreshold) {
-        vecMasternodesUsed.erase(vecMasternodesUsed.begin());
-        LogPrint("privatesend", "  vecMasternodesUsed: size: %d, threshold: %d\n", (int)vecMasternodesUsed.size(), nThreshold);
+    // If we've used 90% of the Masternode list then drop the oldest first ~30%
+    int nThreshold_high = (int)(mnodeman.CountEnabled(MIN_PRIVATESEND_PEER_PROTO_VERSION) * 0.9);
+    int nThreshold_low = nThreshold_high * 0.7;
+    LogPrint("privatesend", "Checking vecMasternodesUsed: size: %d, threshold: %d\n", (int)vecMasternodesUsed.size(), nThreshold_high);
+
+    if((int)vecMasternodesUsed.size() > nThreshold_high) {
+        vecMasternodesUsed.erase(vecMasternodesUsed.begin(), vecMasternodesUsed.begin() + vecMasternodesUsed.size() - nThreshold_low);
+        LogPrint("privatesend", "  vecMasternodesUsed: new size: %d, threshold: %d\n", (int)vecMasternodesUsed.size(), nThreshold_high);
     }
 
     bool fUseQueue = insecure_rand()%100 > 33;
@@ -1556,14 +1559,14 @@ bool CDarksendPool::DoAutomaticDenominating(bool fDryRun)
                 LogPrintf("CDarksendPool::DoAutomaticDenominating -- dsq masternode is not in masternode list! vin=%s\n", dsq.vin.ToString());
                 continue;
             }
+            vecMasternodesUsed.push_back(dsq.vin);
 
             LogPrintf("CDarksendPool::DoAutomaticDenominating -- attempt to connect to masternode from queue, addr=%s\n", pmn->addr.ToString());
             nLastTimeChanged = GetTimeMillis();
             // connect to Masternode and submit the queue request
             CNode* pnode = ConnectNode((CAddress)addr, NULL, true);
-            if(pnode != NULL) {
+            if(pnode) {
                 pSubmittedToMasternode = pmn;
-                vecMasternodesUsed.push_back(dsq.vin);
                 nSessionDenom = dsq.nDenom;
 
                 pnode->PushMessage(NetMsgType::DSACCEPT, nSessionDenom, txMyCollateral);
@@ -1593,6 +1596,7 @@ bool CDarksendPool::DoAutomaticDenominating(bool fDryRun)
             strAutoDenomResult = _("Can't find random Masternode.");
             return false;
         }
+        vecMasternodesUsed.push_back(pmn->vin);
 
         if(pmn->nLastDsq != 0 && pmn->nLastDsq + mnodeman.CountEnabled(MIN_PRIVATESEND_PEER_PROTO_VERSION)/5 > mnodeman.nDsqCount) {
             nTries++;
@@ -1602,10 +1606,9 @@ bool CDarksendPool::DoAutomaticDenominating(bool fDryRun)
         nLastTimeChanged = GetTimeMillis();
         LogPrintf("CDarksendPool::DoAutomaticDenominating -- attempt %d connection to Masternode %s\n", nTries, pmn->addr.ToString());
         CNode* pnode = ConnectNode((CAddress)pmn->addr, NULL, true);
-        if(pnode != NULL) {
+        if(pnode) {
             LogPrintf("CDarksendPool::DoAutomaticDenominating -- connected %s\n", pmn->vin.ToString());
             pSubmittedToMasternode = pmn;
-            vecMasternodesUsed.push_back(pmn->vin);
 
             std::vector<CAmount> vecAmounts;
             pwalletMain->ConvertList(vecTxIn, vecAmounts);
@@ -1620,7 +1623,6 @@ bool CDarksendPool::DoAutomaticDenominating(bool fDryRun)
             return true;
         } else {
             LogPrintf("CDarksendPool::DoAutomaticDenominating -- can't connect %s\n", pmn->vin.ToString());
-            vecMasternodesUsed.push_back(pmn->vin); // postpone MN we wasn't able to connect to
             nTries++;
             continue;
         }
@@ -1685,7 +1687,7 @@ bool CDarksendPool::PrepareDenominate(int nMinRounds, int nMaxRounds, std::strin
 
         if nMinRounds >= 0 it means only denominated inputs are going in and coming out
     */
-    bool fSelected = pwalletMain->SelectCoinsByDenominations(nSessionDenom, 0.1*COIN, PRIVATESEND_POOL_MAX, vecTxIn, vCoins, nValueIn, nMinRounds, nMaxRounds);
+    bool fSelected = pwalletMain->SelectCoinsByDenominations(nSessionDenom, vecPrivateSendDenominations.back(), PRIVATESEND_POOL_MAX, vecTxIn, vCoins, nValueIn, nMinRounds, nMaxRounds);
     if (nMinRounds >= 0 && !fSelected) {
         strErrorRet = "Can't select current denominated inputs";
         return false;
@@ -1702,65 +1704,57 @@ bool CDarksendPool::PrepareDenominate(int nMinRounds, int nMaxRounds, std::strin
 
     CAmount nValueLeft = nValueIn;
 
-    /*
-        TODO: Front load with needed denominations (e.g. .1, 1 )
-    */
-
-    // Make outputs by looping through denominations: try to add every needed denomination, repeat up to 5-10 times.
-    // This way we can be pretty sure that it should have at least one of each needed denomination.
+    // Try to add every needed denomination, repeat up to 5-9 times.
     // NOTE: No need to randomize order of inputs because they were
     // initially shuffled in CWallet::SelectCoinsByDenominations already.
     int nStep = 0;
     int nStepsMax = 5 + GetRandInt(5);
-    while(nStep < nStepsMax) {
+    std::vector<int> vecBits;
+    if (!GetDenominationsBits(nSessionDenom, vecBits)) {
+        strErrorRet = "Incorrect session denom";
+        return false;
+    }
 
-        BOOST_FOREACH(CAmount nValueDenom, vecPrivateSendDenominations) {
-            // only use the ones that are approved
-            if (!((nSessionDenom & (1 << 0)) && nValueDenom == 100*COIN +100000) &&
-                !((nSessionDenom & (1 << 1)) && nValueDenom ==  10*COIN + 10000) &&
-                !((nSessionDenom & (1 << 2)) && nValueDenom ==   1*COIN +  1000) &&
-                !((nSessionDenom & (1 << 3)) && nValueDenom ==  .1*COIN +   100))
-                { continue; }
+    while (nStep < nStepsMax) {
+        BOOST_FOREACH(int nBit, vecBits) {
+            CAmount nValueDenom = vecPrivateSendDenominations[nBit];
+            if (nValueLeft - nValueDenom < 0) continue;
 
-            // try to add it
-            if (nValueLeft - nValueDenom >= 0) {
-                // Note: this relies on a fact that both vectors MUST have same size
-                std::vector<CTxIn>::iterator it = vecTxIn.begin();
-                std::vector<COutput>::iterator it2 = vCoins.begin();
-                while (it2 != vCoins.end()) {
-                    // we have matching inputs
-                    if ((*it2).tx->vout[(*it2).i].nValue == nValueDenom) {
-                        // add new input in resulting vector
-                        vecTxInRet.push_back(*it);
-                        // remove corresponting items from initial vectors
-                        vecTxIn.erase(it);
-                        vCoins.erase(it2);
+            // Note: this relies on a fact that both vectors MUST have same size
+            std::vector<CTxIn>::iterator it = vecTxIn.begin();
+            std::vector<COutput>::iterator it2 = vCoins.begin();
+            while (it2 != vCoins.end()) {
+                // we have matching inputs
+                if ((*it2).tx->vout[(*it2).i].nValue == nValueDenom) {
+                    // add new input in resulting vector
+                    vecTxInRet.push_back(*it);
+                    // remove corresponting items from initial vectors
+                    vecTxIn.erase(it);
+                    vCoins.erase(it2);
 
-                        CScript scriptChange;
-                        CPubKey vchPubKey;
-                        // use a unique change address
-                        assert(reservekey.GetReservedKey(vchPubKey)); // should never fail, as we just unlocked
-                        scriptChange = GetScriptForDestination(vchPubKey.GetID());
-                        reservekey.KeepKey();
+                    CScript scriptChange;
+                    CPubKey vchPubKey;
+                    // use a unique change address
+                    assert(reservekey.GetReservedKey(vchPubKey)); // should never fail, as we just unlocked
+                    scriptChange = GetScriptForDestination(vchPubKey.GetID());
+                    reservekey.KeepKey();
 
-                        // add new output
-                        CTxOut txout(nValueDenom, scriptChange);
-                        vecTxOutRet.push_back(txout);
+                    // add new output
+                    CTxOut txout(nValueDenom, scriptChange);
+                    vecTxOutRet.push_back(txout);
 
-                        // subtract denomination amount
-                        nValueLeft -= nValueDenom;
+                    // subtract denomination amount
+                    nValueLeft -= nValueDenom;
 
-                        break;
-                    }
-                    ++it;
-                    ++it2;
+                    // step is complete
+                    break;
                 }
+                ++it;
+                ++it2;
             }
         }
-
-        nStep++;
-
         if(nValueLeft == 0) break;
+        nStep++;
     }
 
     {
@@ -2070,37 +2064,33 @@ bool CDarksendPool::IsDenomCompatibleWithSession(int nDenom, CTransaction txColl
 }
 
 /*  Create a nice string to show the denominations
-    Function returns as follows:
+    Function returns as follows (for 4 denominations):
         ( bit on if present )
         bit 0           - 100
         bit 1           - 10
         bit 2           - 1
         bit 3           - .1
+        bit 4 and so on - out-of-bounds
         none of above   - non-denom
-        bit 4 and so on - non-denom
 */
 std::string CDarksendPool::GetDenominationsToString(int nDenom)
 {
-    std::string strDenom;
+    std::string strDenom = "";
+    int nMaxDenoms = vecPrivateSendDenominations.size();
 
-    if(nDenom & (1 << 0)) strDenom += "100";
-
-    if(nDenom & (1 << 1)) {
-        if(strDenom.size() > 0) strDenom += "+";
-        strDenom += "10";
+    if(nDenom >= (1 << nMaxDenoms)) {
+        return "out-of-bounds";
     }
 
-    if(nDenom & (1 << 2)) {
-        if(strDenom.size() > 0) strDenom += "+";
-        strDenom += "1";
+    for (int i = 0; i < nMaxDenoms; ++i) {
+        if(nDenom & (1 << i)) {
+            strDenom += (strDenom.empty() ? "" : "+") + FormatMoney(vecPrivateSendDenominations[i]);
+        }
     }
 
-    if(nDenom & (1 << 3)) {
-        if(strDenom.size() > 0) strDenom += "+";
-        strDenom += "0.1";
+    if(strDenom.empty()) {
+        return "non-denom";
     }
-
-    if(strDenom.size() == 0 && nDenom >= (1 << 4)) strDenom += "non-denom";
 
     return strDenom;
 }
@@ -2116,7 +2106,7 @@ int CDarksendPool::GetDenominations(const std::vector<CTxDSOut>& vecTxDSOut)
 }
 
 /*  Return a bitshifted integer representing the denominations in this list
-    Function returns as follows:
+    Function returns as follows (for 4 denominations):
         ( bit on if present )
         100       - bit 0
         10        - bit 1
@@ -2154,6 +2144,29 @@ int CDarksendPool::GetDenominations(const std::vector<CTxOut>& vecTxOut, bool fS
     }
 
     return nDenom;
+}
+
+bool CDarksendPool::GetDenominationsBits(int nDenom, std::vector<int> &vecBitsRet)
+{
+    // ( bit on if present, 4 denominations example )
+    // bit 0 - 100DASH+1
+    // bit 1 - 10DASH+1
+    // bit 2 - 1DASH+1
+    // bit 3 - .1DASH+1
+
+    int nMaxDenoms = vecPrivateSendDenominations.size();
+
+    if(nDenom >= (1 << nMaxDenoms)) return false;
+
+    vecBitsRet.clear();
+
+    for (int i = 0; i < nMaxDenoms; ++i) {
+        if(nDenom & (1 << i)) {
+            vecBitsRet.push_back(i);
+        }
+    }
+
+    return !vecBitsRet.empty();
 }
 
 int CDarksendPool::GetDenominationsByAmounts(const std::vector<CAmount>& vecAmount)
@@ -2325,7 +2338,8 @@ bool CDarksendQueue::Relay()
 {
     LOCK(cs_vNodes);
     BOOST_FOREACH(CNode* pnode, vNodes)
-        pnode->PushMessage(NetMsgType::DSQUEUE, (*this));
+        if(pnode->nVersion >= MIN_PRIVATESEND_PEER_PROTO_VERSION)
+            pnode->PushMessage(NetMsgType::DSQUEUE, (*this));
 
     return true;
 }
@@ -2364,7 +2378,8 @@ void CDarksendPool::RelayFinalTransaction(const CTransaction& txFinal)
 {
     LOCK(cs_vNodes);
     BOOST_FOREACH(CNode* pnode, vNodes)
-        pnode->PushMessage(NetMsgType::DSFINALTX, nSessionID, txFinal);
+        if(pnode->nVersion >= MIN_PRIVATESEND_PEER_PROTO_VERSION)
+            pnode->PushMessage(NetMsgType::DSFINALTX, nSessionID, txFinal);
 }
 
 void CDarksendPool::RelayIn(const CDarkSendEntry& entry)
@@ -2382,14 +2397,16 @@ void CDarksendPool::RelayStatus(int nErrorID)
 {
     LOCK(cs_vNodes);
     BOOST_FOREACH(CNode* pnode, vNodes)
-        pnode->PushMessage(NetMsgType::DSSTATUSUPDATE, nSessionID, nState, nEntriesCount, nAcceptedEntriesCount, nErrorID);
+        if(pnode->nVersion >= MIN_PRIVATESEND_PEER_PROTO_VERSION)
+            pnode->PushMessage(NetMsgType::DSSTATUSUPDATE, nSessionID, nState, nEntriesCount, nAcceptedEntriesCount, nErrorID);
 }
 
 void CDarksendPool::RelayCompletedTransaction(bool fError, int nErrorID)
 {
     LOCK(cs_vNodes);
     BOOST_FOREACH(CNode* pnode, vNodes)
-        pnode->PushMessage(NetMsgType::DSCOMPLETE, nSessionID, fError, nErrorID);
+        if(pnode->nVersion >= MIN_PRIVATESEND_PEER_PROTO_VERSION)
+            pnode->PushMessage(NetMsgType::DSCOMPLETE, nSessionID, fError, nErrorID);
 }
 
 void CDarksendPool::SetState(unsigned int nStateNew)

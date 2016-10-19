@@ -1151,7 +1151,10 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)
         fEnableReplacement = (std::find(vstrReplacementModes.begin(), vstrReplacementModes.end(), "fee") != vstrReplacementModes.end());
     }
 
-    // ********************************************************* Step 4: application initialization: dir lock, daemonize, pidfile, debug log
+    // ********************************************************* Step 4: application initialization: dir lock, daemonize, pidfile, debug log, seed insecure_rand()
+
+    // Initialize fast PRNG
+    seed_insecure_rand(false);
 
     // Initialize elliptic curve code
     ECC_Start();
@@ -1784,20 +1787,12 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)
 
     if(fMasterNode) {
         LogPrintf("MASTERNODE:\n");
-        activeMasternode.strMasterNodeAddr = GetArg("-masternodeaddr", "");
 
-        CService service;
-        if(activeMasternode.strMasterNodeAddr.empty()) {
-            if(!GetLocal(service)) {
-                LogPrintf("Can't detect external address. Please consider using the masternodeaddr configuration option.\n");
-            }
-        } else {
-            service = CService(activeMasternode.strMasterNodeAddr);
-            if (!service.IsValid()) {
-                return InitError("Invalid masternodeaddr: " + activeMasternode.strMasterNodeAddr);
-            }
+        if(!GetArg("-masternodeaddr", "").empty()) {
+            // Hot masternode (either local or remote) should get its address in
+            // CActiveMasternode::ManageState() automatically and no longer relies on masternodeaddr.
+            return InitError(_("masternodeaddr option is deprecated. Please use masternode.conf to manage your remote masterndodes."));
         }
-        LogPrintf("  service: %s\n", service.ToString());
 
         std::string strMasterNodePrivKey = GetArg("-masternodeprivkey", "");
         if(!strMasterNodePrivKey.empty()) {
@@ -1808,24 +1803,26 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)
         } else {
             return InitError(_("You must specify a masternodeprivkey in the configuration. Please see documentation for help."));
         }
-    }
+    } else {
+        LogPrintf("Using masternode config file %s\n", GetMasternodeConfigFile().string());
 
-    if(GetBoolArg("-mnconflock", true) && pwalletMain) {
-        LOCK(pwalletMain->cs_wallet);
-        LogPrintf("Locking Masternodes:\n");
-        uint256 mnTxHash;
-        int outputIndex;
-        BOOST_FOREACH(CMasternodeConfig::CMasternodeEntry mne, masternodeConfig.getEntries()) {
-            mnTxHash.SetHex(mne.getTxHash());
-            outputIndex = boost::lexical_cast<unsigned int>(mne.getOutputIndex());
-            COutPoint outpoint = COutPoint(mnTxHash, outputIndex);
-            // don't lock non-spendable outpoint (i.e. it's already spent or it's not from this wallet at all)
-            if(pwalletMain->IsMine(CTxIn(outpoint)) != ISMINE_SPENDABLE) {
-                LogPrintf("  %s %s - IS NOT SPENDABLE, was not locked\n", mne.getTxHash(), mne.getOutputIndex());
-                continue;
+        if(GetBoolArg("-mnconflock", true) && pwalletMain) {
+            LOCK(pwalletMain->cs_wallet);
+            LogPrintf("Locking Masternodes:\n");
+            uint256 mnTxHash;
+            int outputIndex;
+            BOOST_FOREACH(CMasternodeConfig::CMasternodeEntry mne, masternodeConfig.getEntries()) {
+                mnTxHash.SetHex(mne.getTxHash());
+                outputIndex = boost::lexical_cast<unsigned int>(mne.getOutputIndex());
+                COutPoint outpoint = COutPoint(mnTxHash, outputIndex);
+                // don't lock non-spendable outpoint (i.e. it's already spent or it's not from this wallet at all)
+                if(pwalletMain->IsMine(CTxIn(outpoint)) != ISMINE_SPENDABLE) {
+                    LogPrintf("  %s %s - IS NOT SPENDABLE, was not locked\n", mne.getTxHash(), mne.getOutputIndex());
+                    continue;
+                }
+                pwalletMain->LockCoin(outpoint);
+                LogPrintf("  %s %s - locked successfully\n", mne.getTxHash(), mne.getOutputIndex());
             }
-            pwalletMain->LockCoin(outpoint);
-            LogPrintf("  %s %s - locked successfully\n", mne.getTxHash(), mne.getOutputIndex());
         }
     }
 

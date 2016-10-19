@@ -67,4 +67,11 @@ public:
     }
 };
 
+/**
+ * Function for std::random_shuffle
+ */
+static inline uint32_t GetInsecureRand(uint32_t i){
+    return insecure_rand() % i;
+}
+
 #endif // BITCOIN_RANDOM_H

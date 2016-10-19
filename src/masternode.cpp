@@ -27,6 +27,7 @@ CMasternode::CMasternode() :
     nLastDsq(0),
     nTimeLastChecked(0),
     nTimeLastPaid(0),
+    nTimeLastWatchdogVote(0),
     nActiveState(MASTERNODE_ENABLED),
     nCacheCollateralBlock(0),
     nBlockLastPaid(0),
@@ -46,6 +47,7 @@ CMasternode::CMasternode(CService addrNew, CTxIn vinNew, CPubKey pubKeyCollatera
     nLastDsq(0),
     nTimeLastChecked(0),
     nTimeLastPaid(0),
+    nTimeLastWatchdogVote(0),
     nActiveState(MASTERNODE_ENABLED),
     nCacheCollateralBlock(0),
     nBlockLastPaid(0),
@@ -65,6 +67,7 @@ CMasternode::CMasternode(const CMasternode& other) :
     nLastDsq(other.nLastDsq),
     nTimeLastChecked(other.nTimeLastChecked),
     nTimeLastPaid(other.nTimeLastPaid),
+    nTimeLastWatchdogVote(other.nTimeLastWatchdogVote),
     nActiveState(other.nActiveState),
     nCacheCollateralBlock(other.nCacheCollateralBlock),
     nBlockLastPaid(other.nBlockLastPaid),
@@ -84,6 +87,7 @@ CMasternode::CMasternode(const CMasternodeBroadcast& mnb) :
     nLastDsq(mnb.nLastDsq),
     nTimeLastChecked(0),
     nTimeLastPaid(0),
+    nTimeLastWatchdogVote(0),
     nActiveState(MASTERNODE_ENABLED),
     nCacheCollateralBlock(0),
     nBlockLastPaid(0),
@@ -119,32 +123,31 @@ bool CMasternode::UpdateFromNewBroadcast(CMasternodeBroadcast& mnb)
 // the proof of work for that block. The further away they are the better, the furthest will win the election
 // and get paid this block
 //
-uint256 CMasternode::CalculateScore(int nBlockHeight)
+arith_uint256 CMasternode::CalculateScore(const uint256& blockHash)
 {
-    uint256 hash;
     uint256 aux = ArithToUint256(UintToArith256(vin.prevout.hash) + vin.prevout.n);
 
-    if(!GetBlockHash(hash, nBlockHeight)) {
-        LogPrintf("CMasternode::CalculateScore -- ERROR: GetBlockHash() failed at nBlockHeight %d\n", nBlockHeight);
-        return uint256();
-    }
-
     CHashWriter ss(SER_GETHASH, PROTOCOL_VERSION);
-    ss << hash;
+    ss << blockHash;
     arith_uint256 hash2 = UintToArith256(ss.GetHash());
 
     CHashWriter ss2(SER_GETHASH, PROTOCOL_VERSION);
-    ss2 << hash;
+    ss2 << blockHash;
     ss2 << aux;
     arith_uint256 hash3 = UintToArith256(ss2.GetHash());
 
-    arith_uint256 r = (hash3 > hash2 ? hash3 - hash2 : hash2 - hash3);
-
-    return ArithToUint256(r);
+    return (hash3 > hash2 ? hash3 - hash2 : hash2 - hash3);
 }
 
 void CMasternode::Check(bool fForce)
 {
+    LOCK(cs);
+
+    bool fWatchdogActive = mnodeman.IsWatchdogActive();
+
+    LogPrint("masternode", "CMasternode::Check start -- vin = %s\n", 
+             vin.prevout.ToStringShort());
+
     //once spent, stop doing the checks
     if(nActiveState == MASTERNODE_OUTPOINT_SPENT) return;
 
@@ -153,12 +156,15 @@ void CMasternode::Check(bool fForce)
     if(!fForce && (GetTime() - nTimeLastChecked < MASTERNODE_CHECK_SECONDS)) return;
     nTimeLastChecked = GetTime();
 
-    bool fRemove =  // If there were no pings for quite a long time ...
-                    !IsPingedWithin(MASTERNODE_REMOVAL_SECONDS) ||
-                    // or masternode doesn't meet payment protocol requirements ...
-                    nProtocolVersion < mnpayments.GetMinMasternodePaymentsProto() ||
-                    // or it's our own node and we just updated it to the new protocol but we are still waiting for activation ...
-                    (pubKeyMasternode == activeMasternode.pubKeyMasternode && nProtocolVersion < PROTOCOL_VERSION);
+    if((nActiveState == MASTERNODE_WATCHDOG_EXPIRED) && !fWatchdogActive) {
+        // Redo the checks
+        nActiveState = MASTERNODE_ENABLED;
+    }
+
+                   // masternode doesn't meet payment protocol requirements ...
+    bool fRemove = nProtocolVersion < mnpayments.GetMinMasternodePaymentsProto() ||
+                   // or it's our own node and we just updated it to the new protocol but we are still waiting for activation ...
+                   (pubKeyMasternode == activeMasternode.pubKeyMasternode && nProtocolVersion < PROTOCOL_VERSION);
 
     if(fRemove) {
         // it should be removed from the list
@@ -170,7 +176,9 @@ void CMasternode::Check(bool fForce)
     }
 
     if(!IsPingedWithin(MASTERNODE_EXPIRATION_SECONDS)) {
-        nActiveState = MASTERNODE_EXPIRED;
+        if(nActiveState != MASTERNODE_WATCHDOG_EXPIRED) {
+            nActiveState = MASTERNODE_EXPIRED;
+        }
 
         // RESCAN AFFECTED VOTES
         FlagGovernanceItemsAsDirty();
@@ -178,7 +186,10 @@ void CMasternode::Check(bool fForce)
     }
 
     if(lastPing.sigTime - sigTime < MASTERNODE_MIN_MNP_SECONDS) {
-        nActiveState = MASTERNODE_PRE_ENABLED;
+        if(nActiveState != MASTERNODE_WATCHDOG_EXPIRED) {
+            nActiveState = MASTERNODE_PRE_ENABLED;
+        }
+
         return;
     }
 
@@ -200,7 +211,41 @@ void CMasternode::Check(bool fForce)
         }
     }
 
+    bool fWatchdogExpired = (fWatchdogActive && ((GetTime() - nTimeLastWatchdogVote) > MASTERNODE_WATCHDOG_MAX_SECONDS));
+    LogPrint("masternode", "CMasternode::Check -- vin = %s,  nTimeLastWatchdogVote = %d, GetTime() = %d, fWatchdogExpired = %d\n", 
+             vin.prevout.ToStringShort(), nTimeLastWatchdogVote, GetTime(), fWatchdogExpired);
+    if(fWatchdogExpired) {
+        nActiveState = MASTERNODE_WATCHDOG_EXPIRED;
+        return;
+    }
+
     nActiveState = MASTERNODE_ENABLED; // OK
+}
+
+bool CMasternode::IsValidNetAddr()
+{
+    // TODO: regtest is fine with any addresses for now,
+    // should probably be a bit smarter if one day we start to implement tests for this
+    return Params().NetworkIDString() == CBaseChainParams::REGTEST ||
+            (addr.IsIPv4() && IsReachable(addr) && addr.IsRoutable());
+}
+
+masternode_info_t CMasternode::GetInfo()
+{
+    masternode_info_t info;
+    info.vin = vin;
+    info.addr = addr;
+    info.pubKeyCollateralAddress = pubKeyCollateralAddress;
+    info.pubKeyMasternode = pubKeyMasternode;
+    info.sigTime = sigTime;
+    info.nLastDsq = nLastDsq;
+    info.nTimeLastChecked = nTimeLastChecked;
+    info.nTimeLastPaid = nTimeLastPaid;
+    info.nTimeLastWatchdogVote = nTimeLastWatchdogVote;
+    info.nActiveState = nActiveState;
+    info.nProtocolVersion = nProtocolVersion;
+    info.fInfoValid = true;
+    return info;
 }
 
 std::string CMasternode::GetStatus()
@@ -211,6 +256,7 @@ std::string CMasternode::GetStatus()
         case CMasternode::MASTERNODE_EXPIRED:           return "EXPIRED";
         case CMasternode::MASTERNODE_OUTPOINT_SPENT:    return "OUTPOINT_SPENT";
         case CMasternode::MASTERNODE_REMOVE:            return "REMOVE";
+        case CMasternode::MASTERNODE_WATCHDOG_EXPIRED:  return "WATCHDOG_EXPIRED";
         default:                                        return "UNKNOWN";
     }
 }
@@ -333,6 +379,14 @@ bool CMasternodeBroadcast::Create(CTxIn txin, CService service, CKey keyCollater
     }
 
     mnbRet = CMasternodeBroadcast(service, txin, pubKeyCollateralAddressNew, pubKeyMasternodeNew, PROTOCOL_VERSION);
+
+    if(!mnbRet.IsValidNetAddr()) {
+        strErrorRet = strprintf("Invalid IP address, masternode=%s", txin.prevout.ToStringShort());
+        LogPrintf("CMasternodeBroadcast::Create -- %s\n", strErrorRet);
+        mnbRet = CMasternodeBroadcast();
+        return false;
+    }
+
     mnbRet.lastPing = mnp;
     if(!mnbRet.Sign(keyCollateralAddressNew)) {
         strErrorRet = strprintf("Failed to sign broadcast, masternode=%s", txin.prevout.ToStringShort());
@@ -450,7 +504,7 @@ bool CMasternodeBroadcast::CheckInputsAndAdd(int& nDos)
 
     if(pmn != NULL) {
         // nothing to do here if we already know about this masternode and it's (pre)enabled
-        if(pmn->IsEnabled() || pmn->IsPreEnabled()) return true;
+        if(pmn->IsEnabled() || pmn->IsPreEnabled() || pmn->IsWatchdogExpired()) return true;
         // if it's not (pre)enabled, remove old MN first and continue
         mnodeman.Remove(pmn->vin);
     }
@@ -714,7 +768,7 @@ bool CMasternodePing::CheckAndUpdate(int& nDos, bool fRequireEnabled, bool fChec
         return false;
     }
 
-    if (fRequireEnabled && !pmn->IsEnabled() && !pmn->IsPreEnabled()) return false;
+    if (fRequireEnabled && !pmn->IsEnabled() && !pmn->IsPreEnabled() && !pmn->IsWatchdogExpired()) return false;
 
     // LogPrintf("mnping - Found corresponding mn for vin: %s\n", vin.prevout.ToStringShort());
     // update only if there is no known ping for this masternode or
@@ -772,11 +826,26 @@ void CMasternodePing::Relay()
 
 void CMasternode::AddGovernanceVote(uint256 nGovernanceObjectHash)
 {
-    if(mapGovernaceObjectsVotedOn.count(nGovernanceObjectHash)) {
-        mapGovernaceObjectsVotedOn[nGovernanceObjectHash]++;
+    if(mapGovernanceObjectsVotedOn.count(nGovernanceObjectHash)) {
+        mapGovernanceObjectsVotedOn[nGovernanceObjectHash]++;
     } else {
-        mapGovernaceObjectsVotedOn.insert(std::make_pair(nGovernanceObjectHash, 1));
+        mapGovernanceObjectsVotedOn.insert(std::make_pair(nGovernanceObjectHash, 1));
     }
+}
+
+void CMasternode::RemoveGovernanceObject(uint256 nGovernanceObjectHash)
+{
+    std::map<uint256, int>::iterator it = mapGovernanceObjectsVotedOn.find(nGovernanceObjectHash);
+    if(it == mapGovernanceObjectsVotedOn.end()) {
+        return;
+    }
+    mapGovernanceObjectsVotedOn.erase(it);
+}
+
+void CMasternode::UpdateWatchdogVoteTime()
+{
+    LOCK(cs);
+    nTimeLastWatchdogVote = GetTime();
 }
 
 /**
@@ -785,14 +854,25 @@ void CMasternode::AddGovernanceVote(uint256 nGovernanceObjectHash)
 *   - When masternode come and go on the network, we must flag the items they voted on to recalc it's cached flags
 *
 */
-
 void CMasternode::FlagGovernanceItemsAsDirty()
 {
-    std::map<uint256, int>::iterator it = mapGovernaceObjectsVotedOn.begin();
-    while(it != mapGovernaceObjectsVotedOn.end()){
+    std::map<uint256, int>::iterator it = mapGovernanceObjectsVotedOn.begin();
+    while(it != mapGovernanceObjectsVotedOn.end()){
         CGovernanceObject *pObj = governance.FindGovernanceObject((*it).first);
 
         if(pObj) pObj->InvalidateVoteCache();
         ++it;
+    }
+
+    std::vector<uint256> vecDirty;
+    {
+        std::map<uint256, int>::iterator it = mapGovernanceObjectsVotedOn.begin();
+        while(it != mapGovernanceObjectsVotedOn.end()) {
+            vecDirty.push_back(it->first);
+            ++it;
+        }
+    }
+    for(size_t i = 0; i < vecDirty.size(); ++i) {
+        mnodeman.AddDirtyGovernanceObjectHash(vecDirty[i]);
     }
 }

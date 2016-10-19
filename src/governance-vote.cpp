@@ -236,7 +236,7 @@ CGovernanceVote::CGovernanceVote(CTxIn vinMasternodeIn, uint256 nParentHashIn, v
 void CGovernanceVote::Relay() const
 {
     CInv inv(MSG_GOVERNANCE_OBJECT_VOTE, GetHash());
-    RelayInv(inv, MSG_GOVERNANCE_PEER_PROTO_VERSION);
+    RelayInv(inv, PROTOCOL_VERSION);
 }
 
 bool CGovernanceVote::Sign(CKey& keyMasternode, CPubKey& pubKeyMasternode)
@@ -283,14 +283,9 @@ bool CGovernanceVote::IsValid(bool fSignatureCheck) const
         return false;
     }
 
-    // TODO: This is an unsafe function call: fix
-    CMasternode mn;
-    if(!mnodeman.Get(vinMasternode, mn)) {
+    masternode_info_t infoMn = mnodeman.GetMasternodeInfo(vinMasternode);
+    if(!infoMn.fInfoValid) {
         LogPrint("gobject", "CGovernanceVote::IsValid -- Unknown Masternode - %s\n", vinMasternode.prevout.ToStringShort());
-        return false;
-    }
-    if(!mn.IsEnabled()) {
-        LogPrint("gobject", "CGovernanceVote::IsValid -- Masternode - %s not enabled\n", vinMasternode.prevout.ToStringShort());
         return false;
     }
 
@@ -300,7 +295,7 @@ bool CGovernanceVote::IsValid(bool fSignatureCheck) const
     std::string strMessage = vinMasternode.prevout.ToStringShort() + "|" + nParentHash.ToString() + "|" +
         boost::lexical_cast<std::string>(nVoteSignal) + "|" + boost::lexical_cast<std::string>(nVoteOutcome) + "|" + boost::lexical_cast<std::string>(nTime);
 
-    if(!darkSendSigner.VerifyMessage(mn.pubKeyMasternode, vchSig, strMessage, strError)) {
+    if(!darkSendSigner.VerifyMessage(infoMn.pubKeyMasternode, vchSig, strMessage, strError)) {
         LogPrintf("CGovernanceVote::IsValid -- VerifyMessage() failed, error: %s\n", strError);
         return false;
     }

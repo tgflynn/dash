@@ -316,7 +316,6 @@ void CMasternodePayments::ProcessMessage(CNode* pfrom, std::string& strCommand, 
 
         if(mapMasternodePaymentVotes.count(vote.GetHash())) {
             LogPrint("mnpayments", "MASTERNODEPAYMENTVOTE -- hash=%s, nHeight=%d seen\n", vote.GetHash().ToString(), pCurrentBlockIndex->nHeight);
-            masternodeSync.AddedPaymentVote();
             return;
         }
 
@@ -749,7 +748,7 @@ void CMasternodePayments::Sync(CNode* pnode, int nCountNeeded)
 
     if(!pCurrentBlockIndex) return;
 
-    if(pnode->nVersion < 70201) {
+    if(pnode->nVersion < 70202) {
         // Old nodes can only sync via heavy method
         int nLimit = GetStorageLimit();
         if(nCountNeeded > nLimit) nCountNeeded = nLimit;
@@ -780,7 +779,7 @@ void CMasternodePayments::Sync(CNode* pnode, int nCountNeeded)
 void CMasternodePayments::RequestLowDataPaymentBlocks(CNode* pnode)
 {
     // Old nodes can't process this
-    if(pnode->nVersion < 70201) return;
+    if(pnode->nVersion < 70202) return;
 
     LOCK(cs_mapMasternodeBlocks);
 
