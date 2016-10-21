@@ -914,8 +914,8 @@ bool CGovernanceObject::ProcessVote(CNode* pfrom,
         it2 = recVote.mapInstances.insert(vote_instance_m_t::value_type(int(eSignal), vote_instance_t())).first;
     }
     vote_instance_t& voteInstance = it2->second;
-    //TODO: Check if we should use GetTime instead of the vote's timestamp here
-    int64_t nTimeDelta = vote.GetTimestamp() - voteInstance.nTime;
+    int64_t nNow = GetTime();
+    int64_t nTimeDelta = nNow - voteInstance.nTime;
     if(nTimeDelta < GOVERNANCE_UPDATE_MIN) {
         std::ostringstream ostr;
         ostr << "CGovernanceObject::UpdateVote -- Masternode voting too often "
@@ -938,7 +938,7 @@ bool CGovernanceObject::ProcessVote(CNode* pfrom,
         governance.AddInvalidVote(vote);
         return false;
     }
-    voteInstance = vote_instance_t(vote.GetOutcome(), vote.GetTimestamp());
+    voteInstance = vote_instance_t(vote.GetOutcome(), nNow);
     fileVotes.AddVote(vote);
     return true;
 }
