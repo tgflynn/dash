@@ -207,7 +207,11 @@ void CGovernanceManager::ProcessMessage(CNode* pfrom, std::string& strCommand, C
         CGovernanceVote vote;
         vRecv >> vote;
 
-        AcceptVoteMessage(vote.GetHash());
+        if(!AcceptVoteMessage(vote.GetHash())) {
+            LogPrintf("CGovernanceManager -- Received unrequested vote object: %s", vote.ToString());
+            Misbehaving(pfrom->GetId(), 20);
+            return;
+        }
 
         CGovernanceException exception;
         if(ProcessVote(pfrom, vote, exception)) {
@@ -215,8 +219,9 @@ void CGovernanceManager::ProcessMessage(CNode* pfrom, std::string& strCommand, C
         }
         else {
             if((exception.GetNodePenalty() != 0) && masternodeSync.IsSynced()) {
-                    Misbehaving(pfrom->GetId(), exception.GetNodePenalty());
+                Misbehaving(pfrom->GetId(), exception.GetNodePenalty());
             }
+            return;
         }
 
         // FIND THE MASTERNODE OF THE VOTER
