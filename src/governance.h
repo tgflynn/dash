@@ -72,11 +72,7 @@ public: // Types
 
     typedef object_m_t::const_iterator object_m_cit;
 
-    typedef std::map<uint256, CGovernanceObject*> object_ref_m_t;
-
-    typedef object_ref_m_t::iterator object_ref_m_it;
-
-    typedef object_ref_m_t::const_iterator object_ref_m_cit;
+    typedef CacheMap<uint256, CGovernanceObject*> object_ref_cache_t;
 
     typedef std::map<uint256, int> count_m_t;
 
@@ -122,7 +118,7 @@ private:
 
     count_m_t mapSeenGovernanceObjects;
 
-    object_ref_m_t mapVoteToObject;
+    object_ref_cache_t mapVoteToObject;
 
     vote_cache_t mapInvalidVotes;
 
@@ -197,7 +193,7 @@ public:
         LogPrint("gobject", "Governance object manager was cleared\n");
         mapObjects.clear();
         mapSeenGovernanceObjects.clear();
-        mapVoteToObject.clear();
+        mapVoteToObject.Clear();
         mapInvalidVotes.Clear();
         mapOrphanVotes.Clear();
         mapLastMasternodeTrigger.clear();

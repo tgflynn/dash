@@ -33,7 +33,7 @@ CGovernanceManager::CGovernanceManager()
       nCachedBlockHeight(0),
       mapObjects(),
       mapSeenGovernanceObjects(),
-      mapVoteToObject(),
+      mapVoteToObject(MAX_CACHE_SIZE),
       mapInvalidVotes(MAX_CACHE_SIZE),
       mapOrphanVotes(MAX_CACHE_SIZE),
       mapLastMasternodeTrigger(),
@@ -72,13 +72,12 @@ bool CGovernanceManager::HaveVoteForHash(uint256 nHash)
 {
     LOCK(cs);
 
-    object_ref_m_it it = mapVoteToObject.find(nHash);
-    if(it == mapVoteToObject.end()) {
+    CGovernanceObject* pGovobj = NULL;
+    if(!mapVoteToObject.Get(nHash,pGovobj)) {
         return false;
     }
-    CGovernanceObject& govobj = *(it->second);
 
-    if(!govobj.GetVoteFile().HasVote(nHash)) {
+    if(!pGovobj->GetVoteFile().HasVote(nHash)) {
         return false;
     }
     return true;
@@ -88,14 +87,13 @@ bool CGovernanceManager::SerializeVoteForHash(uint256 nHash, CDataStream& ss)
 {
     LOCK(cs);
 
-    object_ref_m_it it = mapVoteToObject.find(nHash);
-    if(it == mapVoteToObject.end()) {
+    CGovernanceObject* pGovobj = NULL;
+    if(!mapVoteToObject.Get(nHash,pGovobj)) {
         return false;
     }
-    CGovernanceObject& govobj = *(it->second);
 
     CGovernanceVote vote;
-    if(!govobj.GetVoteFile().GetVote(nHash, vote)) {
+    if(!pGovobj->GetVoteFile().GetVote(nHash, vote)) {
         return false;
     }
 
@@ -158,7 +156,11 @@ void CGovernanceManager::ProcessMessage(CNode* pfrom, std::string& strCommand, C
         CGovernanceObject govobj;
         vRecv >> govobj;
 
-        AcceptObjectMessage(govobj.GetHash());
+        if(!AcceptObjectMessage(govobj.GetHash())) {
+            LogPrintf("CGovernanceManager -- Received unrequested object: %s", govobj.GetHash().ToString());
+            Misbehaving(pfrom->GetId(), 20);
+            return;
+        }
 
         if(mapSeenGovernanceObjects.count(govobj.GetHash())){
             // TODO - print error code? what if it's GOVOBJ_ERROR_IMMATURE?
@@ -493,6 +495,29 @@ bool CGovernanceManager::ConfirmInventoryRequest(const CInv& inv)
 {
     LOCK(cs);
 
+    // First check if we've already recorded this object
+    switch(inv.type) {
+    case MSG_GOVERNANCE_OBJECT:
+    {
+        object_m_it it = mapObjects.find(inv.hash);
+        if(it != mapObjects.end()) {
+            return false;
+        }
+    }
+    break;
+    case MSG_GOVERNANCE_OBJECT_VOTE:
+    {
+        object_m_it it = mapObjects.find(inv.hash);
+        if(it != mapObjects.end()) {
+            return false;
+        }
+    }
+    break;
+    default:
+        return false;
+    }
+
+
     hash_s_t* setHash = NULL;
     switch(inv.type) {
     case MSG_GOVERNANCE_OBJECT:
@@ -707,7 +732,7 @@ bool CGovernanceManager::ProcessVote(CNode* pfrom, const CGovernanceVote& vote, 
     CGovernanceObject& govobj = it->second;
     bool fOk = govobj.ProcessVote(pfrom, vote, exception);
     if(fOk) {
-        mapVoteToObject[vote.GetHash()] = &govobj;
+        mapVoteToObject.Insert(vote.GetHash(), &govobj);
     }
     return fOk;
 }
@@ -744,12 +769,12 @@ bool CGovernanceManager::AcceptMessage(const uint256& nHash, hash_s_t& setHash)
 
 void CGovernanceManager::RebuildIndexes()
 {
-    mapVoteToObject.clear();
+    mapVoteToObject.Clear();
     for(object_m_it it = mapObjects.begin(); it != mapObjects.end(); ++it) {
         CGovernanceObject& govobj = it->second;
         std::vector<CGovernanceVote> vecVotes = govobj.GetVoteFile().GetVotes();
         for(size_t i = 0; i < vecVotes.size(); ++i) {
-            mapVoteToObject[vecVotes[i].GetHash()] = &govobj;
+            mapVoteToObject.Insert(vecVotes[i].GetHash(), &govobj);
         }
     }
 }
@@ -1357,7 +1382,7 @@ std::string CGovernanceManager::ToString() const
 
     info << "Governance Objects: " << (int)mapObjects.size() <<
             ", Seen Budgets : " << (int)mapSeenGovernanceObjects.size() <<
-            ", Vote Count   : " << (int)mapVoteToObject.size();
+            ", Vote Count   : " << (int)mapVoteToObject.GetSize();
 
     return info.str();
 }
