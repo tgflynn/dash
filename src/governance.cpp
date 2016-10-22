@@ -226,36 +226,8 @@ void CGovernanceManager::ProcessMessage(CNode* pfrom, std::string& strCommand, C
             return;
         }
 
-        // FIND THE MASTERNODE OF THE VOTER
-
-//        if(!mnodeman.Has(vote.GetVinMasternode())) {
-//           LogPrint("gobject", "gobject - unknown masternode - vin: %s\n", vote.GetVinMasternode().ToString());
-//            mnodeman.AskForMN(pfrom, vote.GetVinMasternode());
-//            return;
-//        }
-
-        // CHECK LOCAL VALIDITY AGAINST BLOCKCHAIN, TIME DATA, ETC
-
-//        if(!vote.IsValid(true)){
-//            LogPrintf("gobject - signature invalid\n");
-//            if(masternodeSync.IsSynced()) Misbehaving(pfrom->GetId(), 20);
-//            // it could just be a non-synced masternode
-//            mnodeman.AskForMN(pfrom, vote.GetVinMasternode());
-//            return;
-//        }
-
-        // IF EVERYTHING CHECKS OUT, UPDATE THE GOVERNANCE MANAGER
-
-//        std::string strError = "";
-//        if(AddOrUpdateVote(vote, pfrom, strError)) {
-//            vote.Relay();
-//            masternodeSync.AddedBudgetItem(vote.GetHash());
-//            mnodeman.AddGovernanceVote(vote.GetVinMasternode(), vote.GetParentHash());
-//        }
-
         LogPrint("gobject", "NEW governance vote: %s\n", vote.GetHash().ToString());
     }
-
 }
 
 void CGovernanceManager::CheckOrphanVotes(CGovernanceObject& govobj)
@@ -349,8 +321,6 @@ void CGovernanceManager::UpdateCachesAndClean()
 
     object_m_it it = mapObjects.begin();
 
-    count_m_t mapDirtyObjects;
-
     // Clean up any expired or invalid triggers
     triggerman.CleanAndRemove();
 
@@ -365,8 +335,6 @@ void CGovernanceManager::UpdateCachesAndClean()
 
         // IF CACHE IS NOT DIRTY, WHY DO THIS?
         if(pObj->IsSetDirtyCache()) {
-            mapDirtyObjects.insert(std::make_pair((*it).first, 1));
-
             // UPDATE LOCAL VALIDITY AGAINST CRYPTO DATA
             pObj->UpdateLocalValidity(pCurrentBlockIndex);
 
@@ -399,23 +367,6 @@ void CGovernanceManager::UpdateCachesAndClean()
             ++it;
         }
     }
-
-    // CHECK EACH GOVERNANCE OBJECTS VALIDITY (CPU HEAVY)
-
-    // 12.1 todo - compile issues
-
-    // std::map<uint256, CBudgetVote>::iterator it = mapVotesByHash.begin();
-    // while(it != mapVotes.end()) {
-
-    //     // ONLY UPDATE THE DIRTY OBJECTS!
-
-    //     if(mapDirtyObjects.count((*it).first))
-    //     {
-    //         (*it).second.fValid = (*it).second.IsValid(true);
-    //         ++it;
-    //     }
-    // }
-
 }
 
 CGovernanceObject *CGovernanceManager::FindGovernanceObject(const uint256& nHash)
