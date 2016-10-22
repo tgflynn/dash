@@ -685,7 +685,7 @@ bool CGovernanceManager::ProcessVote(CNode* pfrom, const CGovernanceVote& vote, 
     object_m_it it = mapObjects.find(nHashGovobj);
     if(it == mapObjects.end()) {
         mapOrphanVotes.Insert(vote.GetHash(), vote);
-        RequestGovernanceObject(nHashGovobj);
+        RequestGovernanceObject(pfrom, nHashGovobj);
         std::ostringstream ostr;
         ostr << "CGovernanceManager::ProcessVote -- Unknown parent object "
                 << ", MN outpoint = " << vote.GetVinMasternode().prevout.ToStringShort()
@@ -703,10 +703,13 @@ bool CGovernanceManager::ProcessVote(CNode* pfrom, const CGovernanceVote& vote, 
     return fOk;
 }
 
-void CGovernanceManager::RequestGovernanceObject(const uint256& nHash)
+void CGovernanceManager::RequestGovernanceObject(CNode* pfrom, const uint256& nHash)
 {
-    //TODO: Implement
+    if(!pfrom) {
+        return;
+    }
 
+    pfrom->PushMessage(NetMsgType::MNGOVERNANCESYNC, nHash);
 }
 
 bool CGovernanceManager::AcceptObjectMessage(const uint256& nHash)

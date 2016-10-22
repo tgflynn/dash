@@ -243,7 +243,7 @@ public:
     }
 
 private:
-    void RequestGovernanceObject(const uint256& nHash);
+    void RequestGovernanceObject(CNode* pfrom, const uint256& nHash);
 
     void AddInvalidVote(const CGovernanceVote& vote)
     {
