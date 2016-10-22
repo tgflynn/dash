@@ -699,6 +699,10 @@ bool CGovernanceManager::ProcessVote(CNode* pfrom, const CGovernanceVote& vote, 
     bool fOk = govobj.ProcessVote(pfrom, vote, exception);
     if(fOk) {
         mapVoteToObject.Insert(vote.GetHash(), &govobj);
+
+        if(govobj.GetObjectType() == GOVERNANCE_OBJECT_WATCHDOG) {
+            mnodeman.UpdateWatchdogVoteTime(vote.GetVinMasternode());
+        }
     }
     return fOk;
 }
