@@ -379,6 +379,21 @@ void CGovernanceManager::UpdateCachesAndClean()
         if(pObj->IsSetCachedDelete() || pObj->IsSetExpired()) {
             LogPrintf("UpdateCachesAndClean --- erase obj %s\n", (*it).first.ToString());
             mnodeman.RemoveGovernanceObject(pObj->GetHash());
+
+            // Remove vote references
+            const object_ref_cache_t::list_t& listItems = mapVoteToObject.GetItemList();
+            object_ref_cache_t::list_cit lit = listItems.begin();
+            while(lit != listItems.end()) {
+                if(lit->value == pObj) {
+                    uint256 nKey = lit->key;
+                    ++lit;
+                    mapVoteToObject.Erase(nKey);
+                }
+                else {
+                    ++lit;
+                }
+            }
+
             mapObjects.erase(it++);
         } else {
             ++it;

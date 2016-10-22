@@ -182,8 +182,9 @@ public:
     //bool AddOrUpdateVote(const CGovernanceVote& vote, CNode* pfrom, std::string& strError);
 
     std::string GetRequiredPaymentsString(int nBlockHeight);
-    void CleanAndRemove(bool fSignatureCheck);
+
     void UpdateCachesAndClean();
+
     void CheckAndRemove() {UpdateCachesAndClean();}
 
     void Clear()
