@@ -132,7 +132,7 @@ void CGovernanceManager::ProcessMessage(CNode* pfrom, std::string& strCommand, C
         if(nProp == uint256()) {
             if(netfulfilledman.HasFulfilledRequest(pfrom->addr, NetMsgType::MNGOVERNANCESYNC)) {
                 // Asking for the whole list multiple times in a short period of time is no good
-                LogPrint("gobject", "peer already asked me for the list\n");
+                LogPrint("gobject", "MNGOVERNANCESYNC -- peer already asked me for the list\n");
                 Misbehaving(pfrom->GetId(), 20);
                 return;
             }
@@ -140,7 +140,7 @@ void CGovernanceManager::ProcessMessage(CNode* pfrom, std::string& strCommand, C
         }
 
         Sync(pfrom, nProp);
-        LogPrint("gobject", "syncing governance objects to our peer at %s\n", pfrom->addr.ToString());
+        LogPrint("gobject", "MNGOVERNANCESYNC -- syncing governance objects to our peer at %s\n", pfrom->addr.ToString());
 
     }
 
@@ -167,34 +167,30 @@ void CGovernanceManager::ProcessMessage(CNode* pfrom, std::string& strCommand, C
             return;
         }
 
-        // IS THE COLLATERAL TRANSACTION ASSOCIATED WITH THIS GOVERNANCE OBJECT MATURE/VALID?
-
         std::string strError = "";
         // CHECK OBJECT AGAINST LOCAL BLOCKCHAIN
 
         if(!govobj.IsValidLocally(pCurrentBlockIndex, strError, true)) {
             mapSeenGovernanceObjects.insert(std::make_pair(govobj.GetHash(), SEEN_OBJECT_ERROR_INVALID));
-            LogPrintf("Governance object is invalid - %s\n", strError);
+            LogPrintf("MNGOVERNANCEOBJECT -- Governance object is invalid - %s\n", strError);
             return;
         }
 
         // UPDATE CACHED VARIABLES FOR THIS OBJECT AND ADD IT TO OUR MANANGED DATA
 
-        {
-            govobj.UpdateSentinelVariables(pCurrentBlockIndex); //this sets local vars in object
+        govobj.UpdateSentinelVariables(pCurrentBlockIndex); //this sets local vars in object
 
-            if(AddGovernanceObject(govobj))
-            {
-                govobj.Relay();
-            }
+        if(AddGovernanceObject(govobj))
+        {
+            LogPrintf("MNGOVERNANCEOBJECT -- %s new\n", govobj.GetHash().ToString());
+            govobj.Relay();
         }
 
         // UPDATE THAT WE'VE SEEN THIS OBJECT
-        mapSeenGovernanceObjects.insert(make_pair(govobj.GetHash(), SEEN_OBJECT_IS_VALID));
+        mapSeenGovernanceObjects.insert(std::make_pair(govobj.GetHash(), SEEN_OBJECT_IS_VALID));
         masternodeSync.AddedBudgetItem(govobj.GetHash());
 
-        LogPrintf("MNGOVERNANCEOBJECT -- %s new\n", govobj.GetHash().ToString());
-        
+
         // WE MIGHT HAVE PENDING/ORPHAN VOTES FOR THIS OBJECT
 
         CheckOrphanVotes(govobj);
@@ -226,7 +222,6 @@ void CGovernanceManager::ProcessMessage(CNode* pfrom, std::string& strCommand, C
             return;
         }
 
-        LogPrint("gobject", "NEW governance vote: %s\n", vote.GetHash().ToString());
     }
 }
 
@@ -256,14 +251,14 @@ bool CGovernanceManager::AddGovernanceObject(CGovernanceObject& govobj)
     // MAKE SURE THIS OBJECT IS OK
 
     if(!govobj.IsValidLocally(pCurrentBlockIndex, strError, true)) {
-        LogPrintf("CGovernanceManager::AddGovernanceObject - invalid governance object - %s - (pCurrentBlockIndex nHeight %d) \n", strError, pCurrentBlockIndex->nHeight);
+        LogPrintf("CGovernanceManager::AddGovernanceObject -- invalid governance object - %s - (pCurrentBlockIndex nHeight %d) \n", strError, pCurrentBlockIndex->nHeight);
         return false;
     }
 
     // IF WE HAVE THIS OBJECT ALREADY, WE DON'T WANT ANOTHER COPY
 
     if(mapObjects.count(govobj.GetHash())) {
-        LogPrintf("CGovernanceManager::AddGovernanceObject - already have governance object - %s\n", strError);
+        LogPrintf("CGovernanceManager::AddGovernanceObject -- already have governance object - %s\n", strError);
         return false;
     }
 
@@ -299,7 +294,7 @@ bool CGovernanceManager::AddGovernanceObject(CGovernanceObject& govobj)
 
 void CGovernanceManager::UpdateCachesAndClean()
 {
-    LogPrintf("CGovernanceManager::UpdateCachesAndClean \n");
+    LogPrint("gobject", "CGovernanceManager::UpdateCachesAndClean\n");
 
     std::vector<uint256> vecDirtyHashes = mnodeman.GetAndClearDirtyGovernanceObjectHashes();
 
@@ -345,7 +340,7 @@ void CGovernanceManager::UpdateCachesAndClean()
         // IF DELETE=TRUE, THEN CLEAN THE MESS UP!
 
         if(pObj->IsSetCachedDelete() || pObj->IsSetExpired()) {
-            LogPrintf("UpdateCachesAndClean --- erase obj %s\n", (*it).first.ToString());
+            LogPrintf("UpdateCachesAndClean -- erase obj %s\n", (*it).first.ToString());
             mnodeman.RemoveGovernanceObject(pObj->GetHash());
 
             // Remove vote references
@@ -540,7 +535,7 @@ void CGovernanceManager::Sync(CNode* pfrom, uint256 nProp)
     }
 
     pfrom->PushMessage(NetMsgType::SYNCSTATUSCOUNT, MASTERNODE_SYNC_GOVOBJ, nInvCount);
-    LogPrintf("CGovernanceManager::Sync - sent %d items\n", nInvCount);
+    LogPrintf("CGovernanceManager::Sync -- sent %d items\n", nInvCount);
 }
 
 void CGovernanceManager::SyncParentObjectByVote(CNode* pfrom, const CGovernanceVote& vote)
@@ -662,7 +657,7 @@ bool CGovernanceManager::MasternodeRateCheck(const CTxIn& vin, int nObjectType)
         return true;
     }
 
-    LogPrintf("CGovernanceManager::MasternodeRateCheck Rate too high: vin = %s, current height = %d, last MN height = %d, minimum difference = %d\n", 
+    LogPrintf("CGovernanceManager::MasternodeRateCheck -- Rate too high: vin = %s, current height = %d, last MN height = %d, minimum difference = %d\n",
               vin.prevout.ToStringShort(), nCachedBlockHeight, it->second, mindiff);
     return false;
 }
@@ -936,7 +931,7 @@ void CGovernanceObject::SetMasternodeInfo(const CTxIn& vin)
     vinMasternode = vin;
 }
 
-bool CGovernanceObject::Sign(CKey& keyMasternode, CPubKey& pubkeyMasternode)
+bool CGovernanceObject::Sign(CKey& keyMasternode, CPubKey& pubKeyMasternode)
 {
     LOCK(cs);
 
@@ -949,26 +944,26 @@ bool CGovernanceObject::Sign(CKey& keyMasternode, CPubKey& pubkeyMasternode)
         return false;
     }
 
-    if(!darkSendSigner.VerifyMessage(pubkeyMasternode, vchSig, strMessage, strError)) {
+    if(!darkSendSigner.VerifyMessage(pubKeyMasternode, vchSig, strMessage, strError)) {
         LogPrintf("CGovernanceObject::Sign -- VerifyMessage() failed, error: %s\n", strError);
         return false;
     }
 
-    LogPrint("gobject", "CGovernanceObject::Sign: pubkey id = %s, vin = %s\n", 
-             pubkeyMasternode.GetID().ToString(), vinMasternode.prevout.ToStringShort());
+    LogPrint("gobject", "CGovernanceObject::Sign -- pubkey id = %s, vin = %s\n",
+             pubKeyMasternode.GetID().ToString(), vinMasternode.prevout.ToStringShort());
 
 
     return true;
 }
 
-bool CGovernanceObject::CheckSignature(CPubKey& pubkeyMasternode)
+bool CGovernanceObject::CheckSignature(CPubKey& pubKeyMasternode)
 {
     LOCK(cs);
     std::string strError;
     uint256 nHash = GetHash();
     std::string strMessage = nHash.ToString();
 
-    if(!darkSendSigner.VerifyMessage(pubkeyMasternode, vchSig, strMessage, strError)) {
+    if(!darkSendSigner.VerifyMessage(pubKeyMasternode, vchSig, strMessage, strError)) {
         LogPrintf("CGovernance::CheckSignature -- VerifyMessage() failed, error: %s\n", strError);
         return false;
     }
@@ -1151,16 +1146,16 @@ bool CGovernanceObject::IsValidLocally(const CBlockIndex* pindex, std::string& s
 
     if(fCheckCollateral) { 
         if((nObjectType == GOVERNANCE_OBJECT_TRIGGER) || (nObjectType == GOVERNANCE_OBJECT_WATCHDOG)) {
-            std::string strVin = vinMasternode.prevout.ToStringShort();
+            std::string strOutpoint = vinMasternode.prevout.ToStringShort();
             masternode_info_t infoMn = mnodeman.GetMasternodeInfo(vinMasternode);
             if(!infoMn.fInfoValid) {
-                strError = "Masternode not found vin: " + strVin;
+                strError = "Masternode not found: " + strOutpoint;
                 return false;
             }
 
             // Check that we have a valid MN signature
             if(!CheckSignature(infoMn.pubKeyMasternode)) {
-                strError = "Invalid masternode signature for: " + strVin + ", pubkey id = " + infoMn.pubKeyMasternode.GetID().ToString();
+                strError = "Invalid masternode signature for: " + strOutpoint + ", pubkey id = " + infoMn.pubKeyMasternode.GetID().ToString();
                 return false;
             }
 
@@ -1168,7 +1163,7 @@ bool CGovernanceObject::IsValidLocally(const CBlockIndex* pindex, std::string& s
             // that objects will be seen in rapid succession
             if(masternodeSync.IsSynced()) {
                 if(!governance.MasternodeRateCheck(vinMasternode, nObjectType)) {
-                    strError = "Masternode attempting to create too many objects vin: " + strVin;
+                    strError = "Masternode attempting to create too many objects: " + strOutpoint;
                     return false;
                 }
             }
@@ -1223,13 +1218,13 @@ bool CGovernanceObject::IsCollateralValid(std::string& strError)
 
     if(!GetTransaction(nCollateralHash, txCollateral, Params().GetConsensus(), nBlockHash, true)){
         strError = strprintf("Can't find collateral tx %s", txCollateral.ToString());
-        LogPrintf("CGovernanceObject::IsCollateralValid - %s\n", strError);
+        LogPrintf("CGovernanceObject::IsCollateralValid -- %s\n", strError);
         return false;
     }
 
     if(txCollateral.vout.size() < 1) {
         strError = strprintf("tx vout size less than 1 | %d", txCollateral.vout.size());
-        LogPrintf ("CGovernanceObject::IsCollateralValid - %s\n", strError);
+        LogPrintf("CGovernanceObject::IsCollateralValid -- %s\n", strError);
         return false;
     }
 
@@ -1253,7 +1248,7 @@ bool CGovernanceObject::IsCollateralValid(std::string& strError)
              << endl; );
         if(!o.scriptPubKey.IsNormalPaymentScript() && !o.scriptPubKey.IsUnspendable()){
             strError = strprintf("Invalid Script %s", txCollateral.ToString());
-            LogPrintf ("CGovernanceObject::IsCollateralValid - %s\n", strError);
+            LogPrintf ("CGovernanceObject::IsCollateralValid -- %s\n", strError);
             return false;
         }
         if(o.scriptPubKey == findScript && o.nValue >= nMinFee) {
@@ -1268,7 +1263,7 @@ bool CGovernanceObject::IsCollateralValid(std::string& strError)
 
     if(!foundOpReturn){
         strError = strprintf("Couldn't find opReturn %s in %s", nExpectedHash.ToString(), txCollateral.ToString());
-        LogPrintf ("CGovernanceObject::IsCollateralValid - %s\n", strError);
+        LogPrintf ("CGovernanceObject::IsCollateralValid -- %s\n", strError);
         return false;
     }
 
@@ -1290,7 +1285,7 @@ bool CGovernanceObject::IsCollateralValid(std::string& strError)
         strError = "valid";
     } else {
         strError = strprintf("Collateral requires at least %d confirmations - %d confirmations", GOVERNANCE_FEE_CONFIRMATIONS, nConfirmationsIn);
-        LogPrintf ("CGovernanceObject::IsCollateralValid - %s - %d confirmations\n", strError, nConfirmationsIn);
+        LogPrintf ("CGovernanceObject::IsCollateralValid -- %s - %d confirmations\n", strError, nConfirmationsIn);
         return false;
     }
 

@@ -133,6 +133,8 @@ public:
         return CGovernanceVoting::ConvertOutcomeToString(GetOutcome());
     }
 
+    CTxIn& GetVinMasternode() { return vinMasternode; }
+
     const CTxIn& GetVinMasternode() const { return vinMasternode; }
 
     /**

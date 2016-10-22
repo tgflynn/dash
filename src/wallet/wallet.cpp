@@ -2325,7 +2325,7 @@ bool CWallet::SelectCoinsMinConf(const CAmount& nTargetValue, int nConfMine, int
                 s += FormatMoney(vValue[i].first) + " ";
             }
         }
-        LogPrintf("%s - total %s\n", s, FormatMoney(nBest));
+        LogPrint("selectcoins", "%s - total %s\n", s, FormatMoney(nBest));
     }
 
     return true;
@@ -2701,9 +2701,6 @@ bool CWallet::GetMasternodeVinAndKeys(CTxIn& txinRet, CPubKey& pubKeyRet, CKey& 
     if (fImporting || fReindex) return false;
 
     // Find possible candidates
-    TRY_LOCK(cs_wallet, fWallet);
-    if(!fWallet) return false;
-
     std::vector<COutput> vPossibleCoins;
     AvailableCoins(vPossibleCoins, true, NULL, false, ONLY_1000);
     if(vPossibleCoins.empty()) {
