@@ -60,7 +60,7 @@ extern CGovernanceManager governance;
 //
 // Governance Manager : Contains all proposals for the budget
 //
-class CGovernanceManager : public IMasternodeIndexUpdateReceiver
+class CGovernanceManager
 {
     friend class CGovernanceObject;
 
@@ -137,14 +137,6 @@ public:
     CGovernanceManager();
 
     virtual ~CGovernanceManager() {}
-
-    // Inherited from IMasternodeIndexUpdateReceiver
-
-    /// Should lock any index dependent data structures
-    void MasternodeIndexUpdateBegin();
-
-    /// Should unlock any index dependent data structures
-    void MasternodeIndexUpdateEnd();
 
     void ClearSeen()
     {

@@ -18,16 +18,16 @@ extern CMasternodeMan mnodeman;
  * Interface (abstract base class) for receiving masternode index
  * update notifications
  */
-class IMasternodeIndexUpdateReceiver
-{
-public:
-    /// Should lock any index dependent data structures
-    virtual void MasternodeIndexUpdateBegin() = 0;
-
-    /// Should unlock any index dependent data structures
-    virtual void MasternodeIndexUpdateEnd() = 0;
-
-};
+//class IMasternodeIndexUpdateReceiver
+//{
+//public:
+//    /// Should lock any index dependent data structures
+//    virtual void MasternodeIndexUpdateBegin() = 0;
+//
+//    /// Should unlock any index dependent data structures
+//    virtual void MasternodeIndexUpdateEnd() = 0;
+//
+//};
 
 /**
  * Provides a forward and reverse index between MN vin's and integers.
@@ -102,12 +102,6 @@ public:
 
     typedef index_m_t::const_iterator index_m_cit;
 
-    typedef std::vector<IMasternodeIndexUpdateReceiver*> receiver_v_t;
-
-    typedef typename receiver_v_t::iterator receiver_v_it;
-
-    typedef typename receiver_v_t::const_iterator receiver_v_cit;
-
 private:
     static const int MAX_EXPECTED_INDEX_SIZE = 30000;
 
@@ -150,9 +144,6 @@ private:
 
     /// Set when index has been rebuilt, clear when read
     bool fIndexRebuilt;
-
-    /// Objects to notify on index update
-    receiver_v_t vecMNIndexUpdateReceivers;
 
     std::vector<uint256> vecDirtyGovernanceObjectHashes;
 
@@ -278,12 +269,6 @@ public:
         indexMasternodesOld.Clear();
         fIndexRebuilt = false;
     }
-
-    /// Register an object to receive masternode index updates
-    void RegisterIndexUpdateReceiver(IMasternodeIndexUpdateReceiver* receiver);
-
-    /// Unregister an object from receiving masternode index updates
-    void UnregisterIndexUpdateReceiver(IMasternodeIndexUpdateReceiver* receiver);
 
     bool Has(const CTxIn& vin);
 

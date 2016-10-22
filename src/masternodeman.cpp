@@ -109,7 +109,6 @@ CMasternodeMan::CMasternodeMan()
   indexMasternodes(),
   indexMasternodesOld(),
   fIndexRebuilt(false),
-  vecMNIndexUpdateReceivers(),
   vecDirtyGovernanceObjectHashes(),
   nLastWatchdogVoteTime(0),
   mapSeenMasternodeBroadcast(),
@@ -409,23 +408,6 @@ bool CMasternodeMan::Get(const CTxIn& vin, CMasternode& masternode)
     }
     masternode = *pMN;
     return true;
-}
-
-void CMasternodeMan::RegisterIndexUpdateReceiver(IMasternodeIndexUpdateReceiver* receiver)
-{
-    LOCK(cs);
-    vecMNIndexUpdateReceivers.push_back(receiver);
-}
-
-void CMasternodeMan::UnregisterIndexUpdateReceiver(IMasternodeIndexUpdateReceiver* receiver)
-{
-    LOCK(cs);
-    for(receiver_v_it it = vecMNIndexUpdateReceivers.begin(); it != vecMNIndexUpdateReceivers.end(); ++it) {
-        if(*it == receiver) {
-            vecMNIndexUpdateReceivers.erase(it);
-            break;
-        }
-    }
 }
 
 masternode_info_t CMasternodeMan::GetMasternodeInfo(const CTxIn& vin)
@@ -1377,7 +1359,7 @@ void CMasternodeMan::CheckAndRebuildMasternodeIndex()
 {
     LOCK(cs);
 
-    if( GetTime() - nLastIndexRebuildTime < MIN_INDEX_REBUILD_TIME ) {
+    if(GetTime() - nLastIndexRebuildTime < MIN_INDEX_REBUILD_TIME) {
         return;
     }
 
@@ -1389,21 +1371,12 @@ void CMasternodeMan::CheckAndRebuildMasternodeIndex()
         return;
     }
 
-    for(receiver_v_it it = vecMNIndexUpdateReceivers.begin(); it != vecMNIndexUpdateReceivers.end(); ++it) {
-        IMasternodeIndexUpdateReceiver* receiver = *it;
-        receiver->MasternodeIndexUpdateBegin();
-    }
-
     indexMasternodesOld = indexMasternodes;
     indexMasternodes.Clear();
     for(size_t i = 0; i < vMasternodes.size(); ++i) {
         indexMasternodes.AddMasternodeVIN(vMasternodes[i].vin);
     }
 
-    for(receiver_v_it it = vecMNIndexUpdateReceivers.begin(); it != vecMNIndexUpdateReceivers.end(); ++it) {
-        IMasternodeIndexUpdateReceiver* receiver = *it;
-        receiver->MasternodeIndexUpdateEnd();
-    }
     fIndexRebuilt = true;
     nLastIndexRebuildTime = GetTime();
 }
