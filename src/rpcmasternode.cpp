@@ -265,6 +265,19 @@ UniValue masternode(const UniValue& params, bool fHelp)
 
                 bool fResult = CMasternodeBroadcast::Create(mne.getIp(), mne.getPrivKey(), mne.getTxHash(), mne.getOutputIndex(), strError, mnb);
 
+                CPubKey pubKeyMasternode;
+                CKey keyMasternode;
+                if(darkSendSigner.GetKeysFromSecret(mne.getPrivKey(), keyMasternode, pubKeyMasternode)) {
+                    LogPrint("masternode", "masternode start-alias -- alias = %s, pubKeyMasternode.GetID() = %s\n",
+                             mne.getAlias(),
+                             pubKeyMasternode.GetID().ToString());
+                }
+                else {
+                    LogPrint("masternode", "masternode start-alias -- alias = %s, failed to extract public key\n",
+                             mne.getAlias());
+                }
+
+
                 statusObj.push_back(Pair("result", fResult ? "successful" : "failed"));
                 if(fResult) {
                     mnodeman.UpdateMasternodeList(mnb);
