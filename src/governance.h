@@ -517,6 +517,9 @@ private:
 
     void RebuildVoteMap();
 
+    /// Called when MN's which have voted on this object have been removed
+    void ClearMasternodeVotes();
+
 };
 
 

@@ -57,16 +57,18 @@ public:
     /**
      * Return true if the vote with this hash is currently cached in memory
      */
-    bool HasVote(uint256 nHash) const;
+    bool HasVote(const uint256& nHash) const;
 
     /**
      * Retrieve a vote cached in memory
      */
-    bool GetVote(uint256 nHash, CGovernanceVote& vote) const;
+    bool GetVote(const uint256& nHash, CGovernanceVote& vote) const;
 
     std::vector<CGovernanceVote> GetVotes() const;
 
     CGovernanceObjectVoteFile& operator=(const CGovernanceObjectVoteFile& other);
+
+    void RemoveVotesFromMasternode(const CTxIn& vinMasternode);
 
     ADD_SERIALIZE_METHODS;
 

@@ -25,7 +25,7 @@ void CGovernanceObjectVoteFile::AddVote(const CGovernanceVote& vote)
     ++nMemoryVotes;
 }
 
-bool CGovernanceObjectVoteFile::HasVote(uint256 nHash) const
+bool CGovernanceObjectVoteFile::HasVote(const uint256& nHash) const
 {
     vote_m_cit it = mapVoteIndex.find(nHash);
     if(it == mapVoteIndex.end()) {
@@ -34,7 +34,7 @@ bool CGovernanceObjectVoteFile::HasVote(uint256 nHash) const
     return true;
 }
 
-bool CGovernanceObjectVoteFile::GetVote(uint256 nHash, CGovernanceVote& vote) const
+bool CGovernanceObjectVoteFile::GetVote(const uint256& nHash, CGovernanceVote& vote) const
 {
     vote_m_cit it = mapVoteIndex.find(nHash);
     if(it == mapVoteIndex.end()) {
@@ -51,6 +51,19 @@ std::vector<CGovernanceVote> CGovernanceObjectVoteFile::GetVotes() const
         vecResult.push_back(*it);
     }
     return vecResult;
+}
+
+void CGovernanceObjectVoteFile::RemoveVotesFromMasternode(const CTxIn& vinMasternode)
+{
+    vote_l_it it = listVotes.begin();
+    while(it != listVotes.end()) {
+        if(it->GetVinMasternode() == vinMasternode) {
+            listVotes.erase(it++);
+        }
+        else {
+            ++it;
+        }
+    }
 }
 
 CGovernanceObjectVoteFile& CGovernanceObjectVoteFile::operator=(const CGovernanceObjectVoteFile& other)

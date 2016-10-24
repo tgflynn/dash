@@ -295,6 +295,7 @@ void CGovernanceManager::UpdateCachesAndClean()
         if(it == mapObjects.end()) {
             continue;
         }
+        it->second.ClearMasternodeVotes();
         it->second.fDirtyCache = true;
     }
 
@@ -915,6 +916,31 @@ void CGovernanceObject::RebuildVoteMap()
         }
     }
     mapCurrentMNVotes = mapMNVotesNew;
+}
+
+void CGovernanceObject::ClearMasternodeVotes()
+{
+    vote_m_it it = mapCurrentMNVotes.begin();
+    while(it != mapCurrentMNVotes.end()) {
+        bool fIndexRebuilt = false;
+        CTxIn vinMasternode;
+        bool fRemove = true;
+        if(mnodeman.Get(it->first, vinMasternode, fIndexRebuilt)) {
+            if(mnodeman.Has(vinMasternode)) {
+                fRemove = false;
+            }
+            else {
+                fileVotes.RemoveVotesFromMasternode(vinMasternode);
+            }
+        }
+
+        if(fRemove) {
+            mapCurrentMNVotes.erase(it++);
+        }
+        else {
+            ++it;
+        }
+    }
 }
 
 void CGovernanceObject::SetMasternodeInfo(const CTxIn& vin)
