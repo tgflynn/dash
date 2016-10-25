@@ -1806,7 +1806,7 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)
 
     LogPrintf("Using masternode config file %s\n", GetMasternodeConfigFile().string());
 
-    if(GetBoolArg("-mnconflock", true) && pwalletMain) {
+    if(GetBoolArg("-mnconflock", true) && pwalletMain && (masternodeConfig.getCount() > 0)) {
         LOCK(pwalletMain->cs_wallet);
         LogPrintf("Locking Masternodes:\n");
         uint256 mnTxHash;
