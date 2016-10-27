@@ -90,7 +90,7 @@ CMasternode::CMasternode(const CMasternodeBroadcast& mnb) :
     nLastDsq(mnb.nLastDsq),
     nTimeLastChecked(0),
     nTimeLastPaid(0),
-    nTimeLastWatchdogVote(GetTime()),
+    nTimeLastWatchdogVote(mnb.sigTime),
     nActiveState(MASTERNODE_ENABLED),
     nCacheCollateralBlock(0),
     nBlockLastPaid(0),
@@ -114,7 +114,7 @@ bool CMasternode::UpdateFromNewBroadcast(CMasternodeBroadcast& mnb)
     addr = mnb.addr;
     nPoSeBanScore = 0;
     nTimeLastChecked = 0;
-    nTimeLastWatchdogVote = GetTime();
+    nTimeLastWatchdogVote = mnb.sigTime;
     int nDos = 0;
     if(mnb.lastPing == CMasternodePing() || (mnb.lastPing != CMasternodePing() && mnb.lastPing.CheckAndUpdate(nDos, false))) {
         lastPing = mnb.lastPing;
