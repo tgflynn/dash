@@ -183,7 +183,8 @@ void CGovernanceManager::ProcessMessage(CNode* pfrom, std::string& strCommand, C
 
         // WE MIGHT HAVE PENDING/ORPHAN VOTES FOR THIS OBJECT
 
-        CheckOrphanVotes(govobj);
+        CGovernanceException exception;
+        CheckOrphanVotes(pfrom, govobj, exception);
     }
 
     // A NEW GOVERNANCE OBJECT VOTE HAS ARRIVED
@@ -215,9 +216,15 @@ void CGovernanceManager::ProcessMessage(CNode* pfrom, std::string& strCommand, C
     }
 }
 
-void CGovernanceManager::CheckOrphanVotes(CGovernanceObject& govobj)
+void CGovernanceManager::CheckOrphanVotes(CNode* pnode, CGovernanceObject& govobj, CGovernanceException& exception)
 {
-//    LOCK(cs);
+    std::vector<CGovernanceVote> vecVotes;
+    mapOrphanVotes.GetAll(govobj.GetHash(), vecVotes);
+
+    for(size_t i = 0; i < vecVotes.size(); ++i) {
+        govobj.ProcessVote(pnode, vecVotes[i], exception);
+    }
+
 //
 //    std::string strError = "";
 //    vote_m_it it1 = mapOrphanVotes.begin();
@@ -670,7 +677,7 @@ bool CGovernanceManager::ProcessVote(CNode* pfrom, const CGovernanceVote& vote, 
     uint256 nHashGovobj = vote.GetParentHash();
     object_m_it it = mapObjects.find(nHashGovobj);
     if(it == mapObjects.end()) {
-        mapOrphanVotes.Insert(vote.GetHash(), vote);
+        mapOrphanVotes.Insert(nHashGovobj, vote);
         RequestGovernanceObject(pfrom, nHashGovobj);
         std::ostringstream ostr;
         ostr << "CGovernanceManager::ProcessVote -- Unknown parent object "
