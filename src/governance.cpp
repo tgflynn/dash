@@ -105,7 +105,7 @@ void CGovernanceManager::ProcessMessage(CNode* pfrom, std::string& strCommand, C
 
     if(pfrom->nVersion < MIN_GOVERNANCE_PEER_PROTO_VERSION) return;
 
-    LOCK(governance.cs);
+    LOCK(cs);
 
     // ANOTHER USER IS ASKING US TO HELP THEM SYNC GOVERNANCE OBJECT DATA
     if (strCommand == NetMsgType::MNGOVERNANCESYNC)
@@ -138,7 +138,6 @@ void CGovernanceManager::ProcessMessage(CNode* pfrom, std::string& strCommand, C
     else if (strCommand == NetMsgType::MNGOVERNANCEOBJECT)
 
     {
-        LOCK(cs);
         // MAKE SURE WE HAVE A VALID REFERENCE TO THE TIP BEFORE CONTINUING
 
         if(!pCurrentBlockIndex) return;
@@ -216,26 +215,25 @@ void CGovernanceManager::ProcessMessage(CNode* pfrom, std::string& strCommand, C
     }
 }
 
-void CGovernanceManager::CheckOrphanVotes(CNode* pnode, CGovernanceObject& govobj, CGovernanceException& exception)
+void CGovernanceManager::CheckOrphanVotes(CNode* pfrom, CGovernanceObject& govobj, CGovernanceException& exception)
 {
+    uint256 nHash = govobj.GetHash();
     std::vector<CGovernanceVote> vecVotes;
-    mapOrphanVotes.GetAll(govobj.GetHash(), vecVotes);
+    mapOrphanVotes.GetAll(nHash, vecVotes);
 
     for(size_t i = 0; i < vecVotes.size(); ++i) {
-        govobj.ProcessVote(pnode, vecVotes[i], exception);
+        CGovernanceVote& vote = vecVotes[i];
+        CGovernanceException exception;
+        if(govobj.ProcessVote(pfrom, vote, exception)) {
+            vecVotes[i].Relay();
+            mapOrphanVotes.Erase(nHash, vote);
+        }
+        else {
+            if((exception.GetNodePenalty() != 0) && masternodeSync.IsSynced()) {
+                Misbehaving(pfrom->GetId(), exception.GetNodePenalty());
+            }
+        }
     }
-
-//
-//    std::string strError = "";
-//    vote_m_it it1 = mapOrphanVotes.begin();
-//    while(it1 != mapOrphanVotes.end()){
-//        if(AddOrUpdateVote(((*it1).second), NULL, strError)){
-//            LogPrintf("CGovernanceManager::CheckOrphanVotes - Governance object is known, activating and removing orphan vote\n");
-//            mapOrphanVotes.erase(it1++);
-//        } else {
-//            ++it1;
-//        }
-//    }
 }
 
 bool CGovernanceManager::AddGovernanceObject(CGovernanceObject& govobj)
@@ -437,8 +435,8 @@ void CGovernanceManager::NewBlock()
     // CHECK OBJECTS WE'VE ASKED FOR, REMOVE OLD ENTRIES
 
     std::map<uint256, int64_t>::iterator it = mapAskedForGovernanceObject.begin();
-    while(it != mapAskedForGovernanceObject.end()){
-        if((*it).second > GetTime() - (60*60*24)){
+    while(it != mapAskedForGovernanceObject.end()) {
+        if((*it).second > GetTime() - (60*60*24)) {
             ++it;
         } else {
             mapAskedForGovernanceObject.erase(it++);

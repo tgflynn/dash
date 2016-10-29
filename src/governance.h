@@ -159,9 +159,11 @@ public:
     bool ConfirmInventoryRequest(const CInv& inv);
 
     void Sync(CNode* node, uint256 nProp);
+
     void SyncParentObjectByVote(CNode* pfrom, const CGovernanceVote& vote);
 
     void ProcessMessage(CNode* pfrom, std::string& strCommand, CDataStream& vRecv);
+
     void NewBlock();
 
     CGovernanceObject *FindGovernanceObject(const uint256& nHash);
@@ -257,7 +259,7 @@ private:
 
     static bool AcceptMessage(const uint256& nHash, hash_s_t& setHash);
 
-    void CheckOrphanVotes(CNode* pnode, CGovernanceObject& govobj, CGovernanceException& exception);
+    void CheckOrphanVotes(CNode* pfrom, CGovernanceObject& govobj, CGovernanceException& exception);
 
     void RebuildIndexes();
 

@@ -152,6 +152,27 @@ public:
         mapIndex.erase(mit);
     }
 
+    void Erase(const K& key, const V& value)
+    {
+        map_it mit = mapIndex.find(key);
+        if(mit == mapIndex.end()) {
+            return;
+        }
+        it_map_t& mapIt = mit->second;
+
+        it_map_it it = mapIt.find(value);
+        if(it == mapIt.end()) {
+            return;
+        }
+
+        listItems.erase(it->second);
+        mapIt.erase(it);
+
+        if(mapIt.size() < 1) {
+            mapIndex.erase(mit);
+        }
+    }
+
     const list_t& GetItemList() const {
         return listItems;
     }
