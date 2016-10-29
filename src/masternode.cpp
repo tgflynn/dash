@@ -90,7 +90,7 @@ CMasternode::CMasternode(const CMasternodeBroadcast& mnb) :
     nLastDsq(mnb.nLastDsq),
     nTimeLastChecked(0),
     nTimeLastPaid(0),
-    nTimeLastWatchdogVote(0),
+    nTimeLastWatchdogVote(mnb.sigTime),
     nActiveState(MASTERNODE_ENABLED),
     nCacheCollateralBlock(0),
     nBlockLastPaid(0),
@@ -114,6 +114,7 @@ bool CMasternode::UpdateFromNewBroadcast(CMasternodeBroadcast& mnb)
     addr = mnb.addr;
     nPoSeBanScore = 0;
     nTimeLastChecked = 0;
+    nTimeLastWatchdogVote = mnb.sigTime;
     int nDos = 0;
     if(mnb.lastPing == CMasternodePing() || (mnb.lastPing != CMasternodePing() && mnb.lastPing.CheckAndUpdate(nDos, false))) {
         lastPing = mnb.lastPing;
@@ -270,9 +271,9 @@ masternode_info_t CMasternode::GetInfo()
     return info;
 }
 
-std::string CMasternode::GetStatus()
+std::string CMasternode::StateToString(int nStateIn)
 {
-    switch(nActiveState) {
+    switch(nStateIn) {
         case CMasternode::MASTERNODE_PRE_ENABLED:       return "PRE_ENABLED";
         case CMasternode::MASTERNODE_ENABLED:           return "ENABLED";
         case CMasternode::MASTERNODE_EXPIRED:           return "EXPIRED";
@@ -282,6 +283,17 @@ std::string CMasternode::GetStatus()
         case CMasternode::MASTERNODE_POSE_BAN:          return "POSE_BAN";
         default:                                        return "UNKNOWN";
     }
+}
+
+std::string CMasternode::GetStateString() const
+{
+    return StateToString(nActiveState);
+}
+
+std::string CMasternode::GetStatus() const
+{
+    // TODO: return smth a bit more human readable here
+    return GetStateString();
 }
 
 int CMasternode::GetCollateralAge()
@@ -393,6 +405,11 @@ bool CMasternodeBroadcast::Create(CTxIn txin, CService service, CKey keyCollater
     // wait for reindex and/or import to finish
     if (fImporting || fReindex) return false;
 
+    LogPrint("masternode", "CMasternodeBroadcast::Create -- pubKeyCollateralAddressNew = %s, pubKeyMasternodeNew.GetID() = %s\n",
+             CBitcoinAddress(pubKeyCollateralAddressNew.GetID()).ToString(),
+             pubKeyMasternodeNew.GetID().ToString());
+
+
     CMasternodePing mnp(txin);
     if(!mnp.Sign(keyMasternodeNew, pubKeyMasternodeNew)) {
         strErrorRet = strprintf("Failed to sign ping, masternode=%s", txin.prevout.ToStringShort());
@@ -439,7 +456,7 @@ bool CMasternodeBroadcast::SimpleCheck(int& nDos)
         return false;
     }
 
-    // incorrect ping or its sigTime
+    // empty ping or incorrect sigTime/blockhash
     if(lastPing == CMasternodePing() || !lastPing.CheckAndUpdate(nDos, false, true)) {
         return false;
     }
@@ -509,9 +526,6 @@ bool CMasternodeBroadcast::Update(CMasternode* pmn, int& nDos)
         return false;
     }
 
-    // masternode is not enabled yet/already, nothing to update
-    if(!pmn->IsEnabled()) return false;
-
     // IsVnAssociatedWithPubkey is validated once in CheckOutpoint, after that they just need to match
     if(pmn->pubKeyCollateralAddress != pubKeyCollateralAddress) {
         LogPrintf("CMasternodeMan::Update -- Got mismatched pubKeyCollateralAddress and vin\n");
@@ -525,10 +539,7 @@ bool CMasternodeBroadcast::Update(CMasternode* pmn, int& nDos)
         LogPrintf("CMasternodeBroadcast::Update -- Got UPDATED Masternode entry: addr=%s\n", addr.ToString());
         if(pmn->UpdateFromNewBroadcast((*this))) {
             pmn->Check();
-            // normally masternode should be in pre-enabled status after update, if not - do not relay
-            if(pmn->IsPreEnabled()) {
-                Relay();
-            }
+            Relay();
         }
         masternodeSync.AddedMasternodeList();
     }
@@ -745,7 +756,7 @@ bool CMasternodePing::CheckSignature(CPubKey& pubKeyMasternode, int &nDos)
     return true;
 }
 
-bool CMasternodePing::CheckAndUpdate(int& nDos, bool fRequireEnabled, bool fCheckSigTimeOnly)
+bool CMasternodePing::CheckAndUpdate(int& nDos, bool fRequireEnabled, bool fSimpleCheck)
 {
     if (sigTime > GetAdjustedTime() + 60 * 60) {
         LogPrintf("CMasternodePing::CheckAndUpdate -- Signature rejected, too far into the future, masternode=%s\n", vin.prevout.ToStringShort());
@@ -776,9 +787,8 @@ bool CMasternodePing::CheckAndUpdate(int& nDos, bool fRequireEnabled, bool fChec
         }
     }
 
-    if (fCheckSigTimeOnly) {
-        CMasternode* pmn = mnodeman.Find(vin);
-        if (pmn) return CheckSignature(pmn->pubKeyMasternode, nDos);
+    if (fSimpleCheck) {
+        LogPrint("masternode", "CMasternodePing::CheckAndUpdate -- ping verified in fSimpleCheck mode: masternode=%s  blockHash=%s  sigTime=%d\n", vin.prevout.ToStringShort(), blockHash.ToString(), sigTime);
         return true;
     }
 

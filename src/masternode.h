@@ -78,7 +78,7 @@ public:
 
     bool Sign(CKey& keyMasternode, CPubKey& pubKeyMasternode);
     bool CheckSignature(CPubKey& pubKeyMasternode, int &nDos);
-    bool CheckAndUpdate(int& nDos, bool fRequireEnabled = true, bool fCheckSigTimeOnly = false);
+    bool CheckAndUpdate(int& nDos, bool fRequireEnabled = true, bool fSimpleCheck = false);
     void Relay();
 
     CMasternodePing& operator=(CMasternodePing from)
@@ -260,7 +260,9 @@ public:
 
     masternode_info_t GetInfo();
 
-    std::string GetStatus();
+    static std::string StateToString(int nStateIn);
+    std::string GetStateString() const;
+    std::string GetStatus() const;
 
     int GetCollateralAge();
 

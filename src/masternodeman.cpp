@@ -126,6 +126,7 @@ bool CMasternodeMan::Add(CMasternode &mn)
     CMasternode *pmn = Find(mn.vin);
     if (pmn == NULL) {
         LogPrint("masternode", "CMasternodeMan::Add -- Adding new Masternode: addr=%s, %i now\n", mn.addr.ToString(), size() + 1);
+        mn.nTimeLastWatchdogVote = mn.sigTime;
         vMasternodes.push_back(mn);
         indexMasternodes.AddMasternodeVIN(mn.vin);
         return true;
@@ -446,7 +447,8 @@ bool CMasternodeMan::Has(const CTxIn& vin)
 //
 CMasternode* CMasternodeMan::GetNextMasternodeInQueueForPayment(int nBlockHeight, bool fFilterSigTime, int& nCount)
 {
-    LOCK(cs);
+    // Need LOCK2 here to ensure consistent locking order because the GetBlockHash call below locks cs_main
+    LOCK2(cs_main,cs);
 
     CMasternode *pBestMasternode = NULL;
     std::vector<std::pair<int, CMasternode*> > vecMasternodeLastPaid;
