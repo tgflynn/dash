@@ -272,6 +272,7 @@ UniValue masternode(const UniValue& params, bool fHelp)
                 } else {
                     statusObj.push_back(Pair("errorMessage", strError));
                 }
+                mnodeman.NotifyMasternodeUpdates();
                 break;
             }
         }
@@ -781,6 +782,7 @@ UniValue masternodebroadcast(const UniValue& params, bool fHelp)
                     mnb.Relay();
                     fResult = true;
                 }
+                mnodeman.NotifyMasternodeUpdates();
             } else fResult = false;
 
             if(fResult) {
