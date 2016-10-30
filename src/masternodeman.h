@@ -15,21 +15,6 @@ class CMasternodeMan;
 extern CMasternodeMan mnodeman;
 
 /**
- * Interface (abstract base class) for receiving masternode index
- * update notifications
- */
-//class IMasternodeIndexUpdateReceiver
-//{
-//public:
-//    /// Should lock any index dependent data structures
-//    virtual void MasternodeIndexUpdateBegin() = 0;
-//
-//    /// Should unlock any index dependent data structures
-//    virtual void MasternodeIndexUpdateEnd() = 0;
-//
-//};
-
-/**
  * Provides a forward and reverse index between MN vin's and integers.
  *
  * This mapping is normally add-only and is expected to be permanent
@@ -144,6 +129,9 @@ private:
 
     /// Set when index has been rebuilt, clear when read
     bool fIndexRebuilt;
+
+    /// Set when masternodes are added or index is rebuilt, clear when CGovernanceManager is notified
+    bool fMasternodesAdded;
 
     std::vector<uint256> vecDirtyGovernanceObjectHashes;
 
@@ -346,6 +334,13 @@ public:
     void SetMasternodeLastPing(const CTxIn& vin, const CMasternodePing& mnp);
 
     void UpdatedBlockTip(const CBlockIndex *pindex);
+
+    /**
+     * Called to notify CGovernanceManager that the masternode index has been updated.
+     * Must be called while not holding the CMasternodeMan::cs mutex
+     */
+    void NotifyMasternodeUpdates();
+
 };
 
 #endif

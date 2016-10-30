@@ -5,6 +5,7 @@
 #include "masternodeman.h"
 #include "activemasternode.h"
 #include "darksend.h"
+#include "governance.h"
 #include "masternode.h"
 #include "masternode-payments.h"
 #include "masternode-sync.h"
@@ -109,6 +110,7 @@ CMasternodeMan::CMasternodeMan()
   indexMasternodes(),
   indexMasternodesOld(),
   fIndexRebuilt(false),
+  fMasternodesAdded(false),
   vecDirtyGovernanceObjectHashes(),
   nLastWatchdogVoteTime(0),
   mapSeenMasternodeBroadcast(),
@@ -129,6 +131,7 @@ bool CMasternodeMan::Add(CMasternode &mn)
         mn.nTimeLastWatchdogVote = mn.sigTime;
         vMasternodes.push_back(mn);
         indexMasternodes.AddMasternodeVIN(mn.vin);
+        fMasternodesAdded = true;
         return true;
     }
 
@@ -678,23 +681,31 @@ void CMasternodeMan::ProcessMessage(CNode* pfrom, std::string& strCommand, CData
     if(fLiteMode) return; // disable all Dash specific functionality
     if(!masternodeSync.IsBlockchainSynced()) return;
 
-    LOCK(cs);
+    // LOCK(cs);
 
     if (strCommand == NetMsgType::MNANNOUNCE) { //Masternode Broadcast
 
-        CMasternodeBroadcast mnb;
-        vRecv >> mnb;
+        {
+            LOCK(cs);
 
-        int nDos = 0;
+            CMasternodeBroadcast mnb;
+            vRecv >> mnb;
 
-        if (CheckMnbAndUpdateMasternodeList(mnb, nDos)) {
-            // use announced Masternode as a peer
-            addrman.Add(CAddress(mnb.addr), pfrom->addr, 2*60*60);
-        } else if(nDos > 0) {
-            Misbehaving(pfrom->GetId(), nDos);
+            int nDos = 0;
+
+            if (CheckMnbAndUpdateMasternodeList(mnb, nDos)) {
+                // use announced Masternode as a peer
+                addrman.Add(CAddress(mnb.addr), pfrom->addr, 2*60*60);
+            } else if(nDos > 0) {
+                Misbehaving(pfrom->GetId(), nDos);
+            }
         }
-
+        if(fMasternodesAdded) {
+            NotifyMasternodeUpdates();
+        }
     } else if (strCommand == NetMsgType::MNPING) { //Masternode Ping
+
+        LOCK(cs);
 
         // ignore masternode pings until masternode list is synced
         if (!masternodeSync.IsMasternodeListSynced()) return;
@@ -727,6 +738,8 @@ void CMasternodeMan::ProcessMessage(CNode* pfrom, std::string& strCommand, CData
         AskForMN(pfrom, mnp.vin);
 
     } else if (strCommand == NetMsgType::DSEG) { //Get Masternode list or specific entry
+
+        LOCK(cs);
 
         // Ignore such requests until we are fully synced.
         // We could start processing this after masternode list is synced
@@ -789,6 +802,8 @@ void CMasternodeMan::ProcessMessage(CNode* pfrom, std::string& strCommand, CData
         LogPrint("masternode", "DSEG -- No invs sent to peer %d\n", pfrom->id);
 
     } else if (strCommand == NetMsgType::MNVERIFY) { // Masternode Verify
+
+        LOCK(cs);
 
         CMasternodeVerification mnv;
         vRecv >> mnv;
@@ -1498,4 +1513,21 @@ void CMasternodeMan::UpdatedBlockTip(const CBlockIndex *pindex)
         // normal wallet does not need to update this every block, doing update on rpc call should be enough
         UpdateLastPaid(pindex);
     }
+}
+
+void CMasternodeMan::NotifyMasternodeUpdates()
+{
+    // Avoid double locking
+    bool fMasternodesAddedLocal = false;
+    {
+        LOCK(cs);
+        fMasternodesAddedLocal = fMasternodesAdded;
+    }
+
+    if(fMasternodesAddedLocal) {
+        governance.CheckMasternodeOrphanVotes();
+    }
+
+    LOCK(cs);
+    fMasternodesAdded = false;
 }
