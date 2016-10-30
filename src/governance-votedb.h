@@ -2,8 +2,8 @@
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#ifndef GOVERANCE_VOTEDB_H
-#define GOVERANCE_VOTEDB_H
+#ifndef GOVERNANCE_VOTEDB_H
+#define GOVERNANCE_VOTEDB_H
 
 #include <list>
 #include <map>

@@ -2,8 +2,8 @@
 
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
-#ifndef GOVERANCE_VOTE_H
-#define GOVERANCE_VOTE_H
+#ifndef GOVERNANCE_VOTE_H
+#define GOVERNANCE_VOTE_H
 
 #include "main.h"
 #include "sync.h"
