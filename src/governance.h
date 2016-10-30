@@ -107,6 +107,8 @@ public: // Types
 private:
     static const int MAX_CACHE_SIZE = 1000;
 
+    static const std::string SERIALIZATION_VERSION_STRING;
+
     // Keep track of current block index
     const CBlockIndex *pCurrentBlockIndex;
 
@@ -201,11 +203,23 @@ public:
     template <typename Stream, typename Operation>
     inline void SerializationOp(Stream& s, Operation ser_action, int nType, int nVersion) {
         LOCK(cs);
+        std::string strVersion;
+        if(ser_action.ForRead()) {
+            READWRITE(strVersion);
+        }
+        else {
+            strVersion = SERIALIZATION_VERSION_STRING;
+            READWRITE(strVersion);
+        }
         READWRITE(mapSeenGovernanceObjects);
         READWRITE(mapInvalidVotes);
         READWRITE(mapOrphanVotes);
         READWRITE(mapObjects);
         READWRITE(mapLastMasternodeTrigger);
+        if(ser_action.ForRead() && (strVersion != SERIALIZATION_VERSION_STRING)) {
+            Clear();
+            return;
+        }
         if(ser_action.ForRead()) {
             RebuildIndexes();
         }
@@ -235,6 +249,8 @@ public:
     bool ProcessVote(const CGovernanceVote& vote, CGovernanceException& exception) {
         return ProcessVote(NULL, vote, exception);
     }
+
+    void CheckMasternodeOrphanVotes();
 
 private:
     void RequestGovernanceObject(CNode* pfrom, const uint256& nHash);
@@ -330,6 +346,8 @@ public: // Types
 
     typedef vote_m_t::const_iterator vote_m_cit;
 
+    typedef CacheMultiMap<CTxIn, CGovernanceVote> vote_mcache_t;
+
 private:
     /// critical section to protect the inner data structures
     mutable CCriticalSection cs;
@@ -387,12 +405,18 @@ private:
 
     vote_m_t mapCurrentMNVotes;
 
+    /// Limited map of votes orphaned by MN
+    vote_mcache_t mapOrphanVotes;
+
     CGovernanceObjectVoteFile fileVotes;
 
 public:
     CGovernanceObject();
+
     CGovernanceObject(uint256 nHashParentIn, int nRevisionIn, int64_t nTime, uint256 nCollateralHashIn, std::string strDataIn);
+
     CGovernanceObject(const CGovernanceObject& other);
+
     void swap(CGovernanceObject& first, CGovernanceObject& second); // nothrow
 
     // Public Getter methods
@@ -459,8 +483,9 @@ public:
     bool IsCollateralValid(std::string& strError);
 
     void UpdateLocalValidity(const CBlockIndex *pCurrentBlockIndex);
+
     void UpdateSentinelVariables(const CBlockIndex *pCurrentBlockIndex);
-    int GetObjectType();
+
     int GetObjectSubtype();
 
     CAmount GetMinCollateralFee();
@@ -468,6 +493,7 @@ public:
     UniValue GetJSONObject();
 
     void Relay();
+
     uint256 GetHash();
 
     // GET VOTE COUNT FOR SIGNAL
@@ -521,6 +547,8 @@ private:
 
     /// Called when MN's which have voted on this object have been removed
     void ClearMasternodeVotes();
+
+    void CheckOrphanVotes();
 
 };
 

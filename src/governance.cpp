@@ -27,6 +27,8 @@ std::map<uint256, int64_t> mapAskedForGovernanceObject;
 
 int nSubmittedFinalBudget;
 
+const std::string CGovernanceManager::SERIALIZATION_VERSION_STRING = "CGovernanceManager-Version-1";
+
 CGovernanceManager::CGovernanceManager()
     : pCurrentBlockIndex(NULL),
       nTimeLastDiff(0),
@@ -698,6 +700,14 @@ bool CGovernanceManager::ProcessVote(CNode* pfrom, const CGovernanceVote& vote, 
     return fOk;
 }
 
+void CGovernanceManager::CheckMasternodeOrphanVotes()
+{
+    LOCK(cs);
+    for(object_m_it it = mapObjects.begin(); it != mapObjects.end(); ++it) {
+        it->second.CheckOrphanVotes();
+    }
+}
+
 void CGovernanceManager::RequestGovernanceObject(CNode* pfrom, const uint256& nHash)
 {
     if(!pfrom) {
@@ -782,6 +792,7 @@ CGovernanceObject::CGovernanceObject()
   fExpired(false),
   fUnparsable(false),
   mapCurrentMNVotes(),
+  mapOrphanVotes(),
   fileVotes()
 {
     // PARSE JSON DATA STORAGE (STRDATA)
@@ -808,6 +819,7 @@ CGovernanceObject::CGovernanceObject(uint256 nHashParentIn, int nRevisionIn, int
   fExpired(false),
   fUnparsable(false),
   mapCurrentMNVotes(),
+  mapOrphanVotes(),
   fileVotes()
 {
     // PARSE JSON DATA STORAGE (STRDATA)
@@ -834,6 +846,7 @@ CGovernanceObject::CGovernanceObject(const CGovernanceObject& other)
   fExpired(other.fExpired),
   fUnparsable(other.fUnparsable),
   mapCurrentMNVotes(other.mapCurrentMNVotes),
+  mapOrphanVotes(other.mapOrphanVotes),
   fileVotes(other.fileVotes)
 {}
 
@@ -843,7 +856,7 @@ bool CGovernanceObject::ProcessVote(CNode* pfrom,
 {
     int nMNIndex = governance.GetMasternodeIndex(vote.GetVinMasternode());
     if(nMNIndex < 0) {
-        governance.AddOrphanVote(vote);
+        mapOrphanVotes.Insert(vote.GetVinMasternode(), vote);
         if(pfrom) {
             mnodeman.AskForMN(pfrom, vote.GetVinMasternode());
         }
@@ -991,11 +1004,6 @@ bool CGovernanceObject::CheckSignature(CPubKey& pubKeyMasternode)
     }
 
     return true;
-}
-
-int CGovernanceObject::GetObjectType()
-{
-    return nObjectType;
 }
 
 int CGovernanceObject::GetObjectSubtype()
@@ -1455,4 +1463,19 @@ void CGovernanceObject::swap(CGovernanceObject& first, CGovernanceObject& second
     swap(first.fCachedEndorsed, second.fCachedEndorsed);
     swap(first.fDirtyCache, second.fDirtyCache);
     swap(first.fExpired, second.fExpired);
+}
+
+void CGovernanceObject::CheckOrphanVotes()
+{
+    std::vector<CGovernanceVote> vecVotes;
+    for(size_t i = 0; i < vecVotes.size(); ++i) {
+        CGovernanceVote& vote = vecVotes[i];
+        int nMNIndex = governance.GetMasternodeIndex(vote.GetVinMasternode());
+        if(nMNIndex >= 0) {
+            CGovernanceException exception;
+            if(!ProcessVote(NULL, vote, exception)) {
+                LogPrintf("governance", "CGovernanceObject::CheckOrphanVotes -- Failed to add orphan vote: %s\n", exception.what());
+            }
+        }
+    }
 }
