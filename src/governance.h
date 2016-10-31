@@ -175,7 +175,6 @@ public:
 
     bool IsBudgetPaymentBlock(int nBlockHeight);
     bool AddGovernanceObject (CGovernanceObject& govobj);
-    //bool AddOrUpdateVote(const CGovernanceVote& vote, CNode* pfrom, std::string& strError);
 
     std::string GetRequiredPaymentsString(int nBlockHeight);
 
