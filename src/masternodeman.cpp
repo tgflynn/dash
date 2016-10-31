@@ -693,8 +693,6 @@ void CMasternodeMan::ProcessMessage(CNode* pfrom, std::string& strCommand, CData
     if(fLiteMode) return; // disable all Dash specific functionality
     if(!masternodeSync.IsBlockchainSynced()) return;
 
-    // LOCK(cs);
-
     if (strCommand == NetMsgType::MNANNOUNCE) { //Masternode Broadcast
 
         {
@@ -716,9 +714,6 @@ void CMasternodeMan::ProcessMessage(CNode* pfrom, std::string& strCommand, CData
             NotifyMasternodeUpdates();
         }
     } else if (strCommand == NetMsgType::MNPING) { //Masternode Ping
-
-        LOCK(cs);
-
         // ignore masternode pings until masternode list is synced
         if (!masternodeSync.IsMasternodeListSynced()) return;
 
@@ -726,6 +721,8 @@ void CMasternodeMan::ProcessMessage(CNode* pfrom, std::string& strCommand, CData
         vRecv >> mnp;
 
         LogPrint("masternode", "MNPING -- Masternode ping, masternode=%s\n", mnp.vin.prevout.ToStringShort());
+
+        LOCK(cs);
 
         if(mapSeenMasternodePing.count(mnp.GetHash())) return; //seen
         mapSeenMasternodePing.insert(std::make_pair(mnp.GetHash(), mnp));
@@ -750,9 +747,6 @@ void CMasternodeMan::ProcessMessage(CNode* pfrom, std::string& strCommand, CData
         AskForMN(pfrom, mnp.vin);
 
     } else if (strCommand == NetMsgType::DSEG) { //Get Masternode list or specific entry
-
-        LOCK(cs);
-
         // Ignore such requests until we are fully synced.
         // We could start processing this after masternode list is synced
         // but this is a heavy one so it's better to finish sync first.
@@ -762,6 +756,8 @@ void CMasternodeMan::ProcessMessage(CNode* pfrom, std::string& strCommand, CData
         vRecv >> vin;
 
         LogPrint("masternode", "DSEG -- Masternode list, masternode=%s\n", vin.prevout.ToStringShort());
+
+        LOCK(cs);
 
         if(vin == CTxIn()) { //only should ask for this once
             //local network
@@ -957,7 +953,8 @@ void CMasternodeMan::CheckSameAddr()
 
     // ban duplicates
     BOOST_FOREACH(CMasternode* pmn, vBan) {
-        pmn->nPoSeBanScore++;
+        LogPrintf("CMasternodeMan::CheckSameAddr -- increasing PoSe ban score for masternode %s\n", pmn->vin.prevout.ToStringShort());
+        pmn->IncreasePoSeBanScore();
     }
 }
 
@@ -987,7 +984,7 @@ bool CMasternodeMan::SendVerifyRequest(const CAddress& addr, const std::vector<C
                 continue;
             }
             fFound = true;
-            pmn->nPoSeBanScore++;
+            pmn->IncreasePoSeBanScore();
         }
         return false;
     }
@@ -1087,7 +1084,7 @@ void CMasternodeMan::ProcessVerifyReply(CNode* pnode, CMasternodeVerification& m
                     // found it!
                     prealMasternode = &(*it);
                     if(!it->IsPoSeVerified()) {
-                            it->nPoSeBanScore--;
+                        it->DecreasePoSeBanScore();
                     }
                     netfulfilledman.AddFulfilledRequest(pnode->addr, strprintf("%s", NetMsgType::MNVERIFY)+"-done");
 
@@ -1133,7 +1130,7 @@ void CMasternodeMan::ProcessVerifyReply(CNode* pnode, CMasternodeVerification& m
                     prealMasternode->vin.prevout.ToStringShort(), pnode->addr.ToString());
         // increase ban score for everyone else
         BOOST_FOREACH(CMasternode* pmn, vpMasternodesToBan) {
-            pmn->nPoSeBanScore++;
+            pmn->IncreasePoSeBanScore();
             LogPrint("masternode", "CMasternodeMan::ProcessVerifyBroadcast -- increased PoSe ban score for %s addr %s, new score %d\n",
                         prealMasternode->vin.prevout.ToStringShort(), pnode->addr.ToString(), pmn->nPoSeBanScore);
         }
@@ -1217,7 +1214,7 @@ void CMasternodeMan::ProcessVerifyBroadcast(CNode* pnode, const CMasternodeVerif
         }
 
         if(!pmn1->IsPoSeVerified()) {
-            pmn1->nPoSeBanScore--;
+            pmn1->DecreasePoSeBanScore();
         }
         mnv.Relay();
 
@@ -1228,7 +1225,7 @@ void CMasternodeMan::ProcessVerifyBroadcast(CNode* pnode, const CMasternodeVerif
         int nCount = 0;
         BOOST_FOREACH(CMasternode& mn, vMasternodes) {
             if(mn.addr != mnv.addr || mn.vin.prevout == mnv.vin1.prevout) continue;
-            mn.nPoSeBanScore++;
+            mn.IncreasePoSeBanScore();
             nCount++;
             LogPrint("masternode", "CMasternodeMan::ProcessVerifyBroadcast -- increased PoSe ban score for %s addr %s, new score %d\n",
                         mn.vin.prevout.ToStringShort(), mn.addr.ToString(), mn.nPoSeBanScore);
