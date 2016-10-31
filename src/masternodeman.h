@@ -130,8 +130,11 @@ private:
     /// Set when index has been rebuilt, clear when read
     bool fIndexRebuilt;
 
-    /// Set when masternodes are added or index is rebuilt, clear when CGovernanceManager is notified
+    /// Set when masternodes are added, cleared when CGovernanceManager is notified
     bool fMasternodesAdded;
+
+    /// Set when masternodes are removed, cleared when CGovernanceManager is notified
+    bool fMasternodesRemoved;
 
     std::vector<uint256> vecDirtyGovernanceObjectHashes;
 

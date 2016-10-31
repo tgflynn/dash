@@ -1467,15 +1467,15 @@ void CGovernanceObject::swap(CGovernanceObject& first, CGovernanceObject& second
 
 void CGovernanceObject::CheckOrphanVotes()
 {
-    std::vector<CGovernanceVote> vecVotes;
-    for(size_t i = 0; i < vecVotes.size(); ++i) {
-        CGovernanceVote& vote = vecVotes[i];
-        int nMNIndex = governance.GetMasternodeIndex(vote.GetVinMasternode());
-        if(nMNIndex >= 0) {
-            CGovernanceException exception;
-            if(!ProcessVote(NULL, vote, exception)) {
-                LogPrintf("governance", "CGovernanceObject::CheckOrphanVotes -- Failed to add orphan vote: %s\n", exception.what());
-            }
+    const vote_mcache_t::list_t& listVotes = mapOrphanVotes.GetItemList();
+    for(vote_mcache_t::list_cit it = listVotes.begin(); it != listVotes.end(); ++it) {
+        const CGovernanceVote& vote = it->value;
+        if(!mnodeman.Has(vote.GetVinMasternode())) {
+            continue;
+        }
+        CGovernanceException exception;
+        if(!ProcessVote(NULL, vote, exception)) {
+            LogPrintf("governance", "CGovernanceObject::CheckOrphanVotes -- Failed to add orphan vote: %s\n", exception.what());
         }
     }
 }
