@@ -527,8 +527,11 @@ public:
         READWRITE(nObjectType);
         READWRITE(vinMasternode);
         READWRITE(vchSig);
-        READWRITE(mapCurrentMNVotes);
-        READWRITE(fileVotes);
+        if(nType & SER_DISK) {
+            // Only include these for the disk file format
+            READWRITE(mapCurrentMNVotes);
+            READWRITE(fileVotes);
+        }
 
         // AFTER DESERIALIZATION OCCURS, CACHED VARIABLES MUST BE CALCULATED MANUALLY
     }

@@ -147,14 +147,20 @@ void CGovernanceManager::ProcessMessage(CNode* pfrom, std::string& strCommand, C
         CGovernanceObject govobj;
         vRecv >> govobj;
 
-        if(!AcceptObjectMessage(govobj.GetHash())) {
-            LogPrintf("CGovernanceManager -- Received unrequested object: %s", govobj.GetHash().ToString());
+        uint256 nHash = govobj.GetHash();
+        std::string strHash = nHash.ToString();
+
+        LogPrint("gobject", "CGovernanceManager -- Received object: %s\n", strHash);
+
+        if(!AcceptObjectMessage(nHash)) {
+            LogPrintf("CGovernanceManager -- Received unrequested object: %s\n", strHash);
             Misbehaving(pfrom->GetId(), 20);
             return;
         }
 
-        if(mapSeenGovernanceObjects.count(govobj.GetHash())){
+        if(mapSeenGovernanceObjects.count(nHash)) {
             // TODO - print error code? what if it's GOVOBJ_ERROR_IMMATURE?
+            LogPrint("gobject", "CGovernanceManager -- Received already seen object: %s\n", strHash);
             return;
         }
 
@@ -162,7 +168,7 @@ void CGovernanceManager::ProcessMessage(CNode* pfrom, std::string& strCommand, C
         // CHECK OBJECT AGAINST LOCAL BLOCKCHAIN
 
         if(!govobj.IsValidLocally(pCurrentBlockIndex, strError, true)) {
-            mapSeenGovernanceObjects.insert(std::make_pair(govobj.GetHash(), SEEN_OBJECT_ERROR_INVALID));
+            mapSeenGovernanceObjects.insert(std::make_pair(nHash, SEEN_OBJECT_ERROR_INVALID));
             LogPrintf("MNGOVERNANCEOBJECT -- Governance object is invalid - %s\n", strError);
             return;
         }
@@ -173,7 +179,7 @@ void CGovernanceManager::ProcessMessage(CNode* pfrom, std::string& strCommand, C
 
         if(AddGovernanceObject(govobj))
         {
-            LogPrintf("MNGOVERNANCEOBJECT -- %s new\n", govobj.GetHash().ToString());
+            LogPrintf("MNGOVERNANCEOBJECT -- %s new\n", strHash);
             govobj.Relay();
         }
 
@@ -197,17 +203,21 @@ void CGovernanceManager::ProcessMessage(CNode* pfrom, std::string& strCommand, C
         CGovernanceVote vote;
         vRecv >> vote;
 
+        LogPrint("gobject", "CGovernanceManager -- Received vote: %s\n", vote.ToString());
+
         if(!AcceptVoteMessage(vote.GetHash())) {
-            LogPrintf("CGovernanceManager -- Received unrequested vote object: %s", vote.ToString());
+            LogPrintf("CGovernanceManager -- Received unrequested vote object: %s\n", vote.ToString());
             Misbehaving(pfrom->GetId(), 20);
             return;
         }
 
         CGovernanceException exception;
         if(ProcessVote(pfrom, vote, exception)) {
+            LogPrint("gobject", "CGovernanceManager -- Accepted vote\n");
             vote.Relay();
         }
         else {
+            LogPrint("gobject", "CGovernanceManager -- Rejected vote, error = %s\n", exception.what());
             if((exception.GetNodePenalty() != 0) && masternodeSync.IsSynced()) {
                 Misbehaving(pfrom->GetId(), exception.GetNodePenalty());
             }
@@ -454,25 +464,31 @@ bool CGovernanceManager::ConfirmInventoryRequest(const CInv& inv)
 {
     LOCK(cs);
 
+    LogPrint("gobject", "CGovernanceManager::ConfirmInventoryRequest inv = %s\n", inv.ToString());
+
     // First check if we've already recorded this object
     switch(inv.type) {
     case MSG_GOVERNANCE_OBJECT:
     {
         object_m_it it = mapObjects.find(inv.hash);
         if(it != mapObjects.end()) {
+            LogPrint("gobject", "CGovernanceManager::ConfirmInventoryRequest already have governance object, returning false\n");
             return false;
         }
     }
     break;
     case MSG_GOVERNANCE_OBJECT_VOTE:
     {
+        // TODO: This is wrong, fix
         object_m_it it = mapObjects.find(inv.hash);
         if(it != mapObjects.end()) {
+            LogPrint("gobject", "CGovernanceManager::ConfirmInventoryRequest already have governance vote, returning false\n");
             return false;
         }
     }
     break;
     default:
+        LogPrint("gobject", "CGovernanceManager::ConfirmInventoryRequest unknown type, returning false\n");
         return false;
     }
 
@@ -493,10 +509,11 @@ bool CGovernanceManager::ConfirmInventoryRequest(const CInv& inv)
     if(it == setHash->end()) {
         // Only retrieve the item once
         setHash->insert(inv.hash);
-        return true;
+        LogPrint("gobject", "CGovernanceManager::ConfirmInventoryRequest added inv to requested set\n");
     }
 
-    return false;
+    LogPrint("gobject", "CGovernanceManager::ConfirmInventoryRequest reached end, returning true\n");
+    return true;
 }
 
 void CGovernanceManager::Sync(CNode* pfrom, uint256 nProp)
@@ -1389,7 +1406,7 @@ void CGovernanceObject::CheckOrphanVotes()
         }
         CGovernanceException exception;
         if(!ProcessVote(NULL, vote, exception)) {
-            LogPrintf("governance", "CGovernanceObject::CheckOrphanVotes -- Failed to add orphan vote: %s\n", exception.what());
+            LogPrintf("CGovernanceObject::CheckOrphanVotes -- Failed to add orphan vote: %s\n", exception.what());
         }
     }
 }
