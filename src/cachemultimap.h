@@ -98,14 +98,9 @@ public:
         }
         it_map_t& mapIt = mit->second;
 
-        std::cout << "Insert: key = " << key.ToString()
-                  << ", value = " << value.ToString()
-                  << std::endl;
-
         it_map_it it = mapIt.find(value);
         if(mapIt.count(value) > 0) {
             // Don't insert duplicates
-            std::cout << "Insert: duplicate, returning" << std::endl;
             return;
         }
 
@@ -114,7 +109,6 @@ public:
 
         mapIt[value] = lit;
         ++nCurrentSize;
-        std::cout << "Insert: inserted, nCurrentSize = " << nCurrentSize << std::endl;
     }
 
     bool HasKey(const K& key) const
@@ -221,31 +215,20 @@ private:
             return;
         }
 
-        std::cout << "PruneLast: listItems.size() = " << listItems.size() << std::endl;
-
         list_it lit = listItems.end();
         --lit;
         item_t& item = *lit;
-
-        std::cout << "PruneLast: item.key = " << item.key.ToString()
-                << ", value = " << item.value.ToString() << std::endl;
 
         map_it mit = mapIndex.find(item.key);
 
         if(mit != mapIndex.end()) {
             it_map_t& mapIt = mit->second;
 
-            std::cout << "PruneLast: mapIt.size() = " << mapIt.size() << std::endl;
-
             mapIt.erase(item.value);
 
             if(mapIt.size() < 1) {
                 mapIndex.erase(item.key);
             }
-        }
-        else {
-            // Shouldn't happen
-            std::cout << "PruneLast: mapIt not found" << std::endl;
         }
 
         listItems.pop_back();
