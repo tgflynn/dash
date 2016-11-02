@@ -92,15 +92,29 @@ public:
         if(nCurrentSize == nMaxSize) {
             PruneLast();
         }
-        listItems.push_front(item_t(key, value));
-        list_it lit = listItems.begin();
         map_it mit = mapIndex.find(key);
         if(mit == mapIndex.end()) {
             mit = mapIndex.insert(std::pair<K,it_map_t>(key, it_map_t())).first;
         }
         it_map_t& mapIt = mit->second;
+
+        std::cout << "Insert: key = " << key.ToString()
+                  << ", value = " << value.ToString()
+                  << std::endl;
+
+        it_map_it it = mapIt.find(value);
+        if(mapIt.count(value) > 0) {
+            // Don't insert duplicates
+            std::cout << "Insert: duplicate, returning" << std::endl;
+            return;
+        }
+
+        listItems.push_front(item_t(key, value));
+        list_it lit = listItems.begin();
+
         mapIt[value] = lit;
         ++nCurrentSize;
+        std::cout << "Insert: inserted, nCurrentSize = " << nCurrentSize << std::endl;
     }
 
     bool HasKey(const K& key) const
@@ -166,6 +180,7 @@ public:
         }
 
         listItems.erase(it->second);
+        --nCurrentSize;
         mapIt.erase(it);
 
         if(mapIt.size() < 1) {
@@ -205,17 +220,32 @@ private:
         if(nCurrentSize < 1) {
             return;
         }
+
+        std::cout << "PruneLast: listItems.size() = " << listItems.size() << std::endl;
+
         list_it lit = listItems.end();
         --lit;
         item_t& item = *lit;
 
+        std::cout << "PruneLast: item.key = " << item.key.ToString()
+                << ", value = " << item.value.ToString() << std::endl;
+
         map_it mit = mapIndex.find(item.key);
-        it_map_t& mapIt = mit->second;
 
-        mapIt.erase(item.value);
+        if(mit != mapIndex.end()) {
+            it_map_t& mapIt = mit->second;
 
-        if(mapIt.size() < 1) {
-            mapIndex.erase(item.key);
+            std::cout << "PruneLast: mapIt.size() = " << mapIt.size() << std::endl;
+
+            mapIt.erase(item.value);
+
+            if(mapIt.size() < 1) {
+                mapIndex.erase(item.key);
+            }
+        }
+        else {
+            // Shouldn't happen
+            std::cout << "PruneLast: mapIt not found" << std::endl;
         }
 
         listItems.pop_back();
