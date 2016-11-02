@@ -6713,9 +6713,15 @@ bool SendMessages(CNode* pto)
         //
         // Message: getdata (non-blocks)
         //
+        int64_t nFirst = -1;
+        if(!pto->mapAskFor.empty()) {
+            nFirst = (*pto->mapAskFor.begin()).first;
+        }
+        LogPrint("net", "SendMessages (mapAskFor) -- before loop: nNow = %d, nFirst = %d\n", nNow, nFirst);
         while (!pto->fDisconnect && !pto->mapAskFor.empty() && (*pto->mapAskFor.begin()).first <= nNow)
         {
             const CInv& inv = (*pto->mapAskFor.begin()).second;
+            LogPrint("net", "SendMessages (mapAskFor) -- inv = %s peer=%d\n", inv.ToString(), pto->id);
             if (!AlreadyHave(inv))
             {
                 if (fDebug)
@@ -6728,6 +6734,7 @@ bool SendMessages(CNode* pto)
                 }
             } else {
                 //If we're not going to ask, don't expect a response.
+                LogPrint("net", "SendMessages -- already have inv = %s peer=%d\n", inv.ToString(), pto->id);
                 pto->setAskFor.erase(inv.hash);
             }
             pto->mapAskFor.erase(pto->mapAskFor.begin());
