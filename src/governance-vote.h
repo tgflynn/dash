@@ -154,7 +154,7 @@ public:
         return ss.GetHash();
     }
 
-    std::string ToString()
+    std::string ToString() const
     {
         std::ostringstream ostr;
         ostr << vinMasternode.ToString() << ":"
