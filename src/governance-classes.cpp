@@ -198,12 +198,15 @@ void CGovernanceTriggerManager::CleanAndRemove()
             switch(pSuperblock->GetStatus()) {
             case SEEN_OBJECT_ERROR_INVALID:
             case SEEN_OBJECT_UNKNOWN:
+                LogPrint("gobject", "CGovernanceTriggerManager::CleanAndRemove -- Unknown or invalid trigger found\n");
                 remove = true;
                 break;
             case SEEN_OBJECT_EXECUTED:
                 {
+                    LogPrint("gobject", "CGovernanceTriggerManager::CleanAndRemove -- Executed trigger found\n");
                     CGovernanceObject* pgovobj = pSuperblock->GetGovernanceObject();
                     if(pgovobj) {
+                        LogPrint("gobject", "CGovernanceTriggerManager::CleanAndRemove -- Expiring executed object: %s\n", pgovobj->GetHash().ToString());
                         pgovobj->fExpired = true;
                     }
                 }
@@ -215,9 +218,11 @@ void CGovernanceTriggerManager::CleanAndRemove()
                     // Rough approximation: a cycle of superblock ++
                     int nExpirationBlock = nTriggerBlock + Params().GetConsensus().nSuperblockCycle + GOVERNANCE_FEE_CONFIRMATIONS; 
                     if(governance.GetCachedBlockHeight() > nExpirationBlock) {
+                        LogPrint("gobject", "CGovernanceTriggerManager::CleanAndRemove -- Outdated trigger found\n");
                         remove = true;
                         CGovernanceObject* pgovobj = pSuperblock->GetGovernanceObject();
                         if(pgovobj) {
+                            LogPrint("gobject", "CGovernanceTriggerManager::CleanAndRemove -- Expiring outdated object: %s\n", pgovobj->GetHash().ToString());
                             pgovobj->fExpired = true;
                         }
                     }
@@ -239,6 +244,7 @@ void CGovernanceTriggerManager::CleanAndRemove()
                      << strdata
                      << endl;
                );
+            LogPrint("gobject", "CGovernanceTriggerManager::CleanAndRemove -- Removing trigger object\n");
             mapTrigger.erase(it++);
         }
         else  {
