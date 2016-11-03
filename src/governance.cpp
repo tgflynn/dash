@@ -206,8 +206,11 @@ void CGovernanceManager::ProcessMessage(CNode* pfrom, std::string& strCommand, C
         LogPrint("gobject", "CGovernanceManager -- Received vote: %s\n", vote.ToString());
 
         if(!AcceptVoteMessage(vote.GetHash())) {
-            LogPrintf("CGovernanceManager -- Received unrequested vote object: %s\n", vote.ToString());
-            Misbehaving(pfrom->GetId(), 20);
+            LogPrintf("CGovernanceManager -- Received unrequested vote object: %s, hash: %s, peer = %d\n",
+                      vote.ToString(),
+                      vote.GetHash().ToString(),
+                      pfrom->GetId());
+            //Misbehaving(pfrom->GetId(), 20);
             return;
         }
 
@@ -479,9 +482,7 @@ bool CGovernanceManager::ConfirmInventoryRequest(const CInv& inv)
     break;
     case MSG_GOVERNANCE_OBJECT_VOTE:
     {
-        // TODO: This is wrong, fix
-        object_m_it it = mapObjects.find(inv.hash);
-        if(it != mapObjects.end()) {
+        if(mapVoteToObject.HasKey(inv.hash)) {
             LogPrint("gobject", "CGovernanceManager::ConfirmInventoryRequest already have governance vote, returning false\n");
             return false;
         }
@@ -507,7 +508,6 @@ bool CGovernanceManager::ConfirmInventoryRequest(const CInv& inv)
 
     hash_s_cit it = setHash->find(inv.hash);
     if(it == setHash->end()) {
-        // Only retrieve the item once
         setHash->insert(inv.hash);
         LogPrint("gobject", "CGovernanceManager::ConfirmInventoryRequest added inv to requested set\n");
     }
