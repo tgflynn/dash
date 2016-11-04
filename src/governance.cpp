@@ -300,6 +300,8 @@ void CGovernanceManager::UpdateCachesAndClean()
 
     if(!pCurrentBlockIndex) return;
 
+    LogPrint("gobject", "CGovernanceManager::UpdateCachesAndClean -- After pCurrentBlockIndex (not NULL)\n");
+
     // UPDATE CACHE FOR EACH OBJECT THAT IS FLAGGED DIRTYCACHE=TRUE
 
     object_m_it it = mapObjects.begin();
@@ -332,7 +334,7 @@ void CGovernanceManager::UpdateCachesAndClean()
         // IF DELETE=TRUE, THEN CLEAN THE MESS UP!
 
         if(pObj->fCachedDelete || pObj->fExpired) {
-            LogPrintf("UpdateCachesAndClean -- erase obj %s\n", (*it).first.ToString());
+            LogPrintf("CGovernanceManager::UpdateCachesAndClean -- erase obj %s\n", (*it).first.ToString());
             mnodeman.RemoveGovernanceObject(pObj->GetHash());
             mapObjects.erase(it++);
         } else {
