@@ -620,6 +620,21 @@ bool CGovernanceManager::MasternodeRateCheck(const CTxIn& vin, int nObjectType)
     return false;
 }
 
+void CGovernanceManager::AddCachedTriggers()
+{
+    LOCK(cs);
+
+    for(object_m_it it = mapObjects.begin(); it != mapObjects.end(); ++it) {
+        CGovernanceObject& govobj = it->second;
+        
+        if(govobj.nObjectType != GOVERNANCE_OBJECT_TRIGGER) {
+            continue;
+        }
+
+        triggerman.AddNewTrigger(govobj.GetHash());
+    }    
+}
+
 CGovernanceObject::CGovernanceObject()
     : cs(),
       nHashParent(),
