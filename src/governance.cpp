@@ -481,9 +481,14 @@ void CGovernanceManager::Sync(CNode* pfrom, uint256 nProp)
 
        vote_m_it it2 = mapVotesByHash.begin();
        while(it2 != mapVotesByHash.end()) {
-          pfrom->PushInventory(CInv(MSG_GOVERNANCE_OBJECT_VOTE, (*it2).first));
-          nInvCount++;
-          ++it2;
+           CGovernanceVote& vote = it2->second;
+           if(!vote.IsValid(true)) {
+               // Don't relay votes that are now invalid (ie. missing MN) to avoid being banned
+               continue;
+           }
+           pfrom->PushInventory(CInv(MSG_GOVERNANCE_OBJECT_VOTE, (*it2).first));
+           nInvCount++;
+           ++it2;
        }
     }
 
