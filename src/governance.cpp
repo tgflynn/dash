@@ -1106,7 +1106,7 @@ void CGovernanceManager::UpdatedBlockTip(const CBlockIndex *pindex)
     LOCK(cs);
     pCurrentBlockIndex = pindex;
     nCachedBlockHeight = pCurrentBlockIndex->nHeight;
-    LogPrint("gobject", "pCurrentBlockIndex->nHeight: %d\n", pCurrentBlockIndex->nHeight);
+    LogPrint("gobject", "CGovernanceManager::UpdatedBlockTip pCurrentBlockIndex->nHeight: %d\n", pCurrentBlockIndex->nHeight);
 
     // TO REPROCESS OBJECTS WE SHOULD BE SYNCED
 
