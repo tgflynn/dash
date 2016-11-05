@@ -221,6 +221,7 @@ public:
         }
         if(ser_action.ForRead()) {
             RebuildIndexes();
+            AddCachedTriggers();
         }
     }
 
@@ -282,6 +283,8 @@ private:
     int GetMasternodeIndex(const CTxIn& masternodeVin);
 
     void RebuildVoteMaps();
+
+    void AddCachedTriggers();
 
 };
 

@@ -323,6 +323,8 @@ void CGovernanceManager::UpdateCachesAndClean()
 
     if(!pCurrentBlockIndex) return;
 
+    LogPrint("gobject", "CGovernanceManager::UpdateCachesAndClean -- After pCurrentBlockIndex (not NULL)\n");
+
     // UPDATE CACHE FOR EACH OBJECT THAT IS FLAGGED DIRTYCACHE=TRUE
 
     object_m_it it = mapObjects.begin();
@@ -351,7 +353,7 @@ void CGovernanceManager::UpdateCachesAndClean()
         // IF DELETE=TRUE, THEN CLEAN THE MESS UP!
 
         if(pObj->IsSetCachedDelete() || pObj->IsSetExpired()) {
-            LogPrintf("UpdateCachesAndClean -- erase obj %s\n", (*it).first.ToString());
+            LogPrintf("CGovernanceManager::UpdateCachesAndClean -- erase obj %s\n", (*it).first.ToString());
             mnodeman.RemoveGovernanceObject(pObj->GetHash());
 
             // Remove vote references
@@ -542,6 +544,7 @@ void CGovernanceManager::Sync(CNode* pfrom, uint256 nProp)
 
                 std::vector<CGovernanceVote> vecVotes = govobj.GetVoteFile().GetVotes();
                 for(size_t i = 0; i < vecVotes.size(); ++i) {
+                    // TODO: Check vote validity
                     pfrom->PushInventory(CInv(MSG_GOVERNANCE_OBJECT_VOTE, vecVotes[i].GetHash()));
                     ++nInvCount;
                 }
@@ -701,6 +704,21 @@ void CGovernanceManager::RebuildVoteMaps()
     for(object_m_it it = mapObjects.begin(); it != mapObjects.end(); ++it) {
         it->second.RebuildVoteMap();
     }
+}
+
+void CGovernanceManager::AddCachedTriggers()
+{
+    LOCK(cs);
+
+    for(object_m_it it = mapObjects.begin(); it != mapObjects.end(); ++it) {
+        CGovernanceObject& govobj = it->second;
+        
+        if(govobj.nObjectType != GOVERNANCE_OBJECT_TRIGGER) {
+            continue;
+        }
+
+        triggerman.AddNewTrigger(govobj.GetHash());
+    }    
 }
 
 CGovernanceObject::CGovernanceObject()
@@ -1326,7 +1344,7 @@ void CGovernanceManager::UpdatedBlockTip(const CBlockIndex *pindex)
     LOCK(cs);
     pCurrentBlockIndex = pindex;
     nCachedBlockHeight = pCurrentBlockIndex->nHeight;
-    LogPrint("gobject", "pCurrentBlockIndex->nHeight: %d\n", pCurrentBlockIndex->nHeight);
+    LogPrint("gobject", "CGovernanceManager::UpdatedBlockTip pCurrentBlockIndex->nHeight: %d\n", pCurrentBlockIndex->nHeight);
 
     // TO REPROCESS OBJECTS WE SHOULD BE SYNCED
 
