@@ -64,6 +64,10 @@ public:
      */
     bool GetVote(const uint256& nHash, CGovernanceVote& vote) const;
 
+    int GetVoteCount() {
+        return nMemoryVotes;
+    }
+
     std::vector<CGovernanceVote> GetVotes() const;
 
     CGovernanceObjectVoteFile& operator=(const CGovernanceObjectVoteFile& other);
