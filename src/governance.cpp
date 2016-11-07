@@ -544,7 +544,9 @@ void CGovernanceManager::Sync(CNode* pfrom, uint256 nProp)
 
                 std::vector<CGovernanceVote> vecVotes = govobj.GetVoteFile().GetVotes();
                 for(size_t i = 0; i < vecVotes.size(); ++i) {
-                    // TODO: Check vote validity
+                    if(!vecVotes[i].IsValid(true)) {
+                        continue;
+                    }
                     pfrom->PushInventory(CInv(MSG_GOVERNANCE_OBJECT_VOTE, vecVotes[i].GetHash()));
                     ++nInvCount;
                 }
