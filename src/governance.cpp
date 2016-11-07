@@ -869,6 +869,7 @@ bool CGovernanceObject::ProcessVote(CNode* pfrom,
     }
     voteInstance = vote_instance_t(vote.GetOutcome(), nNow);
     fileVotes.AddVote(vote);
+    fDirtyCache = true;
     return true;
 }
 
