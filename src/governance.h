@@ -105,7 +105,7 @@ public: // Types
     typedef hash_s_t::const_iterator hash_s_cit;
 
 private:
-    static const int MAX_CACHE_SIZE = 1000;
+    static const int MAX_CACHE_SIZE = 1000000;
 
     static const std::string SERIALIZATION_VERSION_STRING;
 
