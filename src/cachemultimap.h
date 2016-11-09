@@ -98,7 +98,6 @@ public:
         }
         it_map_t& mapIt = mit->second;
 
-        it_map_it it = mapIt.find(value);
         if(mapIt.count(value) > 0) {
             // Don't insert duplicates
             return;
