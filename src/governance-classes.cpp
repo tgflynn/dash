@@ -506,7 +506,7 @@ CSuperblock(uint256& nHash)
 
     DBG( cout << "CSuperblock Constructor pGovObj : "
          << pGovObj->GetDataAsString()
-         << ", nObjectType = " << pGovObj->nObjectType
+         << ", nObjectType = " << pGovObj->GetObjectType()
          << endl; );
 
     if (pGovObj->GetObjectType() != GOVERNANCE_OBJECT_TRIGGER) {
