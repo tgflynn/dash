@@ -74,6 +74,8 @@ BITCOIN_CORE_H = \
   arith_uint256.h \
   base58.h \
   bloom.h \
+  cachemap.h \
+  cachemultimap.h \
   chain.h \
   chainparams.h \
   chainparamsbase.h \
@@ -99,6 +101,7 @@ BITCOIN_CORE_H = \
   darksend-relay.h \
   governance.h \
   governance-classes.h \
+  governance-exceptions.h \
   governance-vote.h \
   governance-votedb.h \
   flat-database.h \
