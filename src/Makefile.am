@@ -100,9 +100,7 @@ BITCOIN_CORE_H = \
   darksend-relay.h \
   governance.h \
   governance-classes.h \
-  governance-exceptions.h \
   governance-vote.h \
-  governance-votedb.h \
   flat-database.h \
   hash.h \
   httprpc.h \
@@ -205,7 +203,6 @@ libbitcoin_server_a_SOURCES = \
   governance.cpp \
   governance-classes.cpp \
   governance-vote.cpp \
-  governance-votedb.cpp \
   main.cpp \
   merkleblock.cpp \
   miner.cpp \
