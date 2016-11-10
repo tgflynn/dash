@@ -42,10 +42,12 @@ struct CacheItem
 /**
  * Map like container that keeps the N most recently added items
  */
-template<typename K, typename V>
+template<typename K, typename V, typename Size = uint32_t>
 class CacheMap
 {
 public:
+    typedef Size size_type;
+
     typedef CacheItem<K,V> item_t;
 
     typedef std::list<item_t> list_t;
@@ -61,16 +63,16 @@ public:
     typedef typename map_t::const_iterator map_cit;
 
 private:
-    std::size_t nMaxSize;
+    size_type nMaxSize;
 
-    std::size_t nCurrentSize;
+    size_type nCurrentSize;
 
     list_t listItems;
 
     map_t mapIndex;
 
 public:
-    CacheMap(std::size_t nMaxSizeIn = 0)
+    CacheMap(size_type nMaxSizeIn = 0)
         : nMaxSize(nMaxSizeIn),
           nCurrentSize(0),
           listItems(),
@@ -93,16 +95,16 @@ public:
         nCurrentSize = 0;
     }
 
-    void SetMaxSize(std::size_t nMaxSizeIn)
+    void SetMaxSize(size_type nMaxSizeIn)
     {
         nMaxSize = nMaxSizeIn;
     }
 
-    std::size_t GetMaxSize() const {
+    size_type GetMaxSize() const {
         return nMaxSize;
     }
 
-    std::size_t GetSize() const {
+    size_type GetSize() const {
         return nCurrentSize;
     }
 

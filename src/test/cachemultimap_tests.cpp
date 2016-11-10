@@ -50,12 +50,12 @@ bool Compare(const CacheMultiMap<int,int>& map1, const CacheMultiMap<int,int>& m
     return true;
 }
 
-bool CheckExpected(const CacheMultiMap<int,int>& map, int* expected, size_t nSize)
+bool CheckExpected(const CacheMultiMap<int,int>& map, int* expected, CacheMultiMap<int,int>::size_type nSize)
 {
     if(map.GetSize() != nSize) {
         return false;
     }
-    for(size_t i = 0; i < nSize; ++i) {
+    for(CacheMultiMap<int,int>::size_type i = 0; i < nSize; ++i) {
         int nVal = 0;
         int eVal = expected[i];
         if(!map.Get(eVal, nVal)) {
