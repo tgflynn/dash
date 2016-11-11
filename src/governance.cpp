@@ -176,7 +176,7 @@ void CGovernanceManager::ProcessMessage(CNode* pfrom, std::string& strCommand, C
     {
         // Ignore such messages until masternode list is synced
         if(!masternodeSync.IsMasternodeListSynced()) {
-            LogPrintf("CGovernanceManager::ProcessMessage MNGOVERNANCEOBJECTVOTE -- masternode list not synced\n");
+            LogPrint("gobject", "CGovernanceManager::ProcessMessage MNGOVERNANCEOBJECTVOTE -- masternode list not synced\n");
             return;
         }
 
