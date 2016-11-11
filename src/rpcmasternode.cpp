@@ -329,6 +329,7 @@ UniValue masternode(const UniValue& params, bool fHelp)
 
             resultsObj.push_back(Pair("status", statusObj));
         }
+        mnodeman.NotifyMasternodeUpdates();
 
         UniValue returnObj(UniValue::VOBJ);
         returnObj.push_back(Pair("overall", strprintf("Successfully started %d masternodes, failed to start %d, total %d", nSuccessful, nFailed, nSuccessful + nFailed)));
