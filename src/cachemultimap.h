@@ -251,4 +251,4 @@ private:
     }
 };
 
-#endif /* CACHEMAP_H_ */
+#endif /* CACHEMULTIMAP_H_ */
