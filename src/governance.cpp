@@ -1112,6 +1112,7 @@ bool CGovernanceObject::IsValidLocally(const CBlockIndex* pindex, std::string& s
     }
 
     if(fUnparsable) {
+        strError = "Object data unparseable";
         return false;
     }
 
