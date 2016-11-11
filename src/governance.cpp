@@ -1131,6 +1131,10 @@ void CGovernanceManager::UpdatedBlockTip(const CBlockIndex *pindex)
     // On the other hand it should be safe for us to access pindex without holding a lock
     // on cs_main because the CBlockIndex objects are dynamically allocated and
     // presumably never deleted.
+    if(!pindex) {
+        return;
+    }
+
     LOCK(cs);
     pCurrentBlockIndex = pindex;
     nCachedBlockHeight = pCurrentBlockIndex->nHeight;
