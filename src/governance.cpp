@@ -129,7 +129,10 @@ void CGovernanceManager::ProcessMessage(CNode* pfrom, std::string& strCommand, C
         LOCK(cs);
         // MAKE SURE WE HAVE A VALID REFERENCE TO THE TIP BEFORE CONTINUING
 
-        if(!pCurrentBlockIndex) return;
+        if(!pCurrentBlockIndex) {
+            LogPrintf("CGovernanceManager::ProcessMessage MNGOVERNANCEOBJECT -- pCurrentBlockIndex is NULL\n");
+            return;
+        }
 
         CGovernanceObject govobj;
         vRecv >> govobj;
@@ -172,7 +175,10 @@ void CGovernanceManager::ProcessMessage(CNode* pfrom, std::string& strCommand, C
     else if (strCommand == NetMsgType::MNGOVERNANCEOBJECTVOTE)
     {
         // Ignore such messages until masternode list is synced
-        if(!masternodeSync.IsMasternodeListSynced()) return;
+        if(!masternodeSync.IsMasternodeListSynced()) {
+            LogPrintf("CGovernanceManager::ProcessMessage MNGOVERNANCEOBJECTVOTE -- masternode list not synced\n");
+            return;
+        }
 
         CGovernanceVote vote;
         vRecv >> vote;
