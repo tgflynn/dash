@@ -207,7 +207,6 @@ public:
 };
 
 
-bool operator==(const CGovernanceVote& vote1, const CGovernanceVote& vote2);
 
 /**
 * 12.1.1 - CGovernanceVoteManager
