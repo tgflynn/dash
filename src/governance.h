@@ -164,8 +164,6 @@ public:
 
     void Sync(CNode* node, uint256 nProp);
 
-    void SyncParentObjectByVote(CNode* pfrom, const CGovernanceVote& vote);
-
     void ProcessMessage(CNode* pfrom, std::string& strCommand, CDataStream& vRecv);
 
     void NewBlock();

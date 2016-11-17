@@ -575,14 +575,6 @@ void CGovernanceManager::Sync(CNode* pfrom, uint256 nProp)
     LogPrintf("CGovernanceManager::Sync -- sent %d items, peer=%d\n", nInvCount, pfrom->id);
 }
 
-void CGovernanceManager::SyncParentObjectByVote(CNode* pfrom, const CGovernanceVote& vote)
-{
-    if(!mapAskedForGovernanceObject.count(vote.GetParentHash())){
-        pfrom->PushMessage(NetMsgType::MNGOVERNANCESYNC, vote.GetParentHash());
-        mapAskedForGovernanceObject[vote.GetParentHash()] = GetTime();
-    }
-}
-
 bool CGovernanceManager::MasternodeRateCheck(const CTxIn& vin, int nObjectType)
 {
     LOCK(cs);
