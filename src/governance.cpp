@@ -41,6 +41,7 @@ CGovernanceManager::CGovernanceManager()
       mapOrphanVotes(MAX_CACHE_SIZE),
       mapLastMasternodeTrigger(),
       setRequestedObjects(),
+      fRateChecksEnabled(true),
       cs()
 {}
 
@@ -579,6 +580,10 @@ bool CGovernanceManager::MasternodeRateCheck(const CTxIn& vin, int nObjectType)
 {
     LOCK(cs);
 
+    if(!fRateChecksEnabled) {
+        return true;
+    }
+
     int mindiff = 0;
     switch(nObjectType) {
     case GOVERNANCE_OBJECT_TRIGGER:
@@ -662,6 +667,7 @@ void CGovernanceManager::CheckMasternodeOrphanVotes()
 void CGovernanceManager::CheckMasternodeOrphanObjects()
 {
     LOCK(cs);
+    fRateChecksEnabled = false;
     object_m_it it = mapMasternodeOrphanObjects.begin();
     while(it != mapMasternodeOrphanObjects.end()) {
         CGovernanceObject& govobj = it->second;
@@ -688,6 +694,7 @@ void CGovernanceManager::CheckMasternodeOrphanObjects()
             ++it;
         }
     }
+    fRateChecksEnabled = true;
 }
 
 void CGovernanceManager::RequestGovernanceObject(CNode* pfrom, const uint256& nHash)

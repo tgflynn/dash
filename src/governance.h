@@ -134,6 +134,8 @@ private:
 
     hash_s_t setRequestedVotes;
 
+    bool fRateChecksEnabled;
+
 public:
     // critical section to protect the inner data structures
     mutable CCriticalSection cs;
@@ -253,6 +255,11 @@ public:
     void CheckMasternodeOrphanVotes();
 
     void CheckMasternodeOrphanObjects();
+
+    bool AreRateChecksEnabled() const {
+        LOCK(cs);
+        return fRateChecksEnabled;
+    }
 
 private:
     void RequestGovernanceObject(CNode* pfrom, const uint256& nHash);
