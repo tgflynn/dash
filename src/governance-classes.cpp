@@ -212,6 +212,7 @@ void CGovernanceTriggerManager::CleanAndRemove()
                     if(pgovobj) {
                         LogPrint("gobject", "CGovernanceTriggerManager::CleanAndRemove -- Expiring executed object: %s\n", pgovobj->GetHash().ToString());
                         pgovobj->fExpired = true;
+                        pgovobj->nDeletionTime = GetAdjustedTime();
                     }
                 }
                 remove = true;
@@ -229,6 +230,7 @@ void CGovernanceTriggerManager::CleanAndRemove()
                         if(pgovobj) {
                             LogPrint("gobject", "CGovernanceTriggerManager::CleanAndRemove -- Expiring outdated object: %s\n", pgovobj->GetHash().ToString());
                             pgovobj->fExpired = true;
+                            pgovobj->nDeletionTime = GetAdjustedTime();
                         }
                     }
                 }
