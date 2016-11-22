@@ -476,7 +476,7 @@ CMasternode* CMasternodeMan::GetNextMasternodeInQueueForPayment(int nBlockHeight
     BOOST_FOREACH(CMasternode &mn, vMasternodes)
     {
         mn.Check();
-        if(!mn.IsEnabled()) continue;
+        if(!mn.IsValidForPayment()) continue;
 
         // //check protocol version
         if(mn.nProtocolVersion < mnpayments.GetMinMasternodePaymentsProto()) continue;
