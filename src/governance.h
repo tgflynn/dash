@@ -47,6 +47,7 @@ static const CAmount GOVERNANCE_PROPOSAL_FEE_TX = (0.33*COIN);
 static const int64_t GOVERNANCE_FEE_CONFIRMATIONS = 6;
 static const int64_t GOVERNANCE_UPDATE_MIN = 60*60;
 static const int64_t GOVERNANCE_DELETION_DELAY = 10*60;
+static const int64_t GOVERNANCE_ORPHAN_EXPIRATION_TIME = 10*60;
 
 
 // FOR SEEN MAP ARRAYS - GOVERNANCE OBJECTS AND VOTES
@@ -59,6 +60,37 @@ static const int SEEN_OBJECT_UNKNOWN = 4; // the default
 extern std::map<uint256, int64_t> mapAskedForGovernanceObject;
 extern CGovernanceManager governance;
 
+struct vote_time_rec_t {
+
+    CGovernanceVote vote;
+    int64_t         nExpirationTime;
+
+    vote_time_rec_t()
+        : vote(),
+          nExpirationTime(0)
+        {}
+
+    vote_time_rec_t(const CGovernanceVote& voteIn, int64_t nExpirationTimeIn)
+        : vote(voteIn),
+          nExpirationTime(nExpirationTimeIn)
+        {}
+
+    ADD_SERIALIZE_METHODS;
+
+    template <typename Stream, typename Operation>
+    inline void SerializationOp(Stream& s, Operation ser_action, int nType, int nVersion)
+    {
+        READWRITE(vote);
+        READWRITE(nExpirationTime);
+    }
+
+    bool operator<(const vote_time_rec_t& other) const
+    {
+        // The same vote at different times should map to the same location
+        return vote < other.vote;
+    }
+};
+
 //
 // Governance Manager : Contains all proposals for the budget
 //
@@ -67,7 +99,6 @@ class CGovernanceManager
     friend class CGovernanceObject;
 
 public: // Types
-
     typedef std::map<uint256, CGovernanceObject> object_m_t;
 
     typedef object_m_t::iterator object_m_it;
@@ -90,7 +121,7 @@ public: // Types
 
     typedef CacheMap<uint256, CGovernanceVote> vote_cache_t;
 
-    typedef CacheMultiMap<uint256, CGovernanceVote> vote_mcache_t;
+    typedef CacheMultiMap<uint256, vote_time_rec_t> vote_mcache_t;
 
     typedef object_m_t::size_type size_type;
 
@@ -274,7 +305,7 @@ private:
 
     void AddOrphanVote(const CGovernanceVote& vote)
     {
-        mapOrphanVotes.Insert(vote.GetHash(), vote);
+        mapOrphanVotes.Insert(vote.GetHash(), vote_time_rec_t(vote, GetAdjustedTime() + GOVERNANCE_ORPHAN_EXPIRATION_TIME));
     }
 
     bool ProcessVote(CNode* pfrom, const CGovernanceVote& vote, CGovernanceException& exception);
@@ -360,7 +391,7 @@ public: // Types
 
     typedef vote_m_t::const_iterator vote_m_cit;
 
-    typedef CacheMultiMap<CTxIn, CGovernanceVote> vote_mcache_t;
+    typedef CacheMultiMap<CTxIn, vote_time_rec_t> vote_mcache_t;
 
 private:
     /// critical section to protect the inner data structures
