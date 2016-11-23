@@ -655,39 +655,6 @@ void CGovernanceObject::Relay()
     RelayInv(inv, PROTOCOL_VERSION);
 }
 
-std::string CGovernanceManager::ToString() const
-{
-    std::ostringstream info;
-
-    info << "Governance Objects: " << (int)mapObjects.size() <<
-            ", Seen Budgets : " << (int)mapSeenGovernanceObjects.size() <<
-            ", Vote Count   : " << (int)mapVoteToObject.GetSize();
-
-    return info.str();
-}
-
-void CGovernanceManager::UpdatedBlockTip(const CBlockIndex *pindex)
-{
-    // Note this gets called from ActivateBestChain without cs_main being held
-    // so it should be safe to lock our mutex here without risking a deadlock
-    // On the other hand it should be safe for us to access pindex without holding a lock
-    // on cs_main because the CBlockIndex objects are dynamically allocated and
-    // presumably never deleted.
-    if(!pindex) {
-        return;
-    }
-
-    LOCK(cs);
-    pCurrentBlockIndex = pindex;
-    nCachedBlockHeight = pCurrentBlockIndex->nHeight;
-    LogPrint("gobject", "CGovernanceManager::UpdatedBlockTip pCurrentBlockIndex->nHeight: %d\n", pCurrentBlockIndex->nHeight);
-
-    // TO REPROCESS OBJECTS WE SHOULD BE SYNCED
-
-    if(!fLiteMode && masternodeSync.IsSynced())
-        NewBlock();
-}
-
 void CGovernanceObject::UpdateSentinelVariables(const CBlockIndex *pCurrentBlockIndex)
 {
     // CALCULATE MINIMUM SUPPORT LEVELS REQUIRED
