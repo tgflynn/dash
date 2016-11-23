@@ -177,7 +177,7 @@ void CGovernanceManager::ProcessMessage(CNode* pfrom, std::string& strCommand, C
         bool fIsValid = govobj.IsValidLocally(pCurrentBlockIndex, strError, fMasternodeMissing, true);
 
         if(fMasternodeMissing) {
-            mapMasternodeOrphanObjects.insert(std::make_pair(govobj.GetHash(), govobj));
+            mapMasternodeOrphanObjects.insert(std::make_pair(govobj.GetHash(), object_time_pair_t(govobj, GetAdjustedTime() + GOVERNANCE_ORPHAN_EXPIRATION_TIME)));
             LogPrint("gobject", "CGovernanceManager -- Missing masternode for: %s\n", strHash);
             // fIsValid must also be false here so we will return early in the next if block
         }
@@ -729,10 +729,17 @@ void CGovernanceManager::CheckMasternodeOrphanVotes()
 void CGovernanceManager::CheckMasternodeOrphanObjects()
 {
     LOCK(cs);
+    int64_t nNow = GetAdjustedTime();
     fRateChecksEnabled = false;
-    object_m_it it = mapMasternodeOrphanObjects.begin();
+    object_time_m_it it = mapMasternodeOrphanObjects.begin();
     while(it != mapMasternodeOrphanObjects.end()) {
-        CGovernanceObject& govobj = it->second;
+        object_time_pair_t& pair = it->second;
+        CGovernanceObject& govobj = pair.first;
+
+        if(pair.second < nNow) {
+            mapMasternodeOrphanObjects.erase(it++);
+            continue;
+        }
 
         string strError;
         bool fMasternodeMissing = false;
