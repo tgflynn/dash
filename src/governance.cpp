@@ -344,12 +344,18 @@ void CGovernanceManager::UpdateCachesAndClean()
     // Flag expired watchdogs for removal
     int64_t nNow = GetAdjustedTime();
     if(mapWatchdogObjects.size() > 1) {
-        for(hash_time_m_it it = mapWatchdogObjects.begin(); it != mapWatchdogObjects.end(); ++it) {
+        hash_time_m_it it = mapWatchdogObjects.begin();
+        while(it != mapWatchdogObjects.end()) {
             if(it->second < nNow) {
                 object_m_it it2 = mapObjects.find(it->first);
                 if(it2 != mapObjects.end()) {
                     it2->second.fExpired = true;
+                    it2->second.nDeletionTime = nNow;
                 }
+                mapWatchdogObjects.erase(it++);
+            }
+            else {
+                ++it;
             }
         }
     }
