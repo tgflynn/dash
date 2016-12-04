@@ -368,6 +368,8 @@ void CGovernanceManager::UpdateCachesAndClean()
 
     if(!pCurrentBlockIndex) return;
 
+    fRateChecksEnabled = false;
+
     LogPrint("gobject", "CGovernanceManager::UpdateCachesAndClean -- After pCurrentBlockIndex (not NULL)\n");
 
     // UPDATE CACHE FOR EACH OBJECT THAT IS FLAGGED DIRTYCACHE=TRUE
@@ -423,6 +425,8 @@ void CGovernanceManager::UpdateCachesAndClean()
             ++it;
         }
     }
+
+    fRateChecksEnabled = true;
 }
 
 CGovernanceObject *CGovernanceManager::FindGovernanceObject(const uint256& nHash)
