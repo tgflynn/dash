@@ -629,6 +629,7 @@ void CGovernanceManager::Sync(CNode* pfrom, uint256 nProp)
 
     {
         LOCK(cs);
+        fRateChecksEnabled = false;
         for(object_m_it it = mapObjects.begin(); it != mapObjects.end(); ++it) {
             uint256 h = it->first;
 
@@ -668,6 +669,7 @@ void CGovernanceManager::Sync(CNode* pfrom, uint256 nProp)
                 ++nInvCount;
             }
         }
+        fRateChecksEnabled = true;
     }
 
     pfrom->PushMessage(NetMsgType::SYNCSTATUSCOUNT, MASTERNODE_SYNC_GOVOBJ, nInvCount);
