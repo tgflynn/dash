@@ -804,7 +804,6 @@ void CGovernanceManager::CheckMasternodeOrphanObjects()
 
         if(AddGovernanceObject(govobj)) {
             LogPrintf("CGovernanceManager::CheckMasternodeOrphanObjects -- %s new\n", govobj.GetHash().ToString());
-            govobj.Relay();
             mapMasternodeOrphanObjects.erase(it++);
         }
         else {
