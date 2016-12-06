@@ -238,7 +238,11 @@ public:
     bool MasternodeRateCheck(const CTxIn& vin, int nObjectType);
 
     bool ProcessVote(const CGovernanceVote& vote, CGovernanceException& exception) {
-        return ProcessVote(NULL, vote, exception);
+        bool fOK = ProcessVote(NULL, vote, exception);
+        if(fOK) {
+            vote.Relay();
+        }
+        return fOK;
     }
 
     void CheckMasternodeOrphanVotes();
