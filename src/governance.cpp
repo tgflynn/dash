@@ -41,7 +41,7 @@ CGovernanceManager::CGovernanceManager()
       mapVoteToObject(MAX_CACHE_SIZE),
       mapInvalidVotes(MAX_CACHE_SIZE),
       mapOrphanVotes(MAX_CACHE_SIZE),
-      mapLastMasternodeTrigger(),
+      mapLastMasternodeObject(),
       setRequestedObjects(),
       fRateChecksEnabled(true),
       cs()
@@ -168,6 +168,11 @@ void CGovernanceManager::ProcessMessage(CNode* pfrom, std::string& strCommand, C
         if(mapSeenGovernanceObjects.count(nHash)) {
             // TODO - print error code? what if it's GOVOBJ_ERROR_IMMATURE?
             LogPrint("gobject", "MNGOVERNANCEOBJECT -- Received already seen object: %s\n", strHash);
+            return;
+        }
+
+        if(!MasternodeRateCheck(govobj, true)) {
+            LogPrintf("MNGOVERNANCEOBJECT -- masternode rate check failed - %s - (current block height %d) \n", strHash, nCachedBlockHeight);
             return;
         }
 
@@ -307,13 +312,8 @@ bool CGovernanceManager::AddGovernanceObject(CGovernanceObject& govobj)
               << ", nObjectType = " << govobj.nObjectType
               << endl; );
 
-    if(govobj.GetObjectType() == GOVERNANCE_OBJECT_TRIGGER) {
-        mapLastMasternodeTrigger[govobj.GetMasternodeVin().prevout] = nCachedBlockHeight;
-    }
-
     switch(govobj.nObjectType) {
     case GOVERNANCE_OBJECT_TRIGGER:
-        mapLastMasternodeTrigger[govobj.vinMasternode.prevout] = nCachedBlockHeight;
         DBG( cout << "CGovernanceManager::AddGovernanceObject Before AddNewTrigger" << endl; );
         triggerman.AddNewTrigger(nHash);
         DBG( cout << "CGovernanceManager::AddGovernanceObject After AddNewTrigger" << endl; );
@@ -686,37 +686,72 @@ void CGovernanceManager::Sync(CNode* pfrom, uint256 nProp)
     LogPrintf("CGovernanceManager::Sync -- sent %d objects and %d votes to peer=%d\n", nObjCount, nVoteCount, pfrom->id);
 }
 
-bool CGovernanceManager::MasternodeRateCheck(const CTxIn& vin, int nObjectType)
+bool CGovernanceManager::MasternodeRateCheck(const CGovernanceObject& govobj, bool fUpdateLast)
 {
     LOCK(cs);
+
+    if(!masternodeSync.IsSynced()) {
+        return true;
+    }
 
     if(!fRateChecksEnabled) {
         return true;
     }
 
-    int mindiff = 0;
+    int nObjectType = govobj.GetObjectType();
+    if((nObjectType != GOVERNANCE_OBJECT_TRIGGER) && (nObjectType != GOVERNANCE_OBJECT_WATCHDOG)) {
+        return true;
+    }
+
+    const CTxIn& vin = govobj.GetMasternodeVin();
+
+    txout_m_it it  = mapLastMasternodeObject.find(vin.prevout);
+
+    if(it == mapLastMasternodeObject.end()) {
+        if(fUpdateLast) {
+            it = mapLastMasternodeObject.insert(txout_m_t::value_type(vin.prevout, last_object_rec(0, 0))).first;
+            switch(nObjectType) {
+            case GOVERNANCE_OBJECT_TRIGGER:
+                it->second.nLastTriggerBlockHeight = nCachedBlockHeight;
+                break;
+            case GOVERNANCE_OBJECT_WATCHDOG:
+                it->second.nLastWatchdogBlockHeight = nCachedBlockHeight;
+                break;
+            default:
+                break;
+            }
+        }
+        return true;
+    }
+
+    int nMinDiff = 0;
+    int nObjectBlock = 0;
     switch(nObjectType) {
     case GOVERNANCE_OBJECT_TRIGGER:
-        mindiff = Params().GetConsensus().nSuperblockCycle - Params().GetConsensus().nSuperblockCycle / 10;
+        // Allow 1 trigger per mn per cycle, with a small fudge factor
+        nMinDiff = Params().GetConsensus().nSuperblockCycle - Params().GetConsensus().nSuperblockCycle / 10;
+        nObjectBlock = it->second.nLastTriggerBlockHeight;
+        if(fUpdateLast) {
+            it->second.nLastTriggerBlockHeight = nCachedBlockHeight;
+        }
         break;
     case GOVERNANCE_OBJECT_WATCHDOG:
-        mindiff = 1;
+        nMinDiff = 1;
+        nObjectBlock = it->second.nLastWatchdogBlockHeight;
+        if(fUpdateLast) {
+            it->second.nLastWatchdogBlockHeight = nCachedBlockHeight;
+        }
         break;
     default:
         break;
     }
 
-    txout_m_it it  = mapLastMasternodeTrigger.find(vin.prevout);
-    if(it == mapLastMasternodeTrigger.end()) {
-        return true;
-    }
-    // Allow 1 trigger per mn per cycle, with a small fudge factor
-    if((nCachedBlockHeight - it->second) > mindiff) {
+    if((nCachedBlockHeight - nObjectBlock) > nMinDiff) {
         return true;
     }
 
     LogPrintf("CGovernanceManager::MasternodeRateCheck -- Rate too high: vin = %s, current height = %d, last MN height = %d, minimum difference = %d\n",
-              vin.prevout.ToStringShort(), nCachedBlockHeight, it->second, mindiff);
+              vin.prevout.ToStringShort(), nCachedBlockHeight, nObjectBlock, nMinDiff);
     return false;
 }
 
