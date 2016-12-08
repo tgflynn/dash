@@ -261,6 +261,7 @@ void CGovernanceManager::CheckOrphanVotes(CGovernanceObject& govobj, CGovernance
     std::vector<vote_time_pair_t> vecVotePairs;
     mapOrphanVotes.GetAll(nHash, vecVotePairs);
 
+    fRateChecksEnabled = false;
     int64_t nNow = GetAdjustedTime();
     for(size_t i = 0; i < vecVotePairs.size(); ++i) {
         bool fRemove = false;
@@ -277,6 +278,7 @@ void CGovernanceManager::CheckOrphanVotes(CGovernanceObject& govobj, CGovernance
             mapOrphanVotes.Erase(nHash, pairVote);
         }
     }
+    fRateChecksEnabled = true;
 }
 
 bool CGovernanceManager::AddGovernanceObject(CGovernanceObject& govobj)
