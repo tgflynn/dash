@@ -650,7 +650,7 @@ void CGovernanceObject::Relay()
     RelayInv(inv, PROTOCOL_VERSION);
 }
 
-void CGovernanceObject::UpdateSentinelVariables(const CBlockIndex *pCurrentBlockIndex)
+void CGovernanceObject::UpdateSentinelVariables()
 {
     // CALCULATE MINIMUM SUPPORT LEVELS REQUIRED
 
