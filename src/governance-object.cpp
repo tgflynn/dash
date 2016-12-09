@@ -277,7 +277,7 @@ int CGovernanceObject::GetObjectSubtype()
     return -1;
 }
 
-uint256 CGovernanceObject::GetHash()
+uint256 CGovernanceObject::GetHash() const
 {
     // CREATE HASH OF ALL IMPORTANT PIECES OF DATA
 

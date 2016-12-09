@@ -49,9 +49,9 @@ class CGovernanceManager
 
 public: // Types
     struct last_object_rec {
-        last_object_rec(int nLastTriggerBlockHeightIn = 0, int nLastWatchdogBlockHeightIn = 0, bool fStatusOKIn = true)
-            : nLastTriggerBlockHeight(nLastTriggerBlockHeightIn),
-              nLastWatchdogBlockHeight(nLastWatchdogBlockHeightIn),
+        last_object_rec(int64_t nLastTriggerTimeIn = 0, int64_t nLastWatchdogTimeIn = 0, bool fStatusOKIn = true)
+            : nLastTriggerTime(nLastTriggerTimeIn),
+              nLastWatchdogTime(nLastWatchdogTimeIn),
               fStatusOK(fStatusOKIn)
             {}
 
@@ -60,13 +60,13 @@ public: // Types
         template <typename Stream, typename Operation>
         inline void SerializationOp(Stream& s, Operation ser_action, int nType, int nVersion)
         {
-            READWRITE(nLastTriggerBlockHeight);
-            READWRITE(nLastWatchdogBlockHeight);
+            READWRITE(nLastTriggerTime);
+            READWRITE(nLastWatchdogTime);
             READWRITE(fStatusOK);
         }
 
-        int nLastTriggerBlockHeight;
-        int nLastWatchdogBlockHeight;
+        int64_t nLastTriggerTime;
+        int64_t nLastWatchdogTime;
         bool fStatusOK;
     };
 
