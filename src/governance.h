@@ -49,9 +49,10 @@ class CGovernanceManager
 
 public: // Types
     struct last_object_rec {
-        last_object_rec(int nLastTriggerBlockHeightIn = 0, int nLastWatchdogBlockHeightIn = 0)
+        last_object_rec(int nLastTriggerBlockHeightIn = 0, int nLastWatchdogBlockHeightIn = 0, bool fStatusOKIn = true)
             : nLastTriggerBlockHeight(nLastTriggerBlockHeightIn),
-              nLastWatchdogBlockHeight(nLastWatchdogBlockHeightIn)
+              nLastWatchdogBlockHeight(nLastWatchdogBlockHeightIn),
+              fStatusOK(fStatusOKIn)
             {}
 
         ADD_SERIALIZE_METHODS;
@@ -61,10 +62,12 @@ public: // Types
         {
             READWRITE(nLastTriggerBlockHeight);
             READWRITE(nLastWatchdogBlockHeight);
+            READWRITE(fStatusOK);
         }
 
         int nLastTriggerBlockHeight;
         int nLastWatchdogBlockHeight;
+        bool fStatusOK;
     };
 
 
@@ -256,6 +259,8 @@ public:
     void AddSeenVote(uint256 nHash, int status);
 
     bool MasternodeRateCheck(const CGovernanceObject& govobj, bool fUpdateLast = false);
+
+    bool MasternodeRateCheck(const CGovernanceObject& govobj, bool fUpdateLast, bool fForce, bool& fRateCheckBypassed);
 
     bool ProcessVoteAndRelay(const CGovernanceVote& vote, CGovernanceException& exception) {
         bool fOK = ProcessVote(NULL, vote, exception);
