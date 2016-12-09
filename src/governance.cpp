@@ -171,7 +171,8 @@ void CGovernanceManager::ProcessMessage(CNode* pfrom, std::string& strCommand, C
             return;
         }
 
-        if(!MasternodeRateCheck(govobj, true)) {
+        bool fRateCheckBypassed = false;
+        if(!MasternodeRateCheck(govobj, true, false, fRateCheckBypassed)) {
             LogPrintf("MNGOVERNANCEOBJECT -- masternode rate check failed - %s - (current block height %d) \n", strHash, nCachedBlockHeight);
             return;
         }
@@ -191,6 +192,13 @@ void CGovernanceManager::ProcessMessage(CNode* pfrom, std::string& strCommand, C
             mapSeenGovernanceObjects.insert(std::make_pair(nHash, SEEN_OBJECT_ERROR_INVALID));
             LogPrintf("MNGOVERNANCEOBJECT -- Governance object is invalid - %s\n", strError);
             return;
+        }
+
+        if(fRateCheckBypassed) {
+            if(!MasternodeRateCheck(govobj, true, true, fRateCheckBypassed)) {
+                LogPrintf("MNGOVERNANCEOBJECT -- masternode rate check failed (after signature verification) - %s - (current block height %d) \n", strHash, nCachedBlockHeight);
+                return;
+            }
         }
 
         // UPDATE CACHED VARIABLES FOR THIS OBJECT AND ADD IT TO OUR MANANGED DATA
@@ -690,7 +698,15 @@ void CGovernanceManager::Sync(CNode* pfrom, uint256 nProp)
 
 bool CGovernanceManager::MasternodeRateCheck(const CGovernanceObject& govobj, bool fUpdateLast)
 {
+    bool fRateCheckBypassed = false;
+    return MasternodeRateCheck(govobj, fUpdateLast, true, fRateCheckBypassed);
+}
+
+bool CGovernanceManager::MasternodeRateCheck(const CGovernanceObject& govobj, bool fUpdateLast, bool fForce, bool& fRateCheckBypassed)
+{
     LOCK(cs);
+
+    fRateCheckBypassed = false;
 
     if(!masternodeSync.IsSynced()) {
         return true;
@@ -711,7 +727,7 @@ bool CGovernanceManager::MasternodeRateCheck(const CGovernanceObject& govobj, bo
 
     if(it == mapLastMasternodeObject.end()) {
         if(fUpdateLast) {
-            it = mapLastMasternodeObject.insert(txout_m_t::value_type(vin.prevout, last_object_rec(0, 0))).first;
+            it = mapLastMasternodeObject.insert(txout_m_t::value_type(vin.prevout, last_object_rec(0, 0, true))).first;
             switch(nObjectType) {
             case GOVERNANCE_OBJECT_TRIGGER:
                 it->second.nLastTriggerBlockHeight = nCachedBlockHeight;
@@ -723,6 +739,11 @@ bool CGovernanceManager::MasternodeRateCheck(const CGovernanceObject& govobj, bo
                 break;
             }
         }
+        return true;
+    }
+
+    if(it->second.fStatusOK && !fForce) {
+        fRateCheckBypassed = true;
         return true;
     }
 
@@ -749,7 +770,15 @@ bool CGovernanceManager::MasternodeRateCheck(const CGovernanceObject& govobj, bo
     }
 
     if((nCachedBlockHeight - nObjectBlock) > nMinDiff) {
+        if(fUpdateLast) {
+            it->second.fStatusOK = true;
+        }
         return true;
+    }
+    else {
+        if(fUpdateLast) {
+            it->second.fStatusOK = false;
+        }
     }
 
     LogPrintf("CGovernanceManager::MasternodeRateCheck -- Rate too high: vin = %s, current height = %d, last MN height = %d, minimum difference = %d\n",
