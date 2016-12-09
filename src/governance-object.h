@@ -273,7 +273,7 @@ public:
 
     void UpdateLocalValidity(const CBlockIndex *pCurrentBlockIndex);
 
-    void UpdateSentinelVariables(const CBlockIndex *pCurrentBlockIndex);
+    void UpdateSentinelVariables();
 
     int GetObjectSubtype();
 

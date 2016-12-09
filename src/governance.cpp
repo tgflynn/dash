@@ -203,7 +203,7 @@ void CGovernanceManager::ProcessMessage(CNode* pfrom, std::string& strCommand, C
 
         // UPDATE CACHED VARIABLES FOR THIS OBJECT AND ADD IT TO OUR MANANGED DATA
 
-        govobj.UpdateSentinelVariables(pCurrentBlockIndex); //this sets local vars in object
+        govobj.UpdateSentinelVariables(); //this sets local vars in object
 
         if(AddGovernanceObject(govobj))
         {
@@ -406,7 +406,7 @@ void CGovernanceManager::UpdateCachesAndClean()
             pObj->UpdateLocalValidity(pCurrentBlockIndex);
 
             // UPDATE SENTINEL SIGNALING VARIABLES
-            pObj->UpdateSentinelVariables(pCurrentBlockIndex);
+            pObj->UpdateSentinelVariables();
         }
 
         // IF DELETE=TRUE, THEN CLEAN THE MESS UP!
