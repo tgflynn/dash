@@ -734,10 +734,10 @@ bool CGovernanceManager::MasternodeRateCheck(const CGovernanceObject& govobj, bo
             it = mapLastMasternodeObject.insert(txout_m_t::value_type(vin.prevout, last_object_rec(0, 0, true))).first;
             switch(nObjectType) {
             case GOVERNANCE_OBJECT_TRIGGER:
-                it->second.nLastTriggerTime = nTimestamp;
+                it->second.nLastTriggerTime = std::max(it->second.nLastTriggerTime, nTimestamp);
                 break;
             case GOVERNANCE_OBJECT_WATCHDOG:
-                it->second.nLastWatchdogTime = nTimestamp;
+                it->second.nLastWatchdogTime = std::max(it->second.nLastWatchdogTime, nTimestamp);
                 break;
             default:
                 break;
@@ -773,14 +773,14 @@ bool CGovernanceManager::MasternodeRateCheck(const CGovernanceObject& govobj, bo
         nMinDiff = int64_t(0.9 * nSuperblockCycleSeconds);
         nLastObjectTime = it->second.nLastTriggerTime;
         if(fUpdateLast) {
-            it->second.nLastTriggerTime = nTimestamp;
+            it->second.nLastTriggerTime = std::max(it->second.nLastTriggerTime, nTimestamp);
         }
         break;
     case GOVERNANCE_OBJECT_WATCHDOG:
         nMinDiff = Params().GetConsensus().nPowTargetSpacing;
         nLastObjectTime = it->second.nLastWatchdogTime;
         if(fUpdateLast) {
-            it->second.nLastWatchdogTime = nTimestamp;
+            it->second.nLastWatchdogTime = std::max(it->second.nLastWatchdogTime, nTimestamp);
         }
         break;
     default:
