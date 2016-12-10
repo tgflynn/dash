@@ -754,13 +754,13 @@ bool CGovernanceManager::MasternodeRateCheck(const CGovernanceObject& govobj, bo
     std::string strHash = govobj.GetHash().ToString();
 
     if(nTimestamp < nNow - 2 * nSuperblockCycleSeconds) {
-        LogPrint("gobject", "CGovernanceManager::MasternodeRateCheck -- object %s rejected due to too old timestamp, masternode vin = %s, timestamp = %d, current time = %d\n",
+        LogPrintf("CGovernanceManager::MasternodeRateCheck -- object %s rejected due to too old timestamp, masternode vin = %s, timestamp = %d, current time = %d\n",
                  strHash, vin.prevout.ToStringShort(), nTimestamp, nNow);
         return false;
     }
 
     if(nTimestamp > nNow - 2 * nSuperblockCycleSeconds) {
-        LogPrint("gobject", "CGovernanceManager::MasternodeRateCheck -- object %s rejected due to too new (future) timestamp, masternode vin = %s, timestamp = %d, current time = %d\n",
+        LogPrintf("CGovernanceManager::MasternodeRateCheck -- object %s rejected due to too new (future) timestamp, masternode vin = %s, timestamp = %d, current time = %d\n",
                  strHash, vin.prevout.ToStringShort(), nTimestamp, nNow);
         return false;
     }
@@ -799,7 +799,7 @@ bool CGovernanceManager::MasternodeRateCheck(const CGovernanceObject& govobj, bo
         }
     }
 
-    LogPrintf("CGovernanceManager::MasternodeRateCheck -- Rate too high: object hash = %s, vin = %s, object timestamp = %d, last timestamp = %d, minimum difference = %d\n",
+    LogPrintf("CGovernanceManager::MasternodeRateCheck -- Rate too high: object hash = %s, masternode vin = %s, object timestamp = %d, last timestamp = %d, minimum difference = %d\n",
               strHash, vin.prevout.ToStringShort(), nTimestamp, nLastObjectTime, nMinDiff);
     return false;
 }
