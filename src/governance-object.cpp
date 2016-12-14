@@ -677,7 +677,9 @@ void CGovernanceObject::UpdateSentinelVariables()
     if(GetAbsoluteYesCount(VOTE_SIGNAL_FUNDING) >= nAbsVoteReq) fCachedFunding = true;
     if((GetAbsoluteYesCount(VOTE_SIGNAL_DELETE) >= nAbsDeleteReq) && !fCachedDelete) {
         fCachedDelete = true;
-        nDeletionTime = GetAdjustedTime();
+        if(nDeletionTime == 0) {
+            nDeletionTime = GetAdjustedTime();
+        }
     }
     if(GetAbsoluteYesCount(VOTE_SIGNAL_ENDORSED) >= nAbsVoteReq) fCachedEndorsed = true;
 
