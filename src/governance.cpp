@@ -364,7 +364,7 @@ void CGovernanceManager::UpdateCachesAndClean()
                 if(it2 != mapObjects.end()) {
                     LogPrint("gobject", "CGovernanceManager::UpdateCachesAndClean -- Expiring watchdog: %s, expiration time = %d\n", it->first.ToString(), it->second);
                     it2->second.fExpired = true;
-                    if(it2->second.nDeletionTime != 0) {
+                    if(it2->second.nDeletionTime == 0) {
                         it2->second.nDeletionTime = nNow;
                     }
                 }
