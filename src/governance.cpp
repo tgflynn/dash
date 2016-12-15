@@ -280,6 +280,7 @@ void CGovernanceManager::CheckOrphanVotes(CGovernanceObject& govobj, CGovernance
             fRemove = true;
         }
         else if(govobj.ProcessVote(NULL, vote, exception)) {
+            vote.Relay();
             fRemove = true;
         }
         if(fRemove) {

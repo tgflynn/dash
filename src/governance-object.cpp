@@ -732,6 +732,7 @@ void CGovernanceObject::CheckOrphanVotes()
             LogPrintf("CGovernanceObject::CheckOrphanVotes -- Failed to add orphan vote: %s\n", exception.what());
         }
         else {
+            vote.Relay();
             fRemove = true;
         }
         ++it;
