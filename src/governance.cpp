@@ -786,7 +786,7 @@ bool CGovernanceManager::MasternodeRateCheck(const CGovernanceObject& govobj, bo
     switch(nObjectType) {
     case GOVERNANCE_OBJECT_TRIGGER:
         // Allow 1 trigger per mn per cycle, with a small fudge factor
-        dMaxRate = 1.1 / nSuperblockCycleSeconds;
+        dMaxRate = 2 * 1.1 / double(nSuperblockCycleSeconds);
         buffer = it->second.triggerBuffer;
         buffer.AddTimestamp(nTimestamp);
         dRate = buffer.GetRate();
@@ -795,7 +795,7 @@ bool CGovernanceManager::MasternodeRateCheck(const CGovernanceObject& govobj, bo
         }
         break;
     case GOVERNANCE_OBJECT_WATCHDOG:
-        dMaxRate = 1.1 / 3600.;
+        dMaxRate = 2 * 1.1 / 3600.;
         buffer = it->second.watchdogBuffer;
         buffer.AddTimestamp(nTimestamp);
         dRate = buffer.GetRate();
