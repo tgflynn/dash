@@ -299,7 +299,6 @@ uint256 CGovernanceObject::GetHash() const
     ss << nTime;
     ss << strData;
     ss << vinMasternode;
-    ss << nCollateralHash;
     ss << vchSig;
     // fee_tx is left out on purpose
     uint256 h1 = ss.GetHash();
