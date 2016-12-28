@@ -1312,7 +1312,7 @@ bool CMasternodeMan::CheckMnbAndUpdateMasternodeList(CMasternodeBroadcast mnb, i
     if(mapSeenMasternodeBroadcast.count(hash)) { //seen
         LogPrint("masternode", "CMasternodeMan::CheckMnbAndUpdateMasternodeList -- masternode=%s seen\n", mnb.vin.prevout.ToStringShort());
         // less then 2 pings left before this MN goes into non-recoverable state, bump sync timeout
-        if(GetTime() - mapSeenMasternodeBroadcast[hash].first > MASTERNODE_NEW_START_REQUIRED_SECONDS - MASTERNODE_MIN_MNP_SECONDS * 2) {
+        if(GetTime() - mapSeenMasternodeBroadcast[hash].first > MASTERNODE_MNP_EXPIRE_SECONDS - MASTERNODE_MIN_MNP_SECONDS * 2) {
             LogPrint("masternode", "CMasternodeMan::CheckMnbAndUpdateMasternodeList -- masternode=%s seen update\n", mnb.vin.prevout.ToStringShort());
             mapSeenMasternodeBroadcast[hash].first = GetTime();
             masternodeSync.AddedMasternodeList();
@@ -1478,7 +1478,7 @@ int CMasternodeMan::GetMasternodeState(const CTxIn& vin)
     LOCK(cs);
     CMasternode* pMN = Find(vin);
     if(!pMN)  {
-        return CMasternode::MASTERNODE_NEW_START_REQUIRED;
+        return CMasternode::MASTERNODE_NULL;
     }
     return pMN->nActiveState;
 }
@@ -1488,7 +1488,7 @@ int CMasternodeMan::GetMasternodeState(const CPubKey& pubKeyMasternode)
     LOCK(cs);
     CMasternode* pMN = Find(pubKeyMasternode);
     if(!pMN)  {
-        return CMasternode::MASTERNODE_NEW_START_REQUIRED;
+        return CMasternode::MASTERNODE_NULL;
     }
     return pMN->nActiveState;
 }
@@ -1556,4 +1556,13 @@ void CMasternodeMan::NotifyMasternodeUpdates()
     LOCK(cs);
     fMasternodesAdded = false;
     fMasternodesRemoved = false;
+}
+
+int CMasternodeMan::GetCurrentBlockHeight()
+{
+    if(!pCurrentBlockIndex) {
+        return 0;
+    }
+
+    return pCurrentBlockIndex->nHeight;
 }

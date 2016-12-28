@@ -20,7 +20,7 @@ static const int MASTERNODE_MIN_MNB_SECONDS             =   5 * 60;
 static const int MASTERNODE_MIN_MNP_SECONDS             =  10 * 60;
 static const int MASTERNODE_EXPIRATION_SECONDS          =  65 * 60;
 static const int MASTERNODE_WATCHDOG_MAX_SECONDS        = 120 * 60;
-static const int MASTERNODE_NEW_START_REQUIRED_SECONDS  = 180 * 60;
+static const int MASTERNODE_MNP_EXPIRE_SECONDS          = 180 * 60;
 
 static const int MASTERNODE_POSE_BAN_MAX_SCORE          = 5;
 //
@@ -76,7 +76,7 @@ public:
         return ss.GetHash();
     }
 
-    bool IsExpired() { return GetTime() - sigTime > MASTERNODE_NEW_START_REQUIRED_SECONDS; }
+    bool IsExpired() { return GetTime() - sigTime > MASTERNODE_MNP_EXPIRE_SECONDS; }
 
     bool Sign(CKey& keyMasternode, CPubKey& pubKeyMasternode);
     bool CheckSignature(CPubKey& pubKeyMasternode, int &nDos);
@@ -137,19 +137,19 @@ struct masternode_info_t
 //
 class CMasternode
 {
+    friend class CMasternodeFSM;
+
 private:
     // critical section to protect the inner data structures
     mutable CCriticalSection cs;
 
 public:
     enum state {
-        MASTERNODE_PRE_ENABLED,
+        MASTERNODE_NULL,
         MASTERNODE_ENABLED,
-        MASTERNODE_EXPIRED,
-        MASTERNODE_OUTPOINT_SPENT,
-        MASTERNODE_UPDATE_REQUIRED,
+        MASTERNODE_INACTIVE,
         MASTERNODE_WATCHDOG_EXPIRED,
-        MASTERNODE_NEW_START_REQUIRED,
+        MASTERNODE_EXPIRED,
         MASTERNODE_POSE_BAN
     };
 
@@ -244,6 +244,8 @@ public:
 
     void Check(bool fForce = false);
 
+    bool IsCollateralValid();
+
     bool IsBroadcastedWithin(int nSeconds) { return GetAdjustedTime() - sigTime < nSeconds; }
 
     bool IsPingedWithin(int nSeconds, int64_t nTimeToCheckAt = -1)
@@ -257,21 +259,24 @@ public:
     }
 
     bool IsEnabled() { return nActiveState == MASTERNODE_ENABLED; }
-    bool IsPreEnabled() { return nActiveState == MASTERNODE_PRE_ENABLED; }
+
     bool IsPoSeBanned() { return nActiveState == MASTERNODE_POSE_BAN; }
     // NOTE: this one relies on nPoSeBanScore, not on nActiveState as everything else here
     bool IsPoSeVerified() { return nPoSeBanScore <= -MASTERNODE_POSE_BAN_MAX_SCORE; }
+    bool IsInactive() { return nActiveState == MASTERNODE_INACTIVE; }
     bool IsExpired() { return nActiveState == MASTERNODE_EXPIRED; }
-    bool IsOutpointSpent() { return nActiveState == MASTERNODE_OUTPOINT_SPENT; }
-    bool IsUpdateRequired() { return nActiveState == MASTERNODE_UPDATE_REQUIRED; }
     bool IsWatchdogExpired() { return nActiveState == MASTERNODE_WATCHDOG_EXPIRED; }
-    bool IsNewStartRequired() { return nActiveState == MASTERNODE_NEW_START_REQUIRED; }
+
+    // TODO: Remove deprecated states
+    bool IsPreEnabled() { return false; }
+    bool IsOutpointSpent() { return false; }
+    bool IsUpdateRequired() { return false; }
+    bool IsNewStartRequired() { return false; }
 
     static bool IsValidStateForAutoStart(int nActiveStateIn)
     {
         return  nActiveStateIn == MASTERNODE_ENABLED ||
-                nActiveStateIn == MASTERNODE_PRE_ENABLED ||
-                nActiveStateIn == MASTERNODE_EXPIRED ||
+                nActiveStateIn == MASTERNODE_INACTIVE ||
                 nActiveStateIn == MASTERNODE_WATCHDOG_EXPIRED;
     }
 
@@ -452,6 +457,33 @@ public:
         CInv inv(MSG_MASTERNODE_VERIFY, GetHash());
         RelayInv(inv);
     }
+};
+
+class CMasternodeFSM
+{
+private:
+    CMasternode&       masternode;
+
+    CMasternode::state stateCurrent;
+
+public:
+    CMasternodeFSM(CMasternode& masternode);
+
+    CMasternode::state GetCurrentState();
+
+    CMasternode::state UpdateState();
+
+private:
+    CMasternode::state UpdateStateEnabled();
+
+    CMasternode::state UpdateStateInactive();
+    
+    CMasternode::state UpdateStateWatchdogExpired();
+
+    CMasternode::state UpdateStateExpired();
+
+    CMasternode::state UpdateStatePosBan();
+
 };
 
 #endif

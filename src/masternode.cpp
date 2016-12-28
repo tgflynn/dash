@@ -164,6 +164,7 @@ arith_uint256 CMasternode::CalculateScore(const uint256& blockHash)
 
 void CMasternode::Check(bool fForce)
 {
+#if 0
     LOCK(cs);
 
     if(ShutdownRequested()) return;
@@ -303,6 +304,26 @@ void CMasternode::Check(bool fForce)
     if(nActiveStatePrev != nActiveState) {
         LogPrint("masternode", "CMasternode::Check -- Masternode %s is in %s state now\n", vin.prevout.ToStringShort(), GetStateString());
     }
+#endif
+}
+
+bool CMasternode::IsCollateralValid()
+{
+    if(fUnitTest) {
+        return true;
+    }
+
+    LOCK2(cs_main, cs);
+
+    CCoins coins;
+    if(!pcoinsTip->GetCoins(vin.prevout.hash, coins) ||
+       (unsigned int)vin.prevout.n>=coins.vout.size() ||
+       coins.vout[vin.prevout.n].IsNull()) {
+        LogPrint("masternode", "CMasternode::IsCollateralValid -- Failed to find Masternode UTXO, masternode=%s\n", vin.prevout.ToStringShort());
+        return false;
+    }
+    
+    return true;
 }
 
 bool CMasternode::IsValidNetAddr()
@@ -339,13 +360,10 @@ masternode_info_t CMasternode::GetInfo()
 std::string CMasternode::StateToString(int nStateIn)
 {
     switch(nStateIn) {
-        case MASTERNODE_PRE_ENABLED:            return "PRE_ENABLED";
         case MASTERNODE_ENABLED:                return "ENABLED";
+        case MASTERNODE_INACTIVE:               return "INACTIVE";
         case MASTERNODE_EXPIRED:                return "EXPIRED";
-        case MASTERNODE_OUTPOINT_SPENT:         return "OUTPOINT_SPENT";
-        case MASTERNODE_UPDATE_REQUIRED:        return "UPDATE_REQUIRED";
         case MASTERNODE_WATCHDOG_EXPIRED:       return "WATCHDOG_EXPIRED";
-        case MASTERNODE_NEW_START_REQUIRED:     return "NEW_START_REQUIRED";
         case MASTERNODE_POSE_BAN:               return "POSE_BAN";
         default:                                return "UNKNOWN";
     }
@@ -982,4 +1000,127 @@ void CMasternode::FlagGovernanceItemsAsDirty()
     for(size_t i = 0; i < vecDirty.size(); ++i) {
         mnodeman.AddDirtyGovernanceObjectHash(vecDirty[i]);
     }
+}
+
+CMasternodeFSM::CMasternodeFSM(CMasternode& masternodeIn)
+    : masternode(masternodeIn),
+      stateCurrent(CMasternode::MASTERNODE_NULL)
+{}
+
+CMasternode::state CMasternodeFSM::GetCurrentState()
+{
+    return stateCurrent;
+}
+
+CMasternode::state CMasternodeFSM::UpdateState()
+{
+    CMasternode::state stateNew = CMasternode::MASTERNODE_NULL;
+
+    if(!masternode.IsCollateralValid()) {
+        // Remove from list if the collateral is not valid
+        stateCurrent = stateNew;
+        return stateCurrent;
+    }
+
+    if(masternode.nProtocolVersion < mnpayments.GetMinMasternodePaymentsProto()) {
+        // Remove from list protocol too old (if upgrade, will be radded when new broadcast received)
+        stateCurrent = stateNew;
+        return stateCurrent;
+    }
+
+    if(stateCurrent == CMasternode::MASTERNODE_NULL) {
+        // Treat initial state as enabled
+        stateCurrent = CMasternode::MASTERNODE_ENABLED;
+    }
+
+    switch(stateCurrent) {
+    case CMasternode::MASTERNODE_ENABLED:
+        stateNew = UpdateStateEnabled();
+        break;
+    case CMasternode::MASTERNODE_INACTIVE:
+        stateNew = UpdateStateInactive();
+        break;
+    case CMasternode::MASTERNODE_WATCHDOG_EXPIRED:
+        stateNew = UpdateStateWatchdogExpired();
+        break;
+    case CMasternode::MASTERNODE_EXPIRED:
+        stateNew = UpdateStateExpired();
+        break;
+    case CMasternode::MASTERNODE_POSE_BAN:
+        stateNew = UpdateStatePosBan();
+        break;
+    default:
+        break;
+    }
+
+    return stateNew;
+}
+
+CMasternode::state CMasternodeFSM::UpdateStateEnabled()
+{
+    if(masternode.nPoSeBanScore >= MASTERNODE_POSE_BAN_MAX_SCORE) {
+        stateCurrent = CMasternode::MASTERNODE_POSE_BAN;
+        // ban for the whole payment cycle
+        masternode.nPoSeBanHeight = mnodeman.GetCurrentBlockHeight() + mnodeman.size();
+        LogPrintf("CMasternodeFSM::UpdateStateEnabled -- Masternode %s is banned until block %d now\n", 
+                  masternode.vin.prevout.ToStringShort(), masternode.nPoSeBanHeight);
+        return stateCurrent;
+    }
+
+    if(!masternode.IsPingedWithin(MASTERNODE_MIN_MNP_SECONDS)) {
+        stateCurrent = CMasternode::MASTERNODE_INACTIVE;
+        return stateCurrent;
+    }
+
+    bool fWatchdogActive = masternodeSync.IsSynced() && mnodeman.IsWatchdogActive();
+    if(fWatchdogActive && ((GetTime() - masternode.nTimeLastWatchdogVote) > MASTERNODE_WATCHDOG_MAX_SECONDS)) {
+        stateCurrent = CMasternode::MASTERNODE_WATCHDOG_EXPIRED;
+        return stateCurrent;
+    }
+
+    return stateCurrent;
+}
+
+CMasternode::state CMasternodeFSM::UpdateStateInactive()
+{
+    if(!masternode.IsPingedWithin(MASTERNODE_MNP_EXPIRE_SECONDS)) {
+        stateCurrent = CMasternode::MASTERNODE_EXPIRED;
+        return stateCurrent;
+    }
+
+    if(masternode.IsPingedWithin(MASTERNODE_MIN_MNP_SECONDS)) {
+        // If ping received, set to enabled, but check other conditions
+        stateCurrent = CMasternode::MASTERNODE_ENABLED;
+        return UpdateStateEnabled();
+    }
+
+    return stateCurrent;
+}
+    
+CMasternode::state CMasternodeFSM::UpdateStateWatchdogExpired()
+{
+    CMasternode::state stateNew = CMasternode::MASTERNODE_NULL;
+
+    bool fWatchdogActive = masternodeSync.IsSynced() && mnodeman.IsWatchdogActive();
+    if(!fWatchdogActive || ((GetTime() - masternode.nTimeLastWatchdogVote) <= MASTERNODE_WATCHDOG_MAX_SECONDS)) {
+        // If watchdog received, set to enabled, but check other conditions
+        stateCurrent = CMasternode::MASTERNODE_ENABLED;
+        return UpdateStateEnabled();
+    }
+
+    return stateNew;
+}
+
+CMasternode::state CMasternodeFSM::UpdateStateExpired()
+{
+    CMasternode::state stateNew = CMasternode::MASTERNODE_NULL;
+
+    return stateNew;
+}
+
+CMasternode::state CMasternodeFSM::UpdateStatePosBan()
+{
+    CMasternode::state stateNew = CMasternode::MASTERNODE_NULL;
+
+    return stateNew;
 }

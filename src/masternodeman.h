@@ -80,6 +80,10 @@ private:
 
 class CMasternodeMan
 {
+    friend class CMasternode;
+
+    friend class CMasternodeFSM;
+
 public:
     typedef std::map<CTxIn,int> index_m_t;
 
@@ -345,6 +349,8 @@ public:
      * Must be called while not holding the CMasternodeMan::cs mutex
      */
     void NotifyMasternodeUpdates();
+private:
+    int GetCurrentBlockHeight();
 
 };
 
