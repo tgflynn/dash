@@ -6454,12 +6454,15 @@ bool SendMessages(CNode* pto)
             }
         }
 
+        int64_t nNow = 0;
+        vector<CInv> vGetData;
+        {
         TRY_LOCK(cs_main, lockMain); // Acquire cs_main for IsInitialBlockDownload() and CNodeState()
         if (!lockMain)
             return true;
 
         // Address refresh broadcast
-        int64_t nNow = GetTimeMicros();
+        nNow = GetTimeMicros();
         if (!IsInitialBlockDownload() && pto->nNextLocalAddrSend < nNow) {
             AdvertiseLocal(pto);
             pto->nNextLocalAddrSend = PoissonNextSend(nNow, AVG_LOCAL_ADDRESS_BROADCAST_INTERVAL);
@@ -6733,7 +6736,6 @@ bool SendMessages(CNode* pto)
         //
         // Message: getdata (blocks)
         //
-        vector<CInv> vGetData;
         if (!pto->fDisconnect && !pto->fClient && (fFetch || !IsInitialBlockDownload()) && state.nBlocksInFlight < MAX_BLOCKS_IN_TRANSIT_PER_PEER) {
             vector<CBlockIndex*> vToDownload;
             NodeId staller = -1;
@@ -6752,6 +6754,7 @@ bool SendMessages(CNode* pto)
             }
         }
 
+        }
         //
         // Message: getdata (non-blocks)
         //
