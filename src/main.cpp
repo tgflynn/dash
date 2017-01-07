@@ -4896,6 +4896,7 @@ bool static AlreadyHave(const CInv& inv) EXCLUSIVE_LOCKS_REQUIRED(cs_main)
     {
     case MSG_TX:
         {
+            LOCK(cs_main);
             assert(recentRejects);
             if (chainActive.Tip()->GetBlockHash() != hashRecentRejectsChainTip)
             {
@@ -4914,7 +4915,10 @@ bool static AlreadyHave(const CInv& inv) EXCLUSIVE_LOCKS_REQUIRED(cs_main)
         }
 
     case MSG_BLOCK:
-        return mapBlockIndex.count(inv.hash);
+        {
+            LOCK(cs_main);
+            return mapBlockIndex.count(inv.hash);
+        }
 
     /* 
         Dash Related Inventory Messages
@@ -4939,6 +4943,7 @@ bool static AlreadyHave(const CInv& inv) EXCLUSIVE_LOCKS_REQUIRED(cs_main)
 
     case MSG_MASTERNODE_PAYMENT_BLOCK:
         {
+            LOCK(cs_main);
             BlockMap::iterator mi = mapBlockIndex.find(inv.hash);
             return mi != mapBlockIndex.end() && mnpayments.mapMasternodeBlocks.find(mi->second->nHeight) != mnpayments.mapMasternodeBlocks.end();
         }
@@ -5519,8 +5524,6 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv, 
         if (pfrom->fWhitelisted && GetBoolArg("-whitelistrelay", DEFAULT_WHITELISTRELAY))
             fBlocksOnly = false;
 
-        LOCK(cs_main);
-
         std::vector<CInv> vToFetch;
 
 
@@ -5540,6 +5543,7 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv, 
             LogPrint("net", "got inv: %s  %s peer=%d\n", inv.ToString(), fAlreadyHave ? "have" : "new", pfrom->id);
 
             if (inv.type == MSG_BLOCK) {
+                LOCK(cs_main);
                 UpdateBlockAvailability(pfrom->GetId(), inv.hash);
                 if (!fAlreadyHave && !fImporting && !fReindex && !mapBlocksInFlight.count(inv.hash)) {
                     // First request the headers preceding the announced block. In the normal fully-synced
