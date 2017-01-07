@@ -3358,6 +3358,7 @@ bool ActivateBestChain(CValidationState &state, const CChainParams& chainparams,
         const CBlockIndex *pindexFork;
         bool fInitialDownload;
         {
+            LOCK2(governance.cs, mnodeman.cs);
             LOCK(cs_main);
             CBlockIndex *pindexOldTip = chainActive.Tip();
             pindexMostWork = FindMostWorkChain();
@@ -4354,6 +4355,7 @@ CVerifyDB::~CVerifyDB()
 
 bool CVerifyDB::VerifyDB(const CChainParams& chainparams, CCoinsView *coinsview, int nCheckLevel, int nCheckDepth)
 {
+    LOCK2(governance.cs, mnodeman.cs);
     LOCK(cs_main);
     if (chainActive.Tip() == NULL || chainActive.Tip()->pprev == NULL)
         return true;
