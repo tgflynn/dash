@@ -4476,7 +4476,7 @@ bool LoadBlockIndex()
 
 bool InitBlockIndex(const CChainParams& chainparams) 
 {
-    LOCK(cs_main);
+    LOCK2(governance.cs, cs_main);
 
     // Initialize global variables that cannot be constructed at startup.
     recentRejects.reset(new CRollingBloomFilter(120000, 0.000001));
