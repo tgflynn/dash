@@ -675,6 +675,12 @@ void CGovernanceManager::Sync(CNode* pfrom, uint256 nProp)
 
             LogPrint("gobject", "CGovernanceManager::Sync -- attempting to sync govobj: %s, peer=%d\n", strHash, pfrom->id);
 
+            if(govobj.IsSetCachedDelete()) {
+                LogPrintf("CGovernanceManager::Sync -- not syncing deleted govobj: %s, peer=%d\n",
+                         strHash, pfrom->id);
+                continue;
+            }
+
             std::string strError;
             bool fIsValid = govobj.IsValidLocally(strError, true);
             if(!fIsValid) {
