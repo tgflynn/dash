@@ -962,14 +962,6 @@ void CMasternode::UpdateWatchdogVoteTime()
 */
 void CMasternode::FlagGovernanceItemsAsDirty()
 {
-    std::map<uint256, int>::iterator it = mapGovernanceObjectsVotedOn.begin();
-    while(it != mapGovernanceObjectsVotedOn.end()){
-        CGovernanceObject *pObj = governance.FindGovernanceObject((*it).first);
-
-        if(pObj) pObj->InvalidateVoteCache();
-        ++it;
-    }
-
     std::vector<uint256> vecDirty;
     {
         std::map<uint256, int>::iterator it = mapGovernanceObjectsVotedOn.begin();
