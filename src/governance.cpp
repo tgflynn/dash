@@ -650,7 +650,16 @@ void CGovernanceManager::Sync(CNode* pfrom, uint256 nProp)
 
     // SYNC GOVERNANCE OBJECTS WITH OTHER CLIENT
 
-    LogPrint("gobject", "CGovernanceManager::Sync -- syncing to peer=%d, nProp = %s\n", pfrom->id, nProp.ToString());
+    bool fFullSync = (nProp == uint256());
+
+    if(fFullSync) {
+        LogPrintf("CGovernanceManager::Sync -- full sync to peer=%d\n", pfrom->id);
+    }
+    else {
+        LogPrint("gobject", "CGovernanceManager::Sync -- syncing to peer=%d, nProp = %s\n", pfrom->id, nProp.ToString());
+    }
+
+    int64_t nTimeStart = GetTime();
 
     {
         LOCK2(cs_main, cs);
@@ -699,9 +708,16 @@ void CGovernanceManager::Sync(CNode* pfrom, uint256 nProp)
         fRateChecksEnabled = true;
     }
 
+    int64_t nTotalTime = GetTime() - nTimeStart;
+
     pfrom->PushMessage(NetMsgType::SYNCSTATUSCOUNT, MASTERNODE_SYNC_GOVOBJ, nObjCount);
     pfrom->PushMessage(NetMsgType::SYNCSTATUSCOUNT, MASTERNODE_SYNC_GOVOBJ_VOTE, nVoteCount);
-    LogPrintf("CGovernanceManager::Sync -- sent %d objects and %d votes to peer=%d\n", nObjCount, nVoteCount, pfrom->id);
+    if(fFullSync) {
+        LogPrintf("CGovernanceManager::Sync (full) -- sent %d objects and %d votes to peer=%d in %d s\n", nObjCount, nVoteCount, pfrom->id, nTotalTime);
+    }
+    else {
+        LogPrint("gobject", "CGovernanceManager::Sync -- sent %d objects and %d votes to peer=%d in %d s\n", nObjCount, nVoteCount, pfrom->id, nTotalTime);
+    }
 }
 
 bool CGovernanceManager::MasternodeRateCheck(const CGovernanceObject& govobj, bool fUpdateLast)
