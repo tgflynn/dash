@@ -692,6 +692,12 @@ void CGovernanceManager::Sync(CNode* pfrom, uint256 nProp)
                 continue;
             }
 
+            if(!govobj.IsSetCachedValid()) {
+                LogPrintf("CGovernanceManager::Sync -- invalid flag cached, not syncing govobj: %s, fCachedValid = %d, peer=%d\n", 
+                          strHash, govobj.IsSetCachedValid(), pfrom->id);
+                continue;
+            }
+
             // Push the inventory budget proposal message over to the other client
             LogPrint("gobject", "CGovernanceManager::Sync -- syncing govobj: %s, peer=%d\n", strHash, pfrom->id);
             pfrom->PushInventory(CInv(MSG_GOVERNANCE_OBJECT, h));
