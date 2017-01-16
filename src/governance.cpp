@@ -946,6 +946,12 @@ void CGovernanceManager::RequestGovernanceObject(CNode* pfrom, const uint256& nH
         return;
     }
 
+    if(!masternodeSync.IsSynced()) {
+        return;
+    }
+
+    LogPrint("gobject", "CGovernanceManager::RequestGovernanceObject -- Requesting object: %s\n", nHash.ToString());
+
     pfrom->PushMessage(NetMsgType::MNGOVERNANCESYNC, nHash);
 }
 
