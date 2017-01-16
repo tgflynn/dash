@@ -486,6 +486,7 @@ void CMasternodeSync::ProcessTick()
                 if (pnode->nVersion < MIN_GOVERNANCE_PEER_PROTO_VERSION) continue;
                 nRequestedMasternodeAttempt++;
 
+                LogPrint("gobject", "CMasternodeSync::ProcessTick -- sending MNGOVERNANCESYNC request peer=%d\n", pnode->GetId());
                 pnode->PushMessage(NetMsgType::MNGOVERNANCESYNC, uint256()); //sync masternode votes
 
                 ReleaseNodes(vNodesCopy);
