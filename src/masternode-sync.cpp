@@ -194,6 +194,7 @@ void CMasternodeSync::SwitchToNextAsset()
         case(MASTERNODE_SYNC_MNW):
             nTimeLastGovernanceItem = GetTime();
             nRequestedMasternodeAssets = MASTERNODE_SYNC_GOVERNANCE;
+            fGovernanceStatusReceived = false;
             LogPrintf("CMasternodeSync::SwitchToNextAsset -- Starting %s\n", GetAssetName());
             break;
         case(MASTERNODE_SYNC_GOVERNANCE):
@@ -459,7 +460,7 @@ void CMasternodeSync::ProcessTick()
             if(nRequestedMasternodeAssets == MASTERNODE_SYNC_GOVERNANCE) {
                 LogPrint("mnpayments", "CMasternodeSync::ProcessTick -- nTick %d nRequestedMasternodeAssets %d nTimeLastPaymentVote %lld GetTime() %lld diff %lld\n", nTick, nRequestedMasternodeAssets, nTimeLastPaymentVote, GetTime(), GetTime() - nTimeLastPaymentVote);
 
-                // check for timeout first
+                // check for timeout first and require at least one governance sync status message before continuing
                 if(fGovernanceStatusReceived && (GetTime() - nTimeLastGovernanceItem > MASTERNODE_SYNC_TIMEOUT_SECONDS)) {
                     LogPrintf("CMasternodeSync::ProcessTick -- nTick %d nRequestedMasternodeAssets %d -- timeout\n", nTick, nRequestedMasternodeAssets);
                     if(nRequestedMasternodeAttempt == 0) {
@@ -493,7 +494,6 @@ void CMasternodeSync::ProcessTick()
 
                 LogPrint("gobject", "CMasternodeSync::ProcessTick -- sending MNGOVERNANCESYNC request peer=%d\n", pnode->GetId());
                 pnode->PushMessage(NetMsgType::MNGOVERNANCESYNC, uint256()); //sync masternode votes
-                fGovernanceStatusReceived = false;
 
                 ReleaseNodes(vNodesCopy);
                 return; //this will cause each peer to get one request each six seconds for the various assets we need
