@@ -156,6 +156,10 @@ void CGovernanceManager::ProcessMessage(CNode* pfrom, std::string& strCommand, C
 
         LOCK2(cs_main, cs);
 
+        if(pfrom) {
+            pfrom->setAskFor.erase(nHash);
+        }
+
         if(mapSeenGovernanceObjects.count(nHash)) {
             // TODO - print error code? what if it's GOVOBJ_ERROR_IMMATURE?
             LogPrint("gobject", "MNGOVERNANCEOBJECT -- Received already seen object: %s\n", strHash);
@@ -234,6 +238,10 @@ void CGovernanceManager::ProcessMessage(CNode* pfrom, std::string& strCommand, C
             LogPrint("gobject", "MNGOVERNANCEOBJECTVOTE -- Received unrequested vote object: %s, hash: %s, peer = %d\n",
                       vote.ToString(), strHash, pfrom->GetId());
             return;
+        }
+
+        if(pfrom) {
+            pfrom->setAskFor.erase(nHash);
         }
 
         CGovernanceException exception;
