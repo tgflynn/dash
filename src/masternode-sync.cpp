@@ -151,6 +151,7 @@ void CMasternodeSync::Reset()
     nTimeLastGovernanceItem = GetTime();
     nTimeLastFailure = 0;
     nCountFailures = 0;
+    fGovernanceStatusReceived = false;
 }
 
 std::string CMasternodeSync::GetAssetName()
@@ -239,6 +240,10 @@ void CMasternodeSync::ProcessMessage(CNode* pfrom, std::string& strCommand, CDat
         int nItemID;
         int nCount;
         vRecv >> nItemID >> nCount;
+
+        if(nItemID == MASTERNODE_SYNC_GOVOBJ) {
+            fGovernanceStatusReceived = true;
+        }
 
         LogPrintf("SYNCSTATUSCOUNT -- got inventory count: nItemID=%d  nCount=%d  peer=%d\n", nItemID, nCount, pfrom->id);
     }
@@ -455,7 +460,7 @@ void CMasternodeSync::ProcessTick()
                 LogPrint("mnpayments", "CMasternodeSync::ProcessTick -- nTick %d nRequestedMasternodeAssets %d nTimeLastPaymentVote %lld GetTime() %lld diff %lld\n", nTick, nRequestedMasternodeAssets, nTimeLastPaymentVote, GetTime(), GetTime() - nTimeLastPaymentVote);
 
                 // check for timeout first
-                if(GetTime() - nTimeLastGovernanceItem > MASTERNODE_SYNC_TIMEOUT_SECONDS) {
+                if(fGovernanceStatusReceived && (GetTime() - nTimeLastGovernanceItem > MASTERNODE_SYNC_TIMEOUT_SECONDS)) {
                     LogPrintf("CMasternodeSync::ProcessTick -- nTick %d nRequestedMasternodeAssets %d -- timeout\n", nTick, nRequestedMasternodeAssets);
                     if(nRequestedMasternodeAttempt == 0) {
                         LogPrintf("CMasternodeSync::ProcessTick -- WARNING: failed to sync %s\n", GetAssetName());
@@ -488,6 +493,7 @@ void CMasternodeSync::ProcessTick()
 
                 LogPrint("gobject", "CMasternodeSync::ProcessTick -- sending MNGOVERNANCESYNC request peer=%d\n", pnode->GetId());
                 pnode->PushMessage(NetMsgType::MNGOVERNANCESYNC, uint256()); //sync masternode votes
+                fGovernanceStatusReceived = false;
 
                 ReleaseNodes(vNodesCopy);
                 return; //this will cause each peer to get one request each six seconds for the various assets we need

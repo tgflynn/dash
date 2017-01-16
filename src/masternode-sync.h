@@ -53,6 +53,8 @@ private:
     // How many times we failed
     int nCountFailures;
 
+    bool fGovernanceStatusReceived;
+
     // Keep track of current block index
     const CBlockIndex *pCurrentBlockIndex;
 
