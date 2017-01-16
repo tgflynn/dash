@@ -157,7 +157,9 @@ void CGovernanceManager::ProcessMessage(CNode* pfrom, std::string& strCommand, C
         LOCK2(cs_main, cs);
 
         if(pfrom) {
+            LogPrint("gobject", "MNGOVERNANCEOBJECT -- hash: %s, setAskFor.size() = %d (before erase)\n", strHash, pfrom->setAskFor.size());
             pfrom->setAskFor.erase(nHash);
+            LogPrint("gobject", "MNGOVERNANCEOBJECT -- hash: %s, setAskFor.size() = %d (after erase)\n", strHash, pfrom->setAskFor.size());
         }
 
         if(mapSeenGovernanceObjects.count(nHash)) {
@@ -241,7 +243,9 @@ void CGovernanceManager::ProcessMessage(CNode* pfrom, std::string& strCommand, C
         }
 
         if(pfrom) {
+            LogPrint("gobject", "MNGOVERNANCEOBJECTVOTE -- hash: %s, setAskFor.size() = %d (before erase)\n", strHash, pfrom->setAskFor.size());
             pfrom->setAskFor.erase(nHash);
+            LogPrint("gobject", "MNGOVERNANCEOBJECTVOTE -- hash: %s, setAskFor.size() = %d (after erase)\n", strHash, pfrom->setAskFor.size());
         }
 
         CGovernanceException exception;
