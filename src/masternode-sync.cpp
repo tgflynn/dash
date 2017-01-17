@@ -330,6 +330,7 @@ void CMasternodeSync::ProcessTick()
             pnode->AddRef();
     }
 
+    int nGovernanceSyncRequests = 0;
     BOOST_FOREACH(CNode* pnode, vNodesCopy)
     {
         // QUICK MODE (REGTEST ONLY!)
@@ -490,10 +491,14 @@ void CMasternodeSync::ProcessTick()
                 netfulfilledman.AddFulfilledRequest(pnode->addr, "governance-sync");
 
                 if (pnode->nVersion < MIN_GOVERNANCE_PEER_PROTO_VERSION) continue;
+
+                if(nGovernanceSyncRequests > MASTERNODE_SYNC_MAX_GOVERNANCE_REQUESTS) continue;
+
                 nRequestedMasternodeAttempt++;
 
                 LogPrint("gobject", "CMasternodeSync::ProcessTick -- sending MNGOVERNANCESYNC request peer=%d\n", pnode->GetId());
                 pnode->PushMessage(NetMsgType::MNGOVERNANCESYNC, uint256()); //sync masternode votes
+                ++nGovernanceSyncRequests;
 
                 ReleaseNodes(vNodesCopy);
                 return; //this will cause each peer to get one request each six seconds for the various assets we need

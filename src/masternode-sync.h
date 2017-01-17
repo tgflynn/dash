@@ -26,6 +26,8 @@ static const int MASTERNODE_SYNC_TIMEOUT_SECONDS = 30; // our blocks are 2.5 min
 
 static const int MASTERNODE_SYNC_ENOUGH_PEERS    = 6;
 
+static const int MASTERNODE_SYNC_MAX_GOVERNANCE_REQUESTS = 3;
+
 extern CMasternodeSync masternodeSync;
 
 //
