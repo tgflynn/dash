@@ -55,8 +55,6 @@ private:
     // How many times we failed
     int nCountFailures;
 
-    int nGovernanceSyncRequests;
-
     bool fGovernanceStatusReceived;
 
     // Keep track of current block index
