@@ -151,6 +151,7 @@ void CMasternodeSync::Reset()
     nTimeLastGovernanceItem = GetTime();
     nTimeLastFailure = 0;
     nCountFailures = 0;
+    nGovernanceSyncRequests = 0;
     fGovernanceStatusReceived = false;
 }
 
@@ -330,7 +331,6 @@ void CMasternodeSync::ProcessTick()
             pnode->AddRef();
     }
 
-    int nGovernanceSyncRequests = 0;
     BOOST_FOREACH(CNode* pnode, vNodesCopy)
     {
         // QUICK MODE (REGTEST ONLY!)
