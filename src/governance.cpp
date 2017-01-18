@@ -672,6 +672,12 @@ void CGovernanceManager::Sync(CNode* pfrom, uint256 nProp)
 
                 LogPrint("gobject", "CGovernanceManager::Sync -- attempting to sync govobj: %s, peer=%d\n", strHash, pfrom->id);
 
+                if(govobj.IsSetCachedDelete()) {
+                    LogPrintf("CGovernanceManager::Sync -- not syncing deleted govobj: %s, peer=%d\n",
+                              strHash, pfrom->id);
+                    continue;
+                }
+
                 // Push the inventory budget proposal message over to the other client
                 LogPrint("gobject", "CGovernanceManager::Sync -- syncing govobj: %s, peer=%d\n", strHash, pfrom->id);
                 pfrom->PushInventory(CInv(MSG_GOVERNANCE_OBJECT, it->first));
@@ -688,6 +694,12 @@ void CGovernanceManager::Sync(CNode* pfrom, uint256 nProp)
             std::string strHash = it->first.ToString();
 
             LogPrint("gobject", "CGovernanceManager::Sync -- attempting to sync govobj: %s, peer=%d\n", strHash, pfrom->id);
+
+            if(govobj.IsSetCachedDelete()) {
+                LogPrintf("CGovernanceManager::Sync -- not syncing deleted govobj: %s, peer=%d\n",
+                          strHash, pfrom->id);
+                return;
+            }
 
             // Push the inventory budget proposal message over to the other client
             LogPrint("gobject", "CGovernanceManager::Sync -- syncing govobj: %s, peer=%d\n", strHash, pfrom->id);
