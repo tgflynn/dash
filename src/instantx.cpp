@@ -205,8 +205,8 @@ void CInstantSend::Vote(CTxLockCandidate& txLockCandidate)
             }
         }
         if(fAlreadyVoted) {
-            continue; // skip to the next outpoint
             ++itOutpointLock;
+            continue; // skip to the next outpoint
         }
 
         // we haven't voted for this outpoint yet, let's try to do this now
