@@ -44,11 +44,23 @@ bool CGovernanceObjectVoteFile::GetVote(const uint256& nHash, CGovernanceVote& v
     return true;
 }
 
-std::vector<CGovernanceVote> CGovernanceObjectVoteFile::GetVotes() const
+std::vector<CGovernanceVote> CGovernanceObjectVoteFile::GetVotes()
 {
     std::vector<CGovernanceVote> vecResult;
-    for(vote_l_cit it = listVotes.begin(); it != listVotes.end(); ++it) {
+
+    std::set<uint256> setSeenTypes;
+    vote_l_it it = listVotes.begin();
+
+    while(it != listVotes.end()) {
+        uint256 nTypeHash = it->GetTypeHash();
+        if(setSeenTypes.find(nTypeHash) != setSeenTypes.end()) {
+            listVotes.erase(it++);
+            continue;
+        }
+
         vecResult.push_back(*it);
+        setSeenTypes.insert(nTypeHash);
+        ++it;
     }
     return vecResult;
 }

@@ -68,7 +68,7 @@ public:
         return nMemoryVotes;
     }
 
-    std::vector<CGovernanceVote> GetVotes() const;
+    std::vector<CGovernanceVote> GetVotes();
 
     CGovernanceObjectVoteFile& operator=(const CGovernanceObjectVoteFile& other);
 
