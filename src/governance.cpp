@@ -113,7 +113,13 @@ void CGovernanceManager::ProcessMessage(CNode* pfrom, std::string& strCommand, C
         if (!masternodeSync.IsSynced()) return;
 
         uint256 nProp;
+        CBloomFilter filter;
+
         vRecv >> nProp;
+
+        if(pfrom->nVersion >= GOVERNANCE_FILTER_PROTO_VERSION) {
+            vRecv >> filter;
+        }
 
         if(nProp == uint256()) {
             if(netfulfilledman.HasFulfilledRequest(pfrom->addr, NetMsgType::MNGOVERNANCESYNC)) {
@@ -125,7 +131,7 @@ void CGovernanceManager::ProcessMessage(CNode* pfrom, std::string& strCommand, C
             netfulfilledman.AddFulfilledRequest(pfrom->addr, NetMsgType::MNGOVERNANCESYNC);
         }
 
-        Sync(pfrom, nProp);
+        Sync(pfrom, nProp, filter);
         LogPrint("gobject", "MNGOVERNANCESYNC -- syncing governance objects to our peer at %s\n", pfrom->addr.ToString());
 
     }
@@ -644,7 +650,7 @@ bool CGovernanceManager::ConfirmInventoryRequest(const CInv& inv)
     return true;
 }
 
-void CGovernanceManager::Sync(CNode* pfrom, uint256 nProp)
+void CGovernanceManager::Sync(CNode* pfrom, uint256 nProp, CBloomFilter& filter)
 {
 
     /*
@@ -707,6 +713,9 @@ void CGovernanceManager::Sync(CNode* pfrom, uint256 nProp)
             std::vector<CGovernanceVote> vecVotes = govobj.GetVoteFile().GetVotes();
             for(size_t i = 0; i < vecVotes.size(); ++i) {
                 if(!vecVotes[i].IsValid(true)) {
+                    continue;
+                }
+                if(filter.contains(vecVotes[i].GetHash())) {
                     continue;
                 }
                 pfrom->PushInventory(CInv(MSG_GOVERNANCE_OBJECT_VOTE, vecVotes[i].GetHash()));
@@ -927,13 +936,31 @@ void CGovernanceManager::CheckMasternodeOrphanObjects()
     fRateChecksEnabled = true;
 }
 
-void CGovernanceManager::RequestGovernanceObject(CNode* pfrom, const uint256& nHash)
+void CGovernanceManager::RequestGovernanceObject(CNode* pfrom, const uint256& nHash, bool fUseFilter)
 {
     if(!pfrom) {
         return;
     }
 
-    pfrom->PushMessage(NetMsgType::MNGOVERNANCESYNC, nHash);
+    if(pfrom->nVersion < GOVERNANCE_FILTER_PROTO_VERSION) {
+        pfrom->PushMessage(NetMsgType::MNGOVERNANCESYNC, nHash);
+        return;
+    }
+
+    CBloomFilter filter(GOVERNANCE_FILTER_ELEMENTS, 0.0001, GetRandInt(999999), BLOOM_UPDATE_ALL);
+
+    if(fUseFilter) {
+        CGovernanceObject* pObj = FindGovernanceObject(nHash);
+
+        if(pObj) {
+            std::vector<CGovernanceVote> vecVotes = pObj->GetVoteFile().GetVotes();
+            for(size_t i = 0; i < vecVotes.size(); ++i) {
+                filter.insert(vecVotes[i].GetHash());
+            }
+        }
+    }
+
+    pfrom->PushMessage(NetMsgType::MNGOVERNANCESYNC, nHash, filter);
 }
 
 void CGovernanceManager::RequestGovernanceObjectVotes(CNode* pnode)
