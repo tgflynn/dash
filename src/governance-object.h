@@ -248,6 +248,10 @@ public:
         return fileVotes;
     }
 
+    const CGovernanceObjectVoteFile& GetVoteFile() const {
+        return fileVotes;
+    }
+
     // Signature related functions
 
     void SetMasternodeInfo(const CTxIn& vin);

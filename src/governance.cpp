@@ -1103,6 +1103,7 @@ std::string CGovernanceManager::ToString() const
     int nTriggerCount = 0;
     int nWatchdogCount = 0;
     int nOtherCount = 0;
+    int nVoteCount = 0;
 
     object_m_cit it = mapObjects.begin();
 
@@ -1121,13 +1122,14 @@ std::string CGovernanceManager::ToString() const
                 nOtherCount++;
                 break;
         }
+        nVoteCount += it->second.GetVoteFile().GetVoteCount();
         ++it;
     }
 
     return strprintf("Governance Objects: %d (Proposals: %d, Triggers: %d, Watchdogs: %d, Other: %d; Seen: %d), Votes: %d",
-                    (int)mapObjects.size(),
-                    nProposalCount, nTriggerCount, nWatchdogCount, nOtherCount, (int)mapSeenGovernanceObjects.size(),
-                    (int)mapVoteToObject.GetSize());
+                     (int)mapObjects.size(),
+                     nProposalCount, nTriggerCount, nWatchdogCount, nOtherCount, (int)mapSeenGovernanceObjects.size(),
+                     nVoteCount);
 }
 
 void CGovernanceManager::UpdatedBlockTip(const CBlockIndex *pindex)

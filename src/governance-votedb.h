@@ -64,7 +64,7 @@ public:
      */
     bool GetVote(const uint256& nHash, CGovernanceVote& vote) const;
 
-    int GetVoteCount() {
+    int GetVoteCount() const {
         return nMemoryVotes;
     }
 
