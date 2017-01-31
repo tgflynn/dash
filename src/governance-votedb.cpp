@@ -54,7 +54,6 @@ std::vector<CGovernanceVote> CGovernanceObjectVoteFile::GetVotes()
     while(it != listVotes.end()) {
         uint256 nTypeHash = it->GetTypeHash();
         if(setSeenTypes.find(nTypeHash) != setSeenTypes.end()) {
-            mapVoteIndex.erase(it->GetHash());
             listVotes.erase(it++);
             --nMemoryVotes;
             continue;
