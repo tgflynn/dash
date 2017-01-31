@@ -511,7 +511,7 @@ void CMasternodeSync::ProcessTick()
 void CMasternodeSync::SendGovernanceSyncRequest(CNode* pnode, const char* strMessage, uint256 nHash)
 {
     if(pnode->nVersion >= GOVERNANCE_FILTER_PROTO_VERSION) {
-        CBloomFilter filter(GOVERNANCE_FILTER_ELEMENTS, 0.0001, GetRandInt(999999), BLOOM_UPDATE_ALL);
+        CBloomFilter filter(GOVERNANCE_FILTER_ELEMENTS, GOVERNANCE_FILTER_FP_RATE, GetRandInt(999999), BLOOM_UPDATE_ALL);
         pnode->PushMessage(strMessage, nHash, filter);
     }
     else {

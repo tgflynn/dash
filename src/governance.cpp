@@ -950,7 +950,7 @@ void CGovernanceManager::RequestGovernanceObject(CNode* pfrom, const uint256& nH
         return;
     }
 
-    CBloomFilter filter(GOVERNANCE_FILTER_ELEMENTS, 0.0001, GetRandInt(999999), BLOOM_UPDATE_ALL);
+    CBloomFilter filter(GOVERNANCE_FILTER_ELEMENTS, GOVERNANCE_FILTER_FP_RATE, GetRandInt(999999), BLOOM_UPDATE_ALL);
 
     if(fUseFilter) {
         CGovernanceObject* pObj = FindGovernanceObject(nHash);
