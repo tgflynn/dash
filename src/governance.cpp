@@ -960,6 +960,10 @@ void CGovernanceManager::RequestGovernanceObject(CNode* pfrom, const uint256& nH
         }
     }
 
+    if(!filter.IsWithinSizeConstraints()) {
+        LogPrintf("CGovernanceManager::RequestGovernanceObject -- WARNING: bloom filter too large\n");
+    }
+
     pfrom->PushMessage(NetMsgType::MNGOVERNANCESYNC, nHash, filter);
 }
 
