@@ -646,9 +646,6 @@ bool CGovernanceManager::ConfirmInventoryRequest(const CInv& inv)
         LogPrint("gobject", "CGovernanceManager::ConfirmInventoryRequest added inv to requested set\n");
     }
 
-    // Keep sync alive
-    masternodeSync.AddedGovernanceItem();
-
     LogPrint("gobject", "CGovernanceManager::ConfirmInventoryRequest reached end, returning true\n");
     return true;
 }
