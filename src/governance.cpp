@@ -1009,7 +1009,7 @@ void CGovernanceManager::RequestGovernanceObjectVotes(const std::vector<CNode*>&
             vpGovObjsTmp.erase(vpGovObjsTmp.begin() + r);
         }
         LogPrintf("CGovernanceManager::RequestGovernanceObjectVotes -- Requesting votes for %s, peer=%d\n", nHashGovobj.ToString(), pnode->id);
-        RequestGovernanceObject(pnode, nHashGovobj);
+        RequestGovernanceObject(pnode, nHashGovobj, true);
         mapAskedRecently[nHashGovobj] = nNow + mapObjects.size() * 60; // ask again after full cycle
     }
 }
