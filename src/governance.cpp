@@ -657,7 +657,7 @@ bool CGovernanceManager::ConfirmInventoryRequest(const CInv& inv)
     return true;
 }
 
-void CGovernanceManager::Sync(CNode* pfrom, uint256 nProp, CBloomFilter& filter)
+void CGovernanceManager::Sync(CNode* pfrom, const uint256& nProp, const CBloomFilter& filter)
 {
 
     /*
@@ -954,21 +954,20 @@ void CGovernanceManager::RequestGovernanceObject(CNode* pfrom, const uint256& nH
         return;
     }
 
-    CBloomFilter filter(GOVERNANCE_FILTER_ELEMENTS, GOVERNANCE_FILTER_FP_RATE, GetRandInt(999999), BLOOM_UPDATE_ALL);
+    CBloomFilter filter;
+    filter.clear();
 
     if(fUseFilter) {
         CGovernanceObject* pObj = FindGovernanceObject(nHash);
 
         if(pObj) {
+            int nFilterElements = min(3*mnodeman.CountMasternodes(), GOVERNANCE_FILTER_MAX_ELEMENTS); 
+            filter = CBloomFilter(nFilterElements, GOVERNANCE_FILTER_FP_RATE, GetRandInt(999999), BLOOM_UPDATE_ALL);
             std::vector<CGovernanceVote> vecVotes = pObj->GetVoteFile().GetVotes();
             for(size_t i = 0; i < vecVotes.size(); ++i) {
                 filter.insert(vecVotes[i].GetHash());
             }
         }
-    }
-
-    if(!filter.IsWithinSizeConstraints()) {
-        LogPrintf("CGovernanceManager::RequestGovernanceObject -- WARNING: bloom filter too large\n");
     }
 
     pfrom->PushMessage(NetMsgType::MNGOVERNANCESYNC, nHash, filter);

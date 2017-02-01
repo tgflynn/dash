@@ -344,8 +344,7 @@ void CMasternodeSync::ProcessTick()
             } else if(nRequestedMasternodeAttempt < 6) {
                 int nMnCount = mnodeman.CountMasternodes();
                 pnode->PushMessage(NetMsgType::MASTERNODEPAYMENTSYNC, nMnCount); //sync payment votes
-                uint256 n = uint256();
-                SendGovernanceSyncRequest(pnode, NetMsgType::MNGOVERNANCESYNC, n);
+                SendGovernanceSyncRequest(pnode);
             } else {
                 nRequestedMasternodeAssets = MASTERNODE_SYNC_FINISHED;
             }
@@ -497,7 +496,7 @@ void CMasternodeSync::ProcessTick()
                 if (pnode->nVersion < MIN_GOVERNANCE_PEER_PROTO_VERSION) continue;
                 nRequestedMasternodeAttempt++;
 
-                SendGovernanceSyncRequest(pnode, NetMsgType::MNGOVERNANCESYNC, uint256());
+                SendGovernanceSyncRequest(pnode);
 
                 ReleaseNodes(vNodesCopy);
                 return; //this will cause each peer to get one request each six seconds for the various assets we need
@@ -508,18 +507,16 @@ void CMasternodeSync::ProcessTick()
     ReleaseNodes(vNodesCopy);
 }
 
-void CMasternodeSync::SendGovernanceSyncRequest(CNode* pnode, const char* strMessage, uint256 nHash)
+void CMasternodeSync::SendGovernanceSyncRequest(CNode* pnode)
 {
     if(pnode->nVersion >= GOVERNANCE_FILTER_PROTO_VERSION) {
-        CBloomFilter filter(GOVERNANCE_FILTER_ELEMENTS, GOVERNANCE_FILTER_FP_RATE, GetRandInt(999999), BLOOM_UPDATE_ALL);
-        if(!filter.IsWithinSizeConstraints()) {
-            LogPrintf("CMasternodeSync::SendGovernanceSyncRequest -- WARNING: bloom filter too large\n");
-        }
+        CBloomFilter filter;
+        filter.clear();
 
-        pnode->PushMessage(strMessage, nHash, filter);
+        pnode->PushMessage(NetMsgType::MNGOVERNANCESYNC, uint256(), filter);
     }
     else {
-        pnode->PushMessage(strMessage, nHash);
+        pnode->PushMessage(NetMsgType::MNGOVERNANCESYNC, uint256());
     }
 }
 

@@ -272,7 +272,7 @@ public:
      */
     bool ConfirmInventoryRequest(const CInv& inv);
 
-    void Sync(CNode* node, uint256 nProp, CBloomFilter& filter);
+    void Sync(CNode* node, const uint256& nProp, const CBloomFilter& filter);
 
     void ProcessMessage(CNode* pfrom, std::string& strCommand, CDataStream& vRecv);
 
