@@ -961,8 +961,7 @@ void CGovernanceManager::RequestGovernanceObject(CNode* pfrom, const uint256& nH
         CGovernanceObject* pObj = FindGovernanceObject(nHash);
 
         if(pObj) {
-            int nFilterElements = min(3*mnodeman.CountMasternodes(), GOVERNANCE_FILTER_MAX_ELEMENTS); 
-            filter = CBloomFilter(nFilterElements, GOVERNANCE_FILTER_FP_RATE, GetRandInt(999999), BLOOM_UPDATE_ALL);
+            filter = CBloomFilter(Params().GetConsensus().nGovernanceFilterElements, GOVERNANCE_FILTER_FP_RATE, GetRandInt(999999), BLOOM_UPDATE_ALL);
             std::vector<CGovernanceVote> vecVotes = pObj->GetVoteFile().GetVotes();
             for(size_t i = 0; i < vecVotes.size(); ++i) {
                 filter.insert(vecVotes[i].GetHash());
