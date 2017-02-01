@@ -49,8 +49,8 @@ static const int SEEN_OBJECT_ERROR_IMMATURE = 2;
 static const int SEEN_OBJECT_EXECUTED = 3; //used for triggers
 static const int SEEN_OBJECT_UNKNOWN = 4; // the default
 
-static const int GOVERNANCE_FILTER_ELEMENTS = 50000;
-static const double GOVERNANCE_FILTER_FP_RATE = 0.01;
+static const int GOVERNANCE_FILTER_ELEMENTS = 20000;
+static const double GOVERNANCE_FILTER_FP_RATE = 0.001;
 
 typedef std::pair<CGovernanceVote, int64_t> vote_time_pair_t;
 
