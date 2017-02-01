@@ -26,6 +26,7 @@ class CGovernanceVote;
 static const int MAX_GOVERNANCE_OBJECT_DATA_SIZE = 16 * 1024;
 static const int MIN_GOVERNANCE_PEER_PROTO_VERSION = 70204;
 static const int GOVERNANCE_FILTER_PROTO_VERSION = 70206;
+static const double GOVERNANCE_FILTER_FP_RATE = 0.001;
 
 static const int GOVERNANCE_OBJECT_UNKNOWN = 0;
 static const int GOVERNANCE_OBJECT_PROPOSAL = 1;
@@ -48,8 +49,6 @@ static const int SEEN_OBJECT_ERROR_INVALID = 1;
 static const int SEEN_OBJECT_ERROR_IMMATURE = 2;
 static const int SEEN_OBJECT_EXECUTED = 3; //used for triggers
 static const int SEEN_OBJECT_UNKNOWN = 4; // the default
-
-static const double GOVERNANCE_FILTER_FP_RATE = 0.001;
 
 typedef std::pair<CGovernanceVote, int64_t> vote_time_pair_t;
 
