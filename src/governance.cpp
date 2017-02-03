@@ -997,8 +997,11 @@ void CGovernanceManager::RequestGovernanceObjectVotes(const std::vector<CNode*>&
     // so 1 obj on mainnet == ~10 objs or ~1000 votes on testnet. However we want to test a higher
     // number of votes to make sure it's robust enough, so aim at 2000 votes per masternode per request.
     // On mainnet we have 4K+ masternodes, so nMaxObjRequestsPerNode always evaluates to `1`.
-    size_t nProjectedVotes = 2000;
-    int nMaxObjRequestsPerNode = std::max(1, int(nProjectedVotes / mnodeman.size()));
+    size_t nProjectedVotes = 1;
+    if(Params().NetworkIDString() != CBaseChainParams::MAIN) {
+        nProjectedVotes = 2000;
+    }
+    int nMaxObjRequestsPerNode = std::max(1, int(nProjectedVotes / std::max(1, mnodeman.size())));
 
     std::vector<CGovernanceObject*> vpGovObjsTmp;
     std::vector<CGovernanceObject*> vpGovObjsTriggersTmp;
