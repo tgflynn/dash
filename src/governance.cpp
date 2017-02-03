@@ -998,9 +998,8 @@ void CGovernanceManager::RequestGovernanceObjectVotes(const std::vector<CNode*>&
     // number of votes to make sure it's robust enough, so aim at 2000 votes per masternode per request.
     // On mainnet nMaxObjRequestsPerNode is always set to 1.
     int nMaxObjRequestsPerNode = 1;
-    size_t nProjectedVotes = 1;
+    size_t nProjectedVotes = 2000;
     if(Params().NetworkIDString() != CBaseChainParams::MAIN) {
-        nProjectedVotes = 2000;
         nMaxObjRequestsPerNode = std::max(1, int(nProjectedVotes / std::max(1, mnodeman.size())));
     }
 
