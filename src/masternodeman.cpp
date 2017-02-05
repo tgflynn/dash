@@ -1432,6 +1432,10 @@ bool CMasternodeMan::CheckMnbAndUpdateMasternodeList(CNode* pfrom, CMasternodeBr
     }
     mapSeenMasternodeBroadcast.insert(std::make_pair(hash, std::make_pair(GetTime(), mnb)));
 
+    if(!masternodeSync.IsBlockchainSynced()) {
+        mnb.fRecovery = true;
+    }
+
     LogPrint("masternode", "CMasternodeMan::CheckMnbAndUpdateMasternodeList -- masternode=%s new\n", mnb.vin.prevout.ToStringShort());
 
     if(!mnb.SimpleCheck(nDos)) {
