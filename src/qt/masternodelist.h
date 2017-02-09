@@ -57,6 +57,7 @@ private:
     ClientModel *clientModel;
     WalletModel *walletModel;
     CCriticalSection cs_mnlistupdate;
+    CCriticalSection cs_mymnlistupdate;
     QString strCurrentFilter;
 
 private Q_SLOTS:

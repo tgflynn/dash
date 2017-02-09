@@ -15,8 +15,6 @@
 #include <QTimer>
 #include <QMessageBox>
 
-CCriticalSection cs_masternodes;
-
 MasternodeList::MasternodeList(const PlatformStyle *platformStyle, QWidget *parent) :
     QWidget(parent),
     ui(new Ui::MasternodeList),
@@ -170,7 +168,6 @@ void MasternodeList::StartAll(std::string strCommand)
 
 void MasternodeList::updateMyMasternodeInfo(QString strAlias, QString strAddr, masternode_info_t& infoMn)
 {
-    LOCK(cs_mnlistupdate);
     bool fOldRowFound = false;
     int nNewRow = 0;
 
@@ -207,6 +204,10 @@ void MasternodeList::updateMyMasternodeInfo(QString strAlias, QString strAddr, m
 
 void MasternodeList::updateMyNodeList(bool fForce)
 {
+    TRY_LOCK(cs_mymnlistupdate, fLockAcquired);
+    if(!fLockAcquired) {
+        return;
+    }
     static int64_t nTimeMyListUpdated = 0;
 
     // automatically update my masternode list only once in MY_MASTERNODELIST_UPDATE_SECONDS seconds,
@@ -238,6 +239,11 @@ void MasternodeList::updateMyNodeList(bool fForce)
 
 void MasternodeList::updateNodeList()
 {
+    TRY_LOCK(cs_mnlistupdate, fLockAcquired);
+    if(!fLockAcquired) {
+        return;
+    }
+
     static int64_t nTimeListUpdated = GetTime();
 
     // to prevent high cpu usage update only once in MASTERNODELIST_UPDATE_SECONDS seconds
@@ -251,9 +257,6 @@ void MasternodeList::updateNodeList()
 
     nTimeListUpdated = GetTime();
     fFilterUpdated = false;
-
-    TRY_LOCK(cs_masternodes, lockMasternodes);
-    if(!lockMasternodes) return;
 
     QString strToFilter;
     ui->countLabel->setText("Updating...");
