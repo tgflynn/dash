@@ -204,7 +204,7 @@ void MasternodeList::updateMyMasternodeInfo(QString strAlias, QString strAddr, m
 
 void MasternodeList::updateMyNodeList(bool fForce)
 {
-    TRY_LOCK(cs_mymnlistupdate, fLockAcquired);
+    TRY_LOCK(cs_mymnlist, fLockAcquired);
     if(!fLockAcquired) {
         return;
     }
@@ -239,7 +239,7 @@ void MasternodeList::updateMyNodeList(bool fForce)
 
 void MasternodeList::updateNodeList()
 {
-    TRY_LOCK(cs_mnlistupdate, fLockAcquired);
+    TRY_LOCK(cs_mnlist, fLockAcquired);
     if(!fLockAcquired) {
         return;
     }
@@ -310,15 +310,19 @@ void MasternodeList::on_filterLineEdit_textChanged(const QString &strFilterIn)
 
 void MasternodeList::on_startButton_clicked()
 {
-    // Find selected node alias
-    QItemSelectionModel* selectionModel = ui->tableWidgetMyMasternodes->selectionModel();
-    QModelIndexList selected = selectionModel->selectedRows();
+    std::string strAlias;
+    {
+        LOCK(cs_mymnlist);
+        // Find selected node alias
+        QItemSelectionModel* selectionModel = ui->tableWidgetMyMasternodes->selectionModel();
+        QModelIndexList selected = selectionModel->selectedRows();
 
-    if(selected.count() == 0) return;
+        if(selected.count() == 0) return;
 
-    QModelIndex index = selected.at(0);
-    int nSelectedRow = index.row();
-    std::string strAlias = ui->tableWidgetMyMasternodes->item(nSelectedRow, 0)->text().toStdString();
+        QModelIndex index = selected.at(0);
+        int nSelectedRow = index.row();
+        strAlias = ui->tableWidgetMyMasternodes->item(nSelectedRow, 0)->text().toStdString();
+    }
 
     // Display message box
     QMessageBox::StandardButton retval = QMessageBox::question(this, tr("Confirm masternode start"),

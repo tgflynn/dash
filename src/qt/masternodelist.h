@@ -56,8 +56,13 @@ private:
     Ui::MasternodeList *ui;
     ClientModel *clientModel;
     WalletModel *walletModel;
-    CCriticalSection cs_mnlistupdate;
-    CCriticalSection cs_mymnlistupdate;
+
+    // Protects tableWidgetMasternodes
+    CCriticalSection cs_mnlist;
+
+    // Protects tableWidgetMyMasternodes
+    CCriticalSection cs_mymnlist;
+
     QString strCurrentFilter;
 
 private Q_SLOTS:
