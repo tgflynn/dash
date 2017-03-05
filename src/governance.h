@@ -427,6 +427,8 @@ private:
 
     void RequestOrphanObjects();
 
+    void CleanOrphanObjects();
+
 };
 
 #endif
