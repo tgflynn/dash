@@ -1314,15 +1314,16 @@ void CGovernanceManager::RequestOrphanObjects()
 
     {
         LOCK(cs);
-        const vote_mcache_t::list_t& items = mapOrphanVotes.GetItemList();
+        std::vector<uint256> vecHashes;
+        mapOrphanVotes.GetKeys(vecHashes);
 
-        for(vote_mcache_t::list_cit it = items.begin(); it != items.end(); ++it) {
-            const uint256& nHash = it->key;
+        for(size_t i = 0; i < vecHashes.size(); ++i) {
+            const uint256& nHash = vecHashes[i];
             if(mapObjects.find(nHash) != mapObjects.end()) {
                 continue;
             }
-            for(size_t i = 0; i < vNodesCopy.size(); ++i) {
-                CNode* pnode = vNodesCopy[i];
+            for(size_t j = 0; j < vNodesCopy.size(); ++j) {
+                CNode* pnode = vNodesCopy[j];
                 RequestGovernanceObject(pnode, nHash);
             }
         }
