@@ -668,6 +668,8 @@ void CGovernanceManager::NewBlock()
         }
     }
 
+    CleanOrphanObjects();
+
     RequestOrphanObjects();
 
     // CHECK AND REMOVE - REPROCESS GOVERNANCE OBJECTS
@@ -1336,4 +1338,22 @@ void CGovernanceManager::RequestOrphanObjects()
     }
 
     ReleaseNodeVector(vNodesCopy);
+}
+
+void CGovernanceManager::CleanOrphanObjects()
+{
+    LOCK(cs);
+    const vote_mcache_t::list_t& items = mapOrphanVotes.GetItemList();
+
+    int64_t nNow = GetAdjustedTime();
+
+    vote_mcache_t::list_cit it = items.begin();
+    while(it != items.end()) {
+        vote_mcache_t::list_cit prevIt = it;
+        ++it;
+        const vote_time_pair_t& pairVote = prevIt->value;
+        if(pairVote.second < nNow) {
+            mapOrphanVotes.Erase(prevIt->key, prevIt->value);
+        }
+    }
 }
