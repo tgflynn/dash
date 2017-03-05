@@ -1032,6 +1032,8 @@ void CGovernanceManager::RequestGovernanceObject(CNode* pfrom, const uint256& nH
         return;
     }
 
+    LogPrint("gobject", "CGovernanceObject::RequestGovernanceObject -- hash = %s (peer=%d)\n", nHash.ToString(), pfrom->GetId());
+
     if(pfrom->nVersion < GOVERNANCE_FILTER_PROTO_VERSION) {
         pfrom->PushMessage(NetMsgType::MNGOVERNANCESYNC, nHash);
         return;
@@ -1317,6 +1319,7 @@ void CGovernanceManager::RequestOrphanObjects()
         std::vector<uint256> vecHashes;
         mapOrphanVotes.GetKeys(vecHashes);
 
+        LogPrint("gobject", "CGovernanceObject::RequestOrphanObjects -- number objects = %d\n", vecHashes.size());
         for(size_t i = 0; i < vecHashes.size(); ++i) {
             const uint256& nHash = vecHashes[i];
             if(mapObjects.find(nHash) != mapObjects.end()) {
@@ -1324,6 +1327,9 @@ void CGovernanceManager::RequestOrphanObjects()
             }
             for(size_t j = 0; j < vNodesCopy.size(); ++j) {
                 CNode* pnode = vNodesCopy[j];
+                if(pnode->fMasternode) {
+                    continue;
+                }
                 RequestGovernanceObject(pnode, nHash);
             }
         }
