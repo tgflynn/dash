@@ -280,7 +280,7 @@ public:
 
     void ProcessMessage(CNode* pfrom, std::string& strCommand, CDataStream& vRecv);
 
-    void NewBlock();
+    void DoMaintenance();
 
     CGovernanceObject *FindGovernanceObject(const uint256& nHash);
 

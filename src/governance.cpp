@@ -16,8 +16,6 @@
 
 CGovernanceManager governance;
 
-std::map<uint256, int64_t> mapAskedForGovernanceObject;
-
 int nSubmittedFinalBudget;
 
 const std::string CGovernanceManager::SERIALIZATION_VERSION_STRING = "CGovernanceManager-Version-11";
@@ -647,26 +645,19 @@ struct sortProposalsByVotes {
     }
 };
 
-void CGovernanceManager::NewBlock()
+void CGovernanceManager::DoMaintenance()
 {
+    // NOTHING TO DO IN LITEMODE
+    if(fLiteMode) {
+        return;
+    }
+
     // IF WE'RE NOT SYNCED, EXIT
     if(!masternodeSync.IsSynced()) return;
 
     if(!pCurrentBlockIndex) return;
 
     // CHECK OBJECTS WE'VE ASKED FOR, REMOVE OLD ENTRIES
-
-    {
-        LOCK(cs);
-        std::map<uint256, int64_t>::iterator it = mapAskedForGovernanceObject.begin();
-        while(it != mapAskedForGovernanceObject.end()) {
-            if((*it).second > GetTime() - (60*60*24)) {
-                ++it;
-            } else {
-                mapAskedForGovernanceObject.erase(it++);
-            }
-        }
-    }
 
     CleanOrphanObjects();
 
@@ -1303,12 +1294,6 @@ void CGovernanceManager::UpdatedBlockTip(const CBlockIndex *pindex)
         pCurrentBlockIndex = pindex;
         nCachedBlockHeight = pCurrentBlockIndex->nHeight;
         LogPrint("gobject", "CGovernanceManager::UpdatedBlockTip pCurrentBlockIndex->nHeight: %d\n", pCurrentBlockIndex->nHeight);
-    }
-
-    // TO REPROCESS OBJECTS WE SHOULD BE SYNCED
-
-    if(!fLiteMode && masternodeSync.IsSynced()) {
-        NewBlock();
     }
 }
 
