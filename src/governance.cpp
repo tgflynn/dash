@@ -653,19 +653,22 @@ void CGovernanceManager::NewBlock()
     if(!masternodeSync.IsSynced()) return;
 
     if(!pCurrentBlockIndex) return;
-    LOCK(cs);
-
 
     // CHECK OBJECTS WE'VE ASKED FOR, REMOVE OLD ENTRIES
 
-    std::map<uint256, int64_t>::iterator it = mapAskedForGovernanceObject.begin();
-    while(it != mapAskedForGovernanceObject.end()) {
-        if((*it).second > GetTime() - (60*60*24)) {
-            ++it;
-        } else {
-            mapAskedForGovernanceObject.erase(it++);
+    {
+        LOCK(cs);
+        std::map<uint256, int64_t>::iterator it = mapAskedForGovernanceObject.begin();
+        while(it != mapAskedForGovernanceObject.end()) {
+            if((*it).second > GetTime() - (60*60*24)) {
+                ++it;
+            } else {
+                mapAskedForGovernanceObject.erase(it++);
+            }
         }
     }
+
+    RequestOrphanObjects();
 
     // CHECK AND REMOVE - REPROCESS GOVERNANCE OBJECTS
 
@@ -1291,13 +1294,39 @@ void CGovernanceManager::UpdatedBlockTip(const CBlockIndex *pindex)
         return;
     }
 
-    LOCK(cs);
-    pCurrentBlockIndex = pindex;
-    nCachedBlockHeight = pCurrentBlockIndex->nHeight;
-    LogPrint("gobject", "CGovernanceManager::UpdatedBlockTip pCurrentBlockIndex->nHeight: %d\n", pCurrentBlockIndex->nHeight);
+    {
+        LOCK(cs);
+        pCurrentBlockIndex = pindex;
+        nCachedBlockHeight = pCurrentBlockIndex->nHeight;
+        LogPrint("gobject", "CGovernanceManager::UpdatedBlockTip pCurrentBlockIndex->nHeight: %d\n", pCurrentBlockIndex->nHeight);
+    }
 
     // TO REPROCESS OBJECTS WE SHOULD BE SYNCED
 
-    if(!fLiteMode && masternodeSync.IsSynced())
+    if(!fLiteMode && masternodeSync.IsSynced()) {
         NewBlock();
+    }
+}
+
+void CGovernanceManager::RequestOrphanObjects()
+{
+    std::vector<CNode*> vNodesCopy = CopyNodeVector();
+
+    {
+        LOCK(cs);
+        const vote_mcache_t::list_t& items = mapOrphanVotes.GetItemList();
+
+        for(vote_mcache_t::list_cit it = items.begin(); it != items.end(); ++it) {
+            const uint256& nHash = it->key;
+            if(mapObjects.find(nHash) != mapObjects.end()) {
+                continue;
+            }
+            for(size_t i = 0; i < vNodesCopy.size(); ++i) {
+                CNode* pnode = vNodesCopy[i];
+                RequestGovernanceObject(pnode, nHash);
+            }
+        }
+    }
+
+    ReleaseNodeVector(vNodesCopy);
 }

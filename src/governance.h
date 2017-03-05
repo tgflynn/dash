@@ -425,6 +425,8 @@ private:
 
     bool UpdateCurrentWatchdog(CGovernanceObject& watchdogNew);
 
+    void RequestOrphanObjects();
+
 };
 
 #endif
