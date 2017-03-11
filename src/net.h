@@ -420,7 +420,7 @@ public:
     // Whether a ping is requested.
     bool fPingQueued;
 
-    std::vector<unsigned char> vchKeyedNetgroup;
+    std::vector<unsigned char> vchKeyedNetGroup;
 
     CNode(SOCKET hSocketIn, const CAddress &addrIn, const std::string &addrNameIn = "", bool fInboundIn = false, bool fNetworkNodeIn = false);
     ~CNode();
@@ -828,7 +828,7 @@ public:
     // in case of no limit, it will always response 0
     static uint64_t GetMaxOutboundTimeLeftInCycle();
 
-    static std::vector<unsigned char> CalculateKeyedNetgroup(CAddress& address);
+    static std::vector<unsigned char> CalculateKeyedNetGroup(CAddress& address);
 };
 
 class CExplicitNetCleanup
