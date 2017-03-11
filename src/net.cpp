@@ -342,6 +342,8 @@ uint64_t CNode::nMaxOutboundTotalBytesSentInCycle = 0;
 uint64_t CNode::nMaxOutboundTimeframe = 60*60*24; //1 day
 uint64_t CNode::nMaxOutboundCycleStartTime = 0;
 
+std::vector<unsigned char> CNode::vchSecretKey;
+
 CNode* FindNode(const CNetAddr& ip)
 {
     LOCK(cs_vNodes);
@@ -2466,6 +2468,7 @@ CNode::CNode(SOCKET hSocketIn, const CAddress& addrIn, const std::string& addrNa
     fPingQueued = false;
     fMasternode = false;
     nMinPingUsecTime = std::numeric_limits<int64_t>::max();
+    vchKeyedNetgroup = CalculateKeyedNetgroup(addr);
 
     {
         LOCK(cs_nLastNodeId);
@@ -2601,6 +2604,27 @@ void CNode::EndMessage() UNLOCK_FUNCTION(cs_vSend)
         SocketSendData(this);
 
     LEAVE_CRITICAL_SECTION(cs_vSend);
+}
+
+std::vector<unsigned char> CNode::CalculateKeyedNetgroup(CAddress& address)
+{
+    if(vchSecretKey.size() == 0) {
+        vchSecretKey.resize(32, 0);
+        GetRandBytes(vchSecretKey.data(), vchSecretKey.size());
+    }
+
+    std::vector<unsigned char> vchGroup;
+    CSHA256 hash;
+    std::vector<unsigned char> vch(32);
+
+    vchGroup = address.GetGroup();
+
+    hash.Write(begin_ptr(vchGroup), vchGroup.size());
+
+    hash.Write(begin_ptr(vchSecretKey), vchSecretKey.size());
+
+    hash.Finalize(begin_ptr(vch));
+    return vch;
 }
 
 //
