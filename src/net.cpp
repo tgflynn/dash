@@ -810,55 +810,20 @@ void SocketSendData(CNode *pnode)
 
 static list<CNode*> vNodesDisconnected;
 
-class CNodeRef {
-public:
-    CNodeRef(CNode *pnode) : _pnode(pnode) {
-        LOCK(cs_vNodes);
-        _pnode->AddRef();
-    }
-
-    ~CNodeRef() {
-        LOCK(cs_vNodes);
-        _pnode->Release();
-    }
-
-    CNode& operator *() const {return *_pnode;};
-    CNode* operator ->() const {return _pnode;};
-
-    CNodeRef& operator =(const CNodeRef& other)
-    {
-        if (this != &other) {
-            LOCK(cs_vNodes);
-
-            _pnode->Release();
-            _pnode = other._pnode;
-            _pnode->AddRef();
-        }
-        return *this;
-    }
-
-    CNodeRef(const CNodeRef& other):
-        _pnode(other._pnode)
-    {
-        LOCK(cs_vNodes);
-        _pnode->AddRef();
-    }
-private:
-    CNode *_pnode;
-};
-
 struct NodeEvictionCandidate
 {
     NodeEvictionCandidate(CNode* pnode)
-        : refNode(pnode),
+        : id(pnode->id),
           nTimeConnected(pnode->nTimeConnected),
           nMinPingUsecTime(pnode->nMinPingUsecTime),
+          vchNetGroup(pnode->addr.GetGroup()),
           vchKeyedNetGroup(pnode->vchKeyedNetGroup)
         {}
 
-    CNodeRef refNode;
+    int id;
     int64_t nTimeConnected;
     int64_t nMinPingUsecTime;
+    std::vector<unsigned char> vchNetGroup;
     std::vector<unsigned char> vchKeyedNetGroup;
 };
 
@@ -924,22 +889,22 @@ static bool AttemptToEvictConnection(bool fPreferNewConnection) {
     std::vector<unsigned char> naMostConnections;
     unsigned int nMostConnections = 0;
     int64_t nMostConnectionsTime = 0;
-    std::map<std::vector<unsigned char>, std::vector<CNodeRef> > mapAddrCounts;
+    std::map<std::vector<unsigned char>, std::vector<NodeEvictionCandidate> > mapAddrCounts;
     for(size_t i = 0; i < vEvictionCandidates.size(); ++i) {
-        const CNodeRef& refNode = vEvictionCandidates[i].refNode;
-        mapAddrCounts[refNode->addr.GetGroup()].push_back(refNode);
-        int64_t grouptime = mapAddrCounts[refNode->addr.GetGroup()][0]->nTimeConnected;
-        size_t groupsize = mapAddrCounts[refNode->addr.GetGroup()].size();
+        const NodeEvictionCandidate& candidate = vEvictionCandidates[i];
+        mapAddrCounts[candidate.vchNetGroup].push_back(candidate);
+        int64_t grouptime = mapAddrCounts[candidate.vchNetGroup][0].nTimeConnected;
+        size_t groupsize = mapAddrCounts[candidate.vchNetGroup].size();
 
         if (groupsize > nMostConnections || (groupsize == nMostConnections && grouptime > nMostConnectionsTime)) {
             nMostConnections = groupsize;
             nMostConnectionsTime = grouptime;
-            naMostConnections = refNode->addr.GetGroup();
+            naMostConnections = candidate.vchNetGroup;
         }
     }
 
     // Reduce to the network group with the most connections
-    std::vector<CNodeRef> vEvictionNodes = mapAddrCounts[naMostConnections];
+    std::vector<NodeEvictionCandidate> vEvictionNodes = mapAddrCounts[naMostConnections];
 
     if(vEvictionNodes.empty()) {
         return false;
@@ -952,9 +917,19 @@ static bool AttemptToEvictConnection(bool fPreferNewConnection) {
             return false;
 
     // Disconnect from the network group with the most connections
-    vEvictionNodes[0]->fDisconnect = true;
+    int nEvictionId = vEvictionNodes[0].id;
+    {
+        LOCK(cs_vNodes);
+        for(size_t i = 0; i < vNodes.size(); ++i) {
+            CNode* pnode = vNodes[i];
+            if(pnode->id == nEvictionId) {
+                pnode->fDisconnect = true;
+                return true;
+            }
+        }
+    }
 
-    return true;
+    return false;
 }
 
 static void AcceptConnection(const ListenSocket& hListenSocket) {
