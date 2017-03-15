@@ -30,6 +30,7 @@
 
 #include <boost/thread.hpp>
 #include <boost/tuple/tuple.hpp>
+#include <memory>
 #include <queue>
 
 using namespace std;
@@ -437,7 +438,7 @@ void static BitcoinMiner(const CChainParams& chainparams)
             CBlockIndex* pindexPrev = chainActive.Tip();
             if(!pindexPrev) break;
 
-            auto_ptr<CBlockTemplate> pblocktemplate(CreateNewBlock(chainparams, coinbaseScript->reserveScript));
+            unique_ptr<CBlockTemplate> pblocktemplate(CreateNewBlock(chainparams, coinbaseScript->reserveScript));
             if (!pblocktemplate.get())
             {
                 LogPrintf("DashMiner -- Keypool ran out, please call keypoolrefill before restarting the mining thread\n");
