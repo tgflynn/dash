@@ -2,7 +2,7 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-// Including keystore.h fixes a strange compiler warning
+// Including keystore.h fixes a strange compiler warning when --std=c++11 is enabled
 #include "keystore.h"
 #include "script/script.h"
 #include "test/test_dash.h"
