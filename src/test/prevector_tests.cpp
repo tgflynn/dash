@@ -161,7 +161,9 @@ public:
 
 BOOST_AUTO_TEST_CASE(PrevectorTestInt)
 {
+    std::cout << "Start: PrevectorTestInt" << std::endl;
     for (int j = 0; j < 64; j++) {
+        std::cout << "Start: PrevectorTestInt: j = " << j << std::endl;
         prevector_tester<8, int> test;
         for (int i = 0; i < 2048; i++) {
             int r = insecure_rand();
@@ -223,6 +225,7 @@ BOOST_AUTO_TEST_CASE(PrevectorTestInt)
             }
         }
     }
+    std::cout << "End: PrevectorTestInt" << std::endl;
 }
 
 BOOST_AUTO_TEST_SUITE_END()
