@@ -81,7 +81,7 @@ script:
     - make V=1 $MAKEJOBS $GOAL || ( echo "Build failure. Verbose build follows." && make $GOAL V=1 ; false )
     - export LD_LIBRARY_PATH=$TRAVIS_BUILD_DIR/depends/$HOST/lib
     - if [ "$RUN_TESTS" = "true" -a "$WINE" != "true" ]; then make $MAKEJOBS check VERBOSE=1; fi
-    - if [ "$RUN_TESTS" = "true" -a "$WINE" = "true" ]; then echo "Running wine"; wine  src/test/test_dash.exe --log_level=all; fi
+    - if [ "$RUN_TESTS" = "true" -a "$WINE" = "true" ]; then echo "Running wine"; wine  src/test/test_dash.exe --log_level=test_suite; fi
     - if [ "$RUN_TESTS" = "true" ]; then qa/pull-tester/rpc-tests.py --coverage; fi
 after_script:
     - if [ "$TRAVIS_PULL_REQUEST" != "false" ]; then (echo "Upload goes here. Something like: scp -r $BASE_OUTDIR server" || echo "upload failed"); fi
