@@ -186,7 +186,7 @@ void CGovernanceManager::ProcessMessage(CNode* pfrom, std::string& strCommand, C
         }
 
         bool fRateCheckBypassed = false;
-        if(!MasternodeRateCheck(govobj, UPDATE_TRUE, false, fRateCheckBypassed)) {
+        if(!MasternodeRateCheck(govobj, UPDATE_FAIL_ONLY, false, fRateCheckBypassed)) {
             LogPrintf("MNGOVERNANCEOBJECT -- masternode rate check failed - %s - (current block height %d) \n", strHash, nCachedBlockHeight);
             return;
         }
@@ -209,7 +209,7 @@ void CGovernanceManager::ProcessMessage(CNode* pfrom, std::string& strCommand, C
         }
 
         if(fRateCheckBypassed) {
-            if(!MasternodeRateCheck(govobj, UPDATE_TRUE, true, fRateCheckBypassed)) {
+            if(!MasternodeRateCheck(govobj, UPDATE_FAIL_ONLY, true, fRateCheckBypassed)) {
                 LogPrintf("MNGOVERNANCEOBJECT -- masternode rate check failed (after signature verification) - %s - (current block height %d) \n", strHash, nCachedBlockHeight);
                 return;
             }
@@ -229,6 +229,8 @@ void CGovernanceManager::ProcessMessage(CNode* pfrom, std::string& strCommand, C
         if(fAddToSeen) {
             // UPDATE THAT WE'VE SEEN THIS OBJECT
             mapSeenGovernanceObjects.insert(std::make_pair(nHash, SEEN_OBJECT_IS_VALID));
+            // Update the rate buffer
+            MasternodeRateCheck(govobj, UPDATE_TRUE, true, fRateCheckBypassed);
         }
 
         masternodeSync.AddedGovernanceItem();
