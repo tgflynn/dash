@@ -16,7 +16,6 @@
 #include "utiltime.h"
 #include "wallet/wallet.h"
 
-#include <boost/version.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/foreach.hpp>
 #include <boost/scoped_ptr.hpp>
