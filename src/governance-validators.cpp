@@ -4,10 +4,10 @@
 
 #include "governance-validators.h"
 
-#include <regex>
-
 #include "base58.h"
 #include "utilstrencodings.h"
+
+#include <algorithm>
 
 CProposalValidator::CProposalValidator(const std::string& strDataHexIn)
     : strData(),
@@ -31,7 +31,7 @@ void CProposalValidator::Clear()
 void CProposalValidator::SetHexData(const std::string& strDataHexIn)
 {
     std::vector<unsigned char> v = ParseHex(strDataHexIn);
-    std::string strData(v.begin(), v.end());
+    strData = std::string(v.begin(), v.end());
     ParseJSONData();
 }
 
@@ -81,9 +81,15 @@ bool CProposalValidator::ValidateName()
         return false;
     }
 
-    static const std::regex regx("^[-_a-zA-Z0-9]+");
+    std::cout << "ValidateName: strName = " << strName << std::endl;
 
-    if(!regex_match(strName, regx))  {
+    static const std::string strAllowedChars = "-_abcdefghijklmnopqrstuvwxyz012345789";
+
+    std::cout << "ValidateName: After instantiating regex" << std::endl;
+
+    std::transform(strNameStripped.begin(), strNameStripped.end(), strNameStripped.begin(), ::tolower);
+
+    if(strNameStripped.find_first_not_of(strAllowedChars) != std::string::npos) {
         return false;
     }
 
@@ -95,13 +101,17 @@ bool CProposalValidator::ValidateStartEndEpoch()
     int64_t nStartEpoch = 0;
     int64_t nEndEpoch = 0;
 
-    if(!GetDataValue("start-epoch", nStartEpoch)) {
+    if(!GetDataValue("start_epoch", nStartEpoch)) {
         return false;
     }
 
-    if(!GetDataValue("end-epoch", nStartEpoch)) {
+    if(!GetDataValue("end_epoch", nEndEpoch)) {
         return false;
     }
+
+    std::cout << "ValidateStartEndEpoch: nStartEpoch = " << nStartEpoch
+              << ", nEndEpoch = " << nEndEpoch
+              << std::endl;
 
     if(nEndEpoch <= nStartEpoch) {
         return false;
@@ -129,7 +139,7 @@ bool CProposalValidator::ValidatePaymentAddress()
 {
     std::string strPaymentAddress;
 
-    if(!GetDataValue("payment-address", strPaymentAddress)) {
+    if(!GetDataValue("payment_address", strPaymentAddress)) {
         return false;
     }
 
@@ -158,7 +168,7 @@ bool CProposalValidator::ValidateURL()
         return false;
     }
 
-    return false;
+    return true;
 }
 
 void CProposalValidator::ParseJSONData()
@@ -285,6 +295,8 @@ bool CProposalValidator::CheckURL(const std::string& strURLIn)
     std::string strRest(strURLIn);
     std::string::size_type nPos = strRest.find(':');
 
+    std::cout << "CheckURL: strUrlIn = " << strURLIn << std::endl;
+
     if(nPos != std::string::npos) {
         //std::string strSchema = strRest.substr(0,nPos);
 
@@ -307,15 +319,20 @@ bool CProposalValidator::CheckURL(const std::string& strURLIn)
         if(nPos2 != std::string::npos) {
             std::string strNetloc = strRest.substr(0,nPos2 + 1);
 
+            std::cout << "CheckURL: strNetloc = " << strNetloc << std::endl;
+
             if((strNetloc.find('[') != std::string::npos) && (strNetloc.find(']') == std::string::npos)) {
+                std::cout << "CheckURL: Pos 1 returning false" << std::endl;
                 return false;
             }
 
             if((strNetloc.find(']') != std::string::npos) && (strNetloc.find('[') == std::string::npos)) {
+                std::cout << "CheckURL: Pos 2 returning false" << std::endl;
                 return false;
             }
         }
     }
 
+    std::cout << "CheckURL: End returning true" << std::endl;
     return true;
 }
