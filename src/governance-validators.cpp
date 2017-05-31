@@ -287,8 +287,9 @@ std::string CProposalValidator::StripWhitespace(const std::string& strIn)
 
 /*
   The purpose of this function is to replicate the behavior of the
-  Python urlparse function used by sentinel.  This function should
-  return false whenever urlparse raises an exception and true otherwise.
+  Python urlparse function used by sentinel (urlparse.py).  This function
+  should return false whenever urlparse raises an exception and true
+  otherwise.
  */
 bool CProposalValidator::CheckURL(const std::string& strURLIn)
 {
@@ -308,28 +309,28 @@ bool CProposalValidator::CheckURL(const std::string& strURLIn)
         }
     }
 
+    std::cout << "CheckURL: strRest = " << strRest << std::endl;
+
     // Process netloc
     if((strRest.size() > 2) && (strRest.substr(0,2) == "//")) {
         static const std::string strNetlocDelimiters = "/?#";
 
-        strRest = strRest.substr(3);
+        strRest = strRest.substr(2);
 
         std::string::size_type nPos2 = strRest.find_first_of(strNetlocDelimiters);
 
-        if(nPos2 != std::string::npos) {
-            std::string strNetloc = strRest.substr(0,nPos2 + 1);
+        std::string strNetloc = strRest.substr(0,nPos2);
 
-            std::cout << "CheckURL: strNetloc = " << strNetloc << std::endl;
+        std::cout << "CheckURL: strNetloc = " << strNetloc << std::endl;
 
-            if((strNetloc.find('[') != std::string::npos) && (strNetloc.find(']') == std::string::npos)) {
-                std::cout << "CheckURL: Pos 1 returning false" << std::endl;
-                return false;
-            }
+        if((strNetloc.find('[') != std::string::npos) && (strNetloc.find(']') == std::string::npos)) {
+            std::cout << "CheckURL: Pos 1 returning false" << std::endl;
+            return false;
+        }
 
-            if((strNetloc.find(']') != std::string::npos) && (strNetloc.find('[') == std::string::npos)) {
-                std::cout << "CheckURL: Pos 2 returning false" << std::endl;
-                return false;
-            }
+        if((strNetloc.find(']') != std::string::npos) && (strNetloc.find('[') == std::string::npos)) {
+            std::cout << "CheckURL: Pos 2 returning false" << std::endl;
+            return false;
         }
     }
 
