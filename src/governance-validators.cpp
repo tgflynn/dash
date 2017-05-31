@@ -85,8 +85,6 @@ bool CProposalValidator::ValidateName()
 
     static const std::string strAllowedChars = "-_abcdefghijklmnopqrstuvwxyz012345789";
 
-    std::cout << "ValidateName: After instantiating regex" << std::endl;
-
     std::transform(strNameStripped.begin(), strNameStripped.end(), strNameStripped.begin(), ::tolower);
 
     if(strNameStripped.find_first_not_of(strAllowedChars) != std::string::npos) {
@@ -127,6 +125,8 @@ bool CProposalValidator::ValidatePaymentAmount()
     if(!GetDataValue("payment_amount", dValue)) {
         return false;
     }
+
+    std::cout << "ValidatePaymentAmount: dAmount = " << dValue << std::endl;
 
     if(dValue <= 0.0) {
         return false;
@@ -253,9 +253,13 @@ bool CProposalValidator::GetDataValue(const std::string& strKey, double& dValue)
             break;
         case UniValue::VSTR:
         {
+            std::cout << "GetDataValue: str value = " << uValue.get_str() << std::endl;
             std::istringstream istr(uValue.get_str());
             istr >> dValue;
-            fOK = istr.good();
+            fOK = ! istr.fail();
+            std::cout << "GetDataValue: dValue = " << dValue
+                      << ", fOK = " << fOK
+                      << std::endl;
         }
         break;
         default:
