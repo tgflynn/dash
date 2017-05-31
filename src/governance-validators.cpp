@@ -205,8 +205,22 @@ bool CProposalValidator::GetDataValue(const std::string& strKey, int64_t& nValue
 {
     bool fOK = false;
     try  {
-        nValue = objJSON[strKey].get_int64();
-        fOK = true;
+        const UniValue uValue = objJSON[strKey];
+        switch(uValue.getType()) {
+        case UniValue::VNUM:
+            nValue = uValue.get_int64();
+            fOK = true;
+            break;
+        case UniValue::VSTR:
+        {
+            std::istringstream istr(uValue.get_str());
+            istr >> nValue;
+            fOK = istr.good();
+        }
+        break;
+        default:
+            break;
+        }
     }
     catch(std::exception& e) {
         strErrorMessages += std::string(e.what()) + std::string(";");
@@ -221,8 +235,22 @@ bool CProposalValidator::GetDataValue(const std::string& strKey, double& dValue)
 {
     bool fOK = false;
     try  {
-        dValue = objJSON[strKey].get_real();
-        fOK = true;
+        const UniValue uValue = objJSON[strKey];
+        switch(uValue.getType()) {
+        case UniValue::VNUM:
+            dValue = uValue.get_real();
+            fOK = true;
+            break;
+        case UniValue::VSTR:
+        {
+            std::istringstream istr(uValue.get_str());
+            istr >> dValue;
+            fOK = istr.good();
+        }
+        break;
+        default:
+            break;
+        }
     }
     catch(std::exception& e) {
         strErrorMessages += std::string(e.what()) + std::string(";");
