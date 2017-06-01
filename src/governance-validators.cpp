@@ -72,12 +72,14 @@ bool CProposalValidator::ValidateName()
 {
     std::string strName;
     if(!GetDataValue("name", strName)) {
+        strErrorMessages += "name field not found;";
         return false;
     }
 
     std::string strNameStripped = StripWhitespace(strName);
 
     if(strNameStripped.empty()) {
+        strErrorMessages += "name is empty;";
         return false;
     }
 
@@ -88,6 +90,7 @@ bool CProposalValidator::ValidateName()
     std::transform(strNameStripped.begin(), strNameStripped.end(), strNameStripped.begin(), ::tolower);
 
     if(strNameStripped.find_first_not_of(strAllowedChars) != std::string::npos) {
+        strErrorMessages += "name contains invalid characters;";
         return false;
     }
 
@@ -100,10 +103,12 @@ bool CProposalValidator::ValidateStartEndEpoch()
     int64_t nEndEpoch = 0;
 
     if(!GetDataValue("start_epoch", nStartEpoch)) {
+        strErrorMessages += "start_epoch field not found;";
         return false;
     }
 
     if(!GetDataValue("end_epoch", nEndEpoch)) {
+        strErrorMessages += "end_epoch field not found;";
         return false;
     }
 
@@ -112,6 +117,7 @@ bool CProposalValidator::ValidateStartEndEpoch()
               << std::endl;
 
     if(nEndEpoch <= nStartEpoch) {
+        strErrorMessages += "end_epoch <= start_epoch field not found;";
         return false;
     }
 
@@ -123,12 +129,14 @@ bool CProposalValidator::ValidatePaymentAmount()
     double dValue = 0.0;
 
     if(!GetDataValue("payment_amount", dValue)) {
+        strErrorMessages += "payment_amount field not found;";
         return false;
     }
 
     std::cout << "ValidatePaymentAmount: dAmount = " << dValue << std::endl;
 
     if(dValue <= 0.0) {
+        strErrorMessages += "payment_amount invalid;";
         return false;
     }
 
@@ -140,6 +148,7 @@ bool CProposalValidator::ValidatePaymentAddress()
     std::string strPaymentAddress;
 
     if(!GetDataValue("payment_address", strPaymentAddress)) {
+        strErrorMessages += "payment_address field not found;";
         return false;
     }
 
@@ -148,18 +157,18 @@ bool CProposalValidator::ValidatePaymentAddress()
     size_t nLength = strPaymentAddress.size();
 
     if((nLength < 26) || (nLength > 35)) {
-        strErrorMessages += "incorrect payment address length;";
+        strErrorMessages += "incorrect payment_address length;";
         return false;
     }
 
     if(strPaymentAddress.find_first_not_of(base58chars) != std::string::npos) {
-        strErrorMessages += "payment contains invalid characters;";
+        strErrorMessages += "payment_address contains invalid characters;";
         return false;
     }
 
     CBitcoinAddress address(strPaymentAddress);
     if(!address.IsValid()) {
-        strErrorMessages += "invalid payment address;";
+        strErrorMessages += "invalid payment_address;";
         return false;
     }
 
@@ -170,16 +179,19 @@ bool CProposalValidator::ValidateURL()
 {
     std::string strURL;
     if(!GetDataValue("url", strURL)) {
+        strErrorMessages += "url field not found;";
         return false;
     }
 
     std::string strURLStripped = StripWhitespace(strURL);
 
     if(int(strURLStripped.size()) < 4) {
+        strErrorMessages += "url too short;";
         return false;
     }
 
     if(!CheckURL(strURL)) {
+        strErrorMessages += "url invalid;";
         return false;
     }
 
