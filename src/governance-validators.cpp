@@ -143,8 +143,23 @@ bool CProposalValidator::ValidatePaymentAddress()
         return false;
     }
 
+    static const std::string base58chars = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
+
+    size_t nLength = strPaymentAddress.size();
+
+    if((nLength < 26) || (nLength > 35)) {
+        strErrorMessages += "incorrect payment address length;";
+        return false;
+    }
+
+    if(strPaymentAddress.find_first_not_of(base58chars) != std::string::npos) {
+        strErrorMessages += "payment contains invalid characters;";
+        return false;
+    }
+
     CBitcoinAddress address(strPaymentAddress);
     if(!address.IsValid()) {
+        strErrorMessages += "invalid payment address;";
         return false;
     }
 
@@ -225,7 +240,7 @@ bool CProposalValidator::GetDataValue(const std::string& strKey, int64_t& nValue
         {
             std::istringstream istr(uValue.get_str());
             istr >> nValue;
-            fOK = istr.good();
+            fOK = ! istr.fail();
         }
         break;
         default:
