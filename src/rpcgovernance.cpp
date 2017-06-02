@@ -35,6 +35,7 @@ UniValue gobject(const UniValue& params, bool fHelp)
                 "gobject \"command\"...\n"
                 "Manage governance objects\n"
                 "\nAvailable commands:\n"
+                "  check              - Validate governance object data (proposal only)\n"
                 "  prepare            - Prepare governance object by signing and creating tx\n"
                 "  submit             - Submit governance object to network\n"
                 "  deserialize        - Deserialize governance object from hex string to JSON\n"
@@ -74,6 +75,41 @@ UniValue gobject(const UniValue& params, bool fHelp)
         u.read(s);
 
         return u.write().c_str();
+    }
+
+    // VALIDATE A GOVERNANCE OBJECT PRIOR TO SUBMISSION
+    if(strCommand == "check")
+    {
+        if (params.size() != 5) {
+            throw JSONRPCError(RPC_INVALID_PARAMETER, "Correct usage is 'gobject check <data-hex>'");
+        }
+
+        // ASSEMBLE NEW GOVERNANCE OBJECT FROM USER PARAMETERS
+
+        uint256 hashParent;
+
+        int nRevision = 1;
+
+        int64_t nTime = GetTime();
+        std::string strData = params[1].get_str();
+
+        CGovernanceObject govobj(hashParent, nRevision, nTime, uint256(), strData);
+
+        if(govobj.GetObjectType() == GOVERNANCE_OBJECT_PROPOSAL) {
+            CProposalValidator validator(strData);
+            if(!validator.Validate())  {
+                throw JSONRPCError(RPC_INVALID_PARAMETER, "Invalid proposal data, error messages:" + validator.GetErrorMessages());
+            }
+        }
+        else {
+            throw JSONRPCError(RPC_INVALID_PARAMETER, "Invalid object type, only proposals can be validated");
+        }
+
+        UniValue objResult(UniValue::VOBJ);
+
+        objResult.push_back(Pair("Object status", "OK"));
+
+        return objResult;
     }
 
     // PREPARE THE GOVERNANCE OBJECT BY CREATING A COLLATERAL TRANSACTION
