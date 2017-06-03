@@ -168,7 +168,7 @@ bool CProposalValidator::ValidatePaymentAddress()
 
     CBitcoinAddress address(strPaymentAddress);
     if(!address.IsValid()) {
-        strErrorMessages += "invalid payment_address;";
+        strErrorMessages += "payment_address is invalid;";
         return false;
     }
 
