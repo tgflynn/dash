@@ -30,7 +30,8 @@ UniValue gobject(const UniValue& params, bool fHelp)
 
     if (fHelp  ||
         (strCommand != "vote-many" && strCommand != "vote-conf" && strCommand != "vote-alias" && strCommand != "prepare" && strCommand != "submit" && strCommand != "count" &&
-         strCommand != "deserialize" && strCommand != "get" && strCommand != "getvotes" && strCommand != "getcurrentvotes" && strCommand != "list" && strCommand != "diff"))
+         strCommand != "deserialize" && strCommand != "get" && strCommand != "getvotes" && strCommand != "getcurrentvotes" && strCommand != "list" && strCommand != "diff" &&
+         strCommand != "check" ))
         throw std::runtime_error(
                 "gobject \"command\"...\n"
                 "Manage governance objects\n"
@@ -80,7 +81,7 @@ UniValue gobject(const UniValue& params, bool fHelp)
     // VALIDATE A GOVERNANCE OBJECT PRIOR TO SUBMISSION
     if(strCommand == "check")
     {
-        if (params.size() != 5) {
+        if (params.size() != 2) {
             throw JSONRPCError(RPC_INVALID_PARAMETER, "Correct usage is 'gobject check <data-hex>'");
         }
 
