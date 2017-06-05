@@ -50,16 +50,13 @@ std::string CreateEncodedProposalObject(const UniValue& objJSON)
 
 BOOST_AUTO_TEST_CASE(valid_proposals_test)
 {
-    std::cout << "valid_proposals_test: START" << std::endl;
     CProposalValidator validator;
     UniValue obj = LoadJSON("src/test/data/proposals-valid.json");
     for(size_t i = 0; i < obj.size(); ++i) {
         const UniValue& objProposal = obj[i];
-        std::cout << obj[i].write() << std::endl;
         std::string strHexData = CreateEncodedProposalObject(objProposal);
         validator.SetHexData(strHexData);
         BOOST_CHECK(validator.ValidateJSON());
-        std::cout << "Validation Errors: " << validator.GetErrorMessages() << std::endl;
         BOOST_CHECK(validator.ValidateName());
         BOOST_CHECK(validator.ValidateURL());
         BOOST_CHECK(validator.ValidateStartEndEpoch());
@@ -68,24 +65,19 @@ BOOST_AUTO_TEST_CASE(valid_proposals_test)
         BOOST_CHECK(validator.Validate());
         validator.Clear();
     }
-    std::cout << "valid_proposals_test: END" << std::endl;
 }
 
 BOOST_AUTO_TEST_CASE(invalid_proposals_test)
 {
-    std::cout << "invalid_proposals_test: START" << std::endl;
     CProposalValidator validator;
     UniValue obj = LoadJSON("src/test/data/proposals-invalid.json");
     for(size_t i = 0; i < obj.size(); ++i) {
         const UniValue& objProposal = obj[i];
-        std::cout << obj[i].write() << std::endl;
         std::string strHexData = CreateEncodedProposalObject(objProposal);
         validator.SetHexData(strHexData);
         BOOST_CHECK(!validator.Validate());
-        std::cout << "Validation Errors: " << validator.GetErrorMessages() << std::endl;
         validator.Clear();
     }
-    std::cout << "invalid_proposals_test: END" << std::endl;
 }
 
 BOOST_AUTO_TEST_SUITE_END()

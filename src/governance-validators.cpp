@@ -83,8 +83,6 @@ bool CProposalValidator::ValidateName()
         return false;
     }
 
-    std::cout << "ValidateName: strName = " << strName << std::endl;
-
     static const std::string strAllowedChars = "-_abcdefghijklmnopqrstuvwxyz012345789";
 
     std::transform(strNameStripped.begin(), strNameStripped.end(), strNameStripped.begin(), ::tolower);
@@ -112,10 +110,6 @@ bool CProposalValidator::ValidateStartEndEpoch()
         return false;
     }
 
-    std::cout << "ValidateStartEndEpoch: nStartEpoch = " << nStartEpoch
-              << ", nEndEpoch = " << nEndEpoch
-              << std::endl;
-
     if(nEndEpoch <= nStartEpoch) {
         strErrorMessages += "end_epoch <= start_epoch field not found;";
         return false;
@@ -132,8 +126,6 @@ bool CProposalValidator::ValidatePaymentAmount()
         strErrorMessages += "payment_amount field not found;";
         return false;
     }
-
-    std::cout << "ValidatePaymentAmount: dAmount = " << dValue << std::endl;
 
     if(dValue <= 0.0) {
         strErrorMessages += "payment_amount invalid;";
@@ -280,13 +272,9 @@ bool CProposalValidator::GetDataValue(const std::string& strKey, double& dValue)
             break;
         case UniValue::VSTR:
         {
-            std::cout << "GetDataValue: str value = " << uValue.get_str() << std::endl;
             std::istringstream istr(uValue.get_str());
             istr >> dValue;
             fOK = ! istr.fail();
-            std::cout << "GetDataValue: dValue = " << dValue
-                      << ", fOK = " << fOK
-                      << std::endl;
         }
         break;
         default:
@@ -327,8 +315,6 @@ bool CProposalValidator::CheckURL(const std::string& strURLIn)
     std::string strRest(strURLIn);
     std::string::size_type nPos = strRest.find(':');
 
-    std::cout << "CheckURL: strUrlIn = " << strURLIn << std::endl;
-
     if(nPos != std::string::npos) {
         //std::string strSchema = strRest.substr(0,nPos);
 
@@ -340,8 +326,6 @@ bool CProposalValidator::CheckURL(const std::string& strURLIn)
         }
     }
 
-    std::cout << "CheckURL: strRest = " << strRest << std::endl;
-
     // Process netloc
     if((strRest.size() > 2) && (strRest.substr(0,2) == "//")) {
         static const std::string strNetlocDelimiters = "/?#";
@@ -352,19 +336,14 @@ bool CProposalValidator::CheckURL(const std::string& strURLIn)
 
         std::string strNetloc = strRest.substr(0,nPos2);
 
-        std::cout << "CheckURL: strNetloc = " << strNetloc << std::endl;
-
         if((strNetloc.find('[') != std::string::npos) && (strNetloc.find(']') == std::string::npos)) {
-            std::cout << "CheckURL: Pos 1 returning false" << std::endl;
             return false;
         }
 
         if((strNetloc.find(']') != std::string::npos) && (strNetloc.find('[') == std::string::npos)) {
-            std::cout << "CheckURL: Pos 2 returning false" << std::endl;
             return false;
         }
     }
 
-    std::cout << "CheckURL: End returning true" << std::endl;
     return true;
 }
