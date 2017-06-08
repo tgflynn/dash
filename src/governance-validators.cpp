@@ -38,6 +38,7 @@ void CProposalValidator::SetHexData(const std::string& strDataHexIn)
 bool CProposalValidator::Validate()
 {
     if(!ValidateJSON()) {
+        strErrorMessages += "JSON parsing error;";
         return false;
     }
     if(!ValidateName()) {
@@ -111,7 +112,7 @@ bool CProposalValidator::ValidateStartEndEpoch()
     }
 
     if(nEndEpoch <= nStartEpoch) {
-        strErrorMessages += "end_epoch <= start_epoch field not found;";
+        strErrorMessages += "end_epoch <= start_epoch;";
         return false;
     }
 
@@ -128,9 +129,13 @@ bool CProposalValidator::ValidatePaymentAmount()
     }
 
     if(dValue <= 0.0) {
-        strErrorMessages += "payment_amount invalid;";
+        strErrorMessages += "payment_amount is negative;";
         return false;
     }
+
+    // TODO: Should check for an amount which exceeds the budget but this is
+    // currently difficult because start and end epochs are defined in terms of
+    // clock time instead of block height.
 
     return true;
 }
@@ -177,7 +182,7 @@ bool CProposalValidator::ValidateURL()
 
     std::string strURLStripped = StripWhitespace(strURL);
 
-    if(int(strURLStripped.size()) < 4) {
+    if(strURLStripped.size() < 4U) {
         strErrorMessages += "url too short;";
         return false;
     }
